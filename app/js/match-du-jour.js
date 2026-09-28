@@ -326,8 +326,9 @@ function carteChangement(i) {
       </div>
       <div class="changement-actions">
         ${a?.storage_path && i.action !== 'enlever' ? `<button type="button" class="btn btn-discret" data-telecharger="${echapper(a.storage_path)}">Télécharger</button>` : ''}
-        ${estRegie ? `<label class="case-fait"><input type="checkbox" data-fait="${i.ligne_id}|${i.action}" ${fait ? 'checked' : ''}
-          ${etat.tableFait && !fait?.viaDemande ? '' : 'disabled'}> Fait</label>` : ''}
+        ${fait?.viaDemande ? '<span class="etat etat-ecran">✓ Fait</span>'      // ajouté depuis la demande = fait dans Colosseo
+          : estRegie ? `<label class="case-fait"><input type="checkbox" data-fait="${i.ligne_id}|${i.action}" ${fait ? 'checked' : ''}
+          ${etat.tableFait ? '' : 'disabled'}> Fait</label>` : ''}
       </div>
     </div>`;
 }
