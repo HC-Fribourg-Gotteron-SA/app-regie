@@ -358,6 +358,9 @@ Autres règles décidées :
       remarque, bouton **Traiter** → fiche produit ; Sponsoring : « en attente de la Régie ») et comptent dans le
       bilan (« dont N demandes à traiter d'abord »). Une fois ajoutée, la demande devient un vrai changement.
       Le lien du haut ne montre plus que les **autres** demandes en cours (pas pour ce match, questions).
+      Les **fichiers de la demande** (dossier `demandes/<demande>/<produit>/` du bucket) sont listés dans la carte avec
+      **Télécharger** (vidéo vidéotron, visuel anneau LED, logo…) ou « ⏳ Fichier à venir » — pour les mettre dans
+      Colosseo sans changer de page (demandé par Léa).
       Bouton de la demande = « Ajouter » (pour Léa, « traiter » et « ajouter » c'est pareil). Mais **« traitée » ≠
       « fait »** (corrigé par Léa) : traitée = ajoutée dans l'outil ; fait = mis dans Colosseo. Donc PAS de « Fait »
       automatique : le changement issu d'une demande affiche « Demande traitée par … le … » (info) et garde sa case Fait.

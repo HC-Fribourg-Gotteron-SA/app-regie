@@ -1,6 +1,6 @@
 // Match du jour : ce que la Régie doit changer dans Colosseo (depuis le match précédent),
 // puis toute la playlist pour vérifier. Les playlists Colosseo restent d'un match à l'autre.
-import { sb, exigerConnexion, echapper, dateCourte, notifier, toutesLesLignes } from './app.js';
+import { sb, exigerConnexion, echapper, dateCourte, notifier, toutesLesLignes, libelleFichier, taille } from './app.js';
 import { calculerChangements, consigne, PASSE } from './changements.js';
 
 const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
@@ -130,9 +130,24 @@ async function chargerMatch() {
   const jourMatch = jourLocal(m.date_heure);
   etat.attente = attente || [];
   etat.demandesMatch = etat.attente.filter(a => a.type_vente !== 'match' || (a.dates_matchs || []).includes(jourMatch));
+  await chargerFichiersDemandes(etat.demandesMatch);
 
   afficher();
   if (estRegie) compterDemandes();
+}
+
+// Fichiers joints à chaque produit de demande (vidéo, visuel anneau LED, logo…) : à télécharger ici,
+// pour les mettre dans Colosseo et dans l'outil sans changer de page
+async function chargerFichiersDemandes(liste) {
+  await Promise.all(liste.map(async (a) => {
+    const dossier = `demandes/${a.demande_id}/${a.produit_id}`;
+    const { data } = await sb.storage.from('assets').list(dossier, { sortBy: { column: 'name', order: 'asc' } });
+    a.fichiers = (data || []).filter(f => f.id).map(f => {
+      const i = f.name.indexOf('__');
+      return { role: i > 0 ? f.name.slice(0, i) : 'visuel', nom: i > 0 ? f.name.slice(i + 2) : f.name,
+               storage_path: `${dossier}/${f.name}`, taille: f.metadata?.size || 0 };
+    });
+  }));
 }
 
 // Les autres demandes en cours (pas pour ce match, questions, sans produit…) : un simple lien
@@ -283,6 +298,13 @@ function carteDemande(i) {
           <span class="doux petit">(reçue le ${dateCourte(d.created_at)} · pas encore traitée)</span></div>
         <div class="petit">${details.join(' · ')}</div>
         ${a.remarque_sponsoring ? `<div class="petit doux">Sponsoring : ${echapper(a.remarque_sponsoring)}</div>` : ''}
+        ${d.type === 'suppression' ? '' : (a.fichiers || []).length ? `
+          <ul class="liste-fichiers liste-documents">${a.fichiers.map(f => `
+            <li><span><strong>${echapper(libelleFichier(a.produit, f.role))}</strong> : ${echapper(f.nom)}
+                ${f.taille ? `<span class="doux petit">${taille(f.taille)}</span>` : ''}</span>
+              <button type="button" class="btn" data-telecharger="${echapper(f.storage_path)}">Télécharger</button></li>`).join('')}
+          </ul>`
+          : '<div class="petit" style="margin-top:.3rem">⏳ <strong>Fichier à venir</strong> <span class="doux">(pas encore envoyé par le Sponsoring)</span></div>'}
       </div>
       <div class="changement-actions">
         ${estRegie ? `<a class="btn btn-principal" href="produit.html?id=${a.produit_id}">Ajouter</a>`
