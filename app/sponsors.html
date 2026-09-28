@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sponsors — Sponsoring ↔ Régie</title>
+  <link rel="icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <div class="titre-page">
+      <div>
+        <div class="surtitre">Dossiers</div>
+        <h1>Sponsors</h1>
+        <p class="doux" id="resume">Chargement…</p>
+      </div>
+    </div>
+
+    <div class="filtres">
+      <div class="onglets" id="onglets">
+        <button data-vue="produits" class="actif">Avec produits</button>
+        <button data-vue="documents">Avec documents</button>
+        <button data-vue="tous">Tous</button>
+      </div>
+      <input type="search" id="recherche" placeholder="Rechercher un sponsor…">
+    </div>
+
+    <div class="carte" style="padding:0; overflow:hidden">
+      <div class="tableau-conteneur">
+        <table class="tableau">
+          <thead>
+            <tr>
+              <th>Sponsor</th>
+              <th class="col-optionnelle">Produits</th>
+              <th>Documents</th>
+            </tr>
+          </thead>
+          <tbody id="lignes"></tbody>
+        </table>
+      </div>
+      <div class="vide" id="vide" hidden>Aucun sponsor ne correspond.</div>
+    </div>
+  </main>
+  <script type="module" src="js/sponsors.js"></script>
+</body>
+</html>

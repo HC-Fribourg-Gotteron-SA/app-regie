@@ -1,0 +1,11 @@
+# Données réelles des sponsors : jamais dans Git (même dans un dépôt privé)
+import-airtable/
+supabase/import_airtable_2026-27.sql
+
+# Fichiers système / éditeur
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*
+.vscode/
+node_modules/

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dossier sponsor — Sponsoring ↔ Régie</title>
+  <link rel="icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <a href="sponsors.html" class="lien-retour">← Tous les sponsors</a>
+    <div class="titre-page">
+      <div>
+        <div class="surtitre">Dossier sponsor</div>
+        <h1 id="s-nom">Chargement…</h1>
+        <p class="doux" id="s-resume"></p>
+      </div>
+    </div>
+
+    <!-- Ce que l'entreprise possède -->
+    <section style="margin-bottom:1.75rem">
+      <h3>Ce qu'il a <span class="doux" id="nb-produits"></span></h3>
+      <div class="carte" style="padding:0; overflow:hidden">
+        <div class="tableau-conteneur">
+          <table class="tableau">
+            <thead><tr><th>Produit</th><th>Quand</th><th>État</th></tr></thead>
+            <tbody id="produits"></tbody>
+          </table>
+        </div>
+        <div class="vide" id="vide-produits" hidden>Aucun produit en cours pour ce sponsor.</div>
+      </div>
+    </section>
+
+    <!-- Dossier : documents reçus -->
+    <section style="margin-bottom:1.75rem">
+      <h3>Documents reçus <span class="doux" id="nb-documents"></span></h3>
+      <div class="carte">
+        <div class="zone-depot zone-compacte" id="zone-depot">
+          Ajouter un document reçu : glissez le fichier ici ou <u>cliquez pour choisir</u>
+          <input type="file" id="fichiers" multiple hidden>
+        </div>
+        <input type="text" id="note" placeholder="Note (facultatif) : ex. « nouveau logo reçu par e-mail le 28.09 »" style="margin-top:.5rem">
+        <p class="petit" id="envoi" hidden style="margin:.5rem 0 0"></p>
+        <ul class="liste-fichiers liste-documents" id="documents"></ul>
+        <p class="doux petit" id="vide-documents" hidden style="margin:.8rem 0 0">Aucun document pour l'instant.
+          Les fichiers joints aux demandes arrivent ici automatiquement.</p>
+      </div>
+    </section>
+
+    <!-- Demandes du sponsor -->
+    <section>
+      <h3>Demandes <span class="doux" id="nb-demandes"></span></h3>
+      <div class="carte" style="padding:0; overflow:hidden">
+        <div class="tableau-conteneur">
+          <table class="tableau">
+            <tbody id="demandes"></tbody>
+          </table>
+        </div>
+        <div class="vide" id="vide-demandes" hidden>Aucune demande pour ce sponsor.</div>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="js/sponsor.js"></script>
+</body>
+</html>

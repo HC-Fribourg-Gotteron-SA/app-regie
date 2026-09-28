@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fiche produit — Sponsoring ↔ Régie</title>
+  <link rel="icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <a href="produits.html" class="lien-retour">← Tous les produits</a>
+    <div class="titre-page">
+      <div>
+        <div class="surtitre" id="p-categorie"></div>
+        <h1 id="p-nom">Chargement…</h1>
+        <p class="doux" id="p-description"></p>
+      </div>
+    </div>
+    <nav class="onglets-produits" id="onglets-produits" aria-label="Fiches produit" hidden></nav>
+
+    <!-- Demandes à ajouter -->
+    <section id="bloc-a-ajouter" hidden style="margin-bottom:1.75rem">
+      <h3>À ajouter <span class="menu-compteur" id="nb-a-ajouter"></span></h3>
+      <div class="details-produits" id="a-ajouter"></div>
+    </section>
+
+    <!-- Sponsors sur ce produit -->
+    <section>
+      <h3>Sur ce produit <span class="doux" id="nb-sponsors"></span></h3>
+      <div class="carte" style="padding:0; overflow:hidden">
+        <div class="tableau-conteneur">
+          <table class="tableau tableau-diffusions">
+            <thead id="entete-lignes"></thead>
+            <tbody id="lignes"></tbody>
+          </table>
+        </div>
+        <div class="vide" id="vide" hidden>Aucun sponsor sur ce produit pour l'instant.</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Détail d'une diffusion (clic sur une ligne) -->
+  <div class="voile" id="voile" hidden></div>
+  <div class="fenetre" id="fenetre" hidden role="dialog" aria-modal="true" aria-labelledby="d-titre">
+    <div class="fenetre-entete">
+      <div>
+        <div class="surtitre" id="d-surtitre"></div>
+        <h2 id="d-titre"></h2>
+        <div id="d-sous-titre" class="doux petit" style="margin-top:.3rem"></div>
+      </div>
+      <button class="btn btn-discret" id="btn-fermer" aria-label="Fermer">✕</button>
+    </div>
+    <div class="fenetre-corps" id="d-corps"></div>
+  </div>
+
+  <script type="module" src="js/produit.js"></script>
+</body>
+</html>

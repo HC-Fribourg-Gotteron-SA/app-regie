@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calendrier — Sponsoring ↔ Régie</title>
+  <link rel="icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <div class="titre-page">
+      <div>
+        <div class="surtitre">Saison <span id="titre-saison"></span></div>
+        <h1>Calendrier des matchs</h1>
+        <p class="doux">Les matchs à domicile. Ils servent aux ventes « saison » et « au match » et à la préparation Colosseo.</p>
+      </div>
+      <div class="actions" id="actions-admin" hidden style="margin-top:0">
+        <button class="btn" id="btn-ajouter">+ Ajouter un match</button>
+        <button class="btn btn-principal" id="btn-importer">Importer (fichier .ics ou liste)</button>
+      </div>
+    </div>
+
+    <!-- Import d'une liste collée depuis Excel / le site de la ligue -->
+    <div class="carte" id="bloc-import" hidden style="margin-bottom:1rem">
+      <h2>Importer des matchs</h2>
+
+      <h3>1. Fichier calendrier (.ics)</h3>
+      <p class="petit">
+        Sur la page « Calendrier des matchs » de Fribourg-Gottéron sur
+        <a href="https://www.sihf.ch/fr/game-center/equipe/calendrier-des-matchs/1-1-103138" target="_blank" rel="noopener">sihf.ch</a>,
+        cliquez sur « Télécharger ICS », puis déposez le fichier ici.
+      </p>
+      <div class="zone-depot" id="zone-ics">
+        Glissez le fichier calendrier (.ics) ici ou <u>cliquez pour choisir</u>
+        <input type="file" id="fichier-ics" accept=".ics,.ical,.icalendar,.csv,.txt" hidden>
+      </div>
+
+      <h3 style="margin-top:1.25rem">2. Ou coller une liste</h3>
+      <p class="petit">
+        Depuis Excel, un e-mail ou la page sihf.ch (Ctrl+A, Ctrl+C) : la date, l'heure et les équipes
+        (ex. <code>03.10.2026 19:45 SC Bern</code>).
+      </p>
+      <textarea id="texte-import" style="min-height:160px; font-family:ui-monospace, Consolas, monospace; font-size:.88rem"
+        placeholder="03.10.2026	19:45	SC Bern&#10;Ve 09.10.2026 19:45 HC Fribourg-Gottéron - EV Zug&#10;17.10.26 17:00 Lausanne HC"></textarea>
+      <div class="actions">
+        <button class="btn btn-discret" id="btn-annuler-import">Annuler</button>
+        <button class="btn" id="btn-analyser">Vérifier la liste</button>
+      </div>
+
+      <p class="aide">
+        Dans les deux cas, l'équipe qui reçoit est celle écrite en premier : les matchs à l'extérieur et les matchs
+        déjà joués sont écartés, « Exhibition » = amical. Un match déjà au calendrier le même jour est mis à jour.
+        Vous vérifiez tout dans l'aperçu avant d'importer.
+      </p>
+
+      <div id="apercu" hidden style="margin-top:1rem">
+        <h3 id="apercu-titre"></h3>
+        <div class="tableau-conteneur">
+          <table class="tableau non-cliquable">
+            <thead><tr><th></th><th>Date</th><th>Heure</th><th>Adversaire</th><th>Type</th><th>Remarque</th></tr></thead>
+            <tbody id="apercu-lignes"></tbody>
+          </table>
+        </div>
+        <div class="actions">
+          <button class="btn btn-principal" id="btn-confirmer-import">Importer</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="carte" style="padding:0; overflow:hidden">
+      <div class="tableau-conteneur">
+        <table class="tableau" id="tableau-matchs">
+          <thead>
+            <tr><th>N°</th><th>Date</th><th>Heure</th><th>Adversaire</th><th>Type</th></tr>
+          </thead>
+          <tbody id="lignes"></tbody>
+        </table>
+      </div>
+      <div class="vide" id="vide" hidden>Aucun match dans le calendrier pour l'instant.</div>
+    </div>
+  </main>
+
+  <!-- Ajout / modification d'un match (admin) -->
+  <div class="voile" id="voile" hidden></div>
+  <div class="fenetre fenetre-petite" id="fenetre" hidden role="dialog" aria-modal="true" aria-labelledby="f-titre">
+    <div class="fenetre-entete">
+      <h2 id="f-titre" style="margin:0"></h2>
+      <button class="btn btn-discret" id="btn-fermer" aria-label="Fermer">✕</button>
+    </div>
+    <form class="fenetre-corps" id="form-match" novalidate>
+      <div class="grille-2">
+        <div class="champ"><label for="f-date">Date</label><input type="date" id="f-date" required></div>
+        <div class="champ"><label for="f-heure">Heure</label><input type="time" id="f-heure" required value="19:45"></div>
+      </div>
+      <div class="champ"><label for="f-adversaire">Adversaire</label><input type="text" id="f-adversaire" required></div>
+      <div class="champ">
+        <label for="f-type">Type</label>
+        <select id="f-type"></select>
+      </div>
+      <div id="f-erreur" class="message message-erreur" hidden></div>
+      <div class="actions" style="justify-content:space-between">
+        <button type="button" class="btn btn-discret" id="btn-supprimer" style="color:var(--erreur)">Supprimer ce match</button>
+        <button type="submit" class="btn btn-principal" id="btn-enregistrer">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+
+  <script type="module" src="js/calendrier.js"></script>
+</body>
+</html>

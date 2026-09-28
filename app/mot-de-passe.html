@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mot de passe — Sponsoring ↔ Régie</title>
+  <link rel="icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="centre">
+    <div class="carte etroite carte-connexion">
+      <div class="bandeau">
+        <span class="marque-logo">HCFG<img src="img/logo.jpg" alt="HC Fribourg-Gottéron" onerror="this.remove()"></span>
+        <div>
+          <h1>Choisir un mot de passe</h1>
+          <p>Sponsoring ↔ Régie · HC Fribourg-Gottéron</p>
+        </div>
+      </div>
+      <div class="contenu">
+      <p class="doux" id="pour"></p>
+
+      <div id="message" class="message" hidden></div>
+
+      <form id="form-mdp" novalidate hidden>
+        <div class="champ">
+          <label for="mdp1">Nouveau mot de passe</label>
+          <input type="password" id="mdp1" autocomplete="new-password" minlength="8" required>
+          <p class="aide">8 caractères minimum.</p>
+        </div>
+        <div class="champ">
+          <label for="mdp2">Confirmer le mot de passe</label>
+          <input type="password" id="mdp2" autocomplete="new-password" minlength="8" required>
+        </div>
+        <button type="submit" class="btn btn-principal btn-large" id="btn-mdp">Enregistrer</button>
+        <div class="bas-formulaire">
+          <a href="demandes.html" id="lien-annuler">Annuler</a>
+        </div>
+      </form>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="js/mot-de-passe.js"></script>
+</body>
+</html>

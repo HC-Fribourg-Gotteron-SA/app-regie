@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demandes — Sponsoring ↔ Régie</title>
+  <link rel="icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <div class="titre-page">
+      <div>
+        <div class="surtitre">Sponsoring ↔ Régie</div>
+        <h1>Demandes</h1>
+        <p class="doux" id="sous-titre">Toutes les demandes du Sponsoring à la Régie.</p>
+      </div>
+      <a class="btn btn-principal" href="demande.html">+ Nouvelle demande</a>
+    </div>
+
+    <div class="filtres">
+      <div class="onglets" id="onglets"></div>
+      <input type="search" id="recherche" placeholder="Rechercher un sponsor, un produit, une remarque…">
+      <select id="filtre-type"><option value="">Tous les types</option></select>
+      <label class="case"><input type="checkbox" id="mes-demandes"> Mes demandes uniquement</label>
+    </div>
+
+    <div class="carte" style="padding:0; overflow:hidden">
+      <div class="tableau-conteneur">
+        <table class="tableau">
+          <thead>
+            <tr>
+              <th>Demande</th>
+              <th class="col-optionnelle">Quand</th>
+              <th>Statut</th>
+              <th class="col-optionnelle">Reçue</th>
+              <th class="col-optionnelle">Par</th>
+            </tr>
+          </thead>
+          <tbody id="lignes"></tbody>
+        </table>
+      </div>
+      <div class="vide" id="vide" hidden>Aucune demande ici.</div>
+    </div>
+  </main>
+
+  <div class="voile" id="voile" hidden></div>
+  <div class="fenetre" id="fenetre" hidden role="dialog" aria-modal="true" aria-labelledby="d-titre">
+    <div class="fenetre-entete">
+      <div>
+        <div class="surtitre" id="d-surtitre"></div>
+        <h2 id="d-titre"></h2>
+        <div id="d-sous-titre" class="doux petit" style="margin-top:.3rem"></div>
+      </div>
+      <button class="btn btn-discret" id="btn-fermer" aria-label="Fermer">✕</button>
+    </div>
+    <div class="fenetre-corps" id="d-corps"></div>
+    <div class="fenetre-pied" id="d-pied" hidden></div>
+  </div>
+
+  <script type="module" src="js/demandes.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# Publication sur Netlify : le site = le dossier app/ tel quel (pas de build)
+[build]
+  publish = "app"
+  command = ""
+
+# Page d'accueil = page de connexion
+[[redirects]]
+  from = "/"
+  to = "/index.html"
+  status = 200

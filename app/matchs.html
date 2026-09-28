@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Par match — Sponsoring ↔ Régie</title>
+  <link rel="icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <div class="titre-page">
+      <div>
+        <div class="surtitre">Saison <span id="titre-saison"></span></div>
+        <h1>Par match</h1>
+        <p class="doux">Ce qui est pris seulement pour certains matchs (en plus de ce qui passe toute la saison).</p>
+      </div>
+    </div>
+
+    <div class="filtres">
+      <div class="onglets" id="onglets">
+        <button data-vue="avenir" class="actif">À venir</button>
+        <button data-vue="avec">Avec des ventes au match</button>
+        <button data-vue="passes">Passés</button>
+      </div>
+      <input type="search" id="recherche" placeholder="Rechercher un sponsor, un produit, un adversaire…">
+    </div>
+
+    <div id="liste-matchs" class="liste-matchs"><p class="doux">Chargement…</p></div>
+  </main>
+  <script type="module" src="js/matchs.js"></script>
+</body>
+</html>

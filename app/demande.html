@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nouvelle demande — Sponsoring ↔ Régie</title>
+  <link rel="icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <div class="moyenne">
+      <div class="titre-page">
+        <div>
+          <div class="surtitre">Sponsoring → Régie</div>
+          <h1>Nouvelle demande</h1>
+          <p class="doux">Nouveau sponsor, ajout de produit, changement de visuel ou suppression.</p>
+        </div>
+      </div>
+
+      <div id="confirmation" class="carte" hidden>
+        <h2>✓ Demande envoyée</h2>
+        <p>La Régie la voit dès maintenant dans la file des demandes.</p>
+        <div class="actions" style="justify-content:flex-start">
+          <a class="btn btn-principal" href="demandes.html">Voir les demandes</a>
+          <button class="btn" id="btn-autre">Nouvelle demande</button>
+        </div>
+      </div>
+
+      <form id="form-demande" novalidate>
+        <!-- 1. Sponsor -->
+        <section class="carte etape">
+          <h2 class="etape-titre"><span class="etape-num">1</span> Sponsor</h2>
+          <div class="champ" style="margin:0">
+            <div id="bloc-recherche">
+              <input type="search" id="recherche-sponsor" autocomplete="off" aria-label="Sponsor"
+                     placeholder="Tapez le nom (les variantes et fautes sont tolérées)">
+              <div id="suggestions" class="suggestions" hidden></div>
+            </div>
+            <div id="sponsor-choisi" class="selection" hidden>
+              <span id="sponsor-choisi-nom"></span>
+              <button type="button" class="btn btn-discret" id="btn-changer-sponsor">Changer</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. Type -->
+        <section class="carte etape">
+          <h2 class="etape-titre"><span class="etape-num">2</span> Type de demande</h2>
+          <div class="choix" id="types"></div>
+        </section>
+
+        <!-- 3. Produits -->
+        <section class="carte etape">
+          <h2 class="etape-titre"><span class="etape-num">3</span> Produits concernés</h2>
+          <div class="selection-produits" id="selection-produits" hidden></div>
+          <div class="outils-produits">
+            <input type="search" id="filtre-produits" placeholder="Rechercher un produit (ex. goal, 6M, pause…)" aria-label="Rechercher un produit">
+          </div>
+          <div class="groupes-produits" id="produits"><p class="doux">Chargement…</p></div>
+        </section>
+
+        <!-- 4. Détails par produit -->
+        <section class="carte etape" id="bloc-details" hidden>
+          <h2 class="etape-titre"><span class="etape-num">4</span> Détails par produit
+            <span class="doux">quand, son, fichiers, remarque</span></h2>
+          <div class="details-produits" id="details-produits"></div>
+        </section>
+
+        <!-- 5. Remarque générale (les fichiers se déposent dans chaque produit) -->
+        <section class="carte etape">
+          <h2 class="etape-titre"><span class="etape-num" id="num-derniere">4</span> Pour finir <span class="doux">facultatif</span></h2>
+          <div class="champ" style="margin:0">
+            <label for="remarque">Remarque générale pour la Régie</label>
+            <textarea id="remarque" placeholder="Ce qui concerne toute la demande : contact, délai, logo à mettre sur fond noir…"></textarea>
+            <p class="aide">Les fichiers (vidéos, visuels, logos) se déposent dans chaque produit, à l'étape « Détails par produit ».</p>
+          </div>
+        </section>
+
+        <div id="erreur" class="message message-erreur" hidden></div>
+
+        <div class="barre-envoi">
+          <span id="resume-envoi">Aucun produit choisi</span>
+          <button type="submit" class="btn btn-principal" id="btn-envoyer">Envoyer la demande</button>
+        </div>
+      </form>
+    </div>
+  </main>
+  <script type="module" src="js/demande.js"></script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Match du jour — Sponsoring ↔ Régie</title>
+  <link rel="icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <div class="titre-page">
+      <div>
+        <div class="surtitre" id="m-surtitre">Match du jour</div>
+        <h1 id="m-titre">Chargement…</h1>
+        <p class="doux" id="m-sous-titre"></p>
+      </div>
+      <select id="choix-match" aria-label="Choisir un autre match" style="width:auto"></select>
+    </div>
+
+    <!-- En une ligne : qu'est-ce qu'il reste à faire ? -->
+    <div class="carte bilan-match" id="bilan" hidden></div>
+
+    <!-- Pour ce soir : infos générales et tâches (hors sponsors) -->
+    <section class="carte bloc-notes" id="bloc-notes" hidden>
+      <h3>Pour ce soir <span class="doux petit">· infos et tâches pour l'équipe</span></h3>
+      <ul class="notes-match" id="notes"></ul>
+      <p class="doux petit" id="notes-vide" hidden style="margin:.2rem 0 0">Rien de noté pour ce match.</p>
+      <form class="ajout-note" id="form-note" hidden>
+        <select id="note-type" aria-label="Type" style="width:auto">
+          <option value="tache">☐ Tâche</option>
+          <option value="info">📝 Info</option>
+        </select>
+        <input type="text" id="note-texte" placeholder="Ex. : tester le micro du speaker · match télévisé, pause raccourcie…" maxlength="500">
+        <button type="submit" class="btn btn-principal">Ajouter</button>
+      </form>
+    </section>
+
+    <!-- Demandes pas encore traitées (Régie) -->
+    <a class="carte lien-demandes-attente" id="demandes-attente" href="demandes.html" hidden></a>
+
+    <!-- À faire dans Colosseo : seulement ce qui change depuis le match précédent -->
+    <section id="bloc-a-faire" hidden style="margin-bottom:1.75rem">
+      <h3>À faire dans Colosseo <span class="doux" id="nb-a-faire"></span></h3>
+      <div id="a-faire"></div>
+    </section>
+
+    <!-- Toute la playlist, pour vérifier -->
+    <section id="bloc-playlist" hidden>
+      <h3>Ce qui passe <span id="quand-playlist">ce soir</span> <span class="doux">· par produit, dans l'ordre</span></h3>
+      <div id="playlist"></div>
+    </section>
+  </main>
+  <script type="module" src="js/match-du-jour.js"></script>
+</body>
+</html>
