@@ -358,6 +358,10 @@ Autres règles décidées :
       remarque, bouton **Traiter** → fiche produit ; Sponsoring : « en attente de la Régie ») et comptent dans le
       bilan (« dont N demandes à traiter d'abord »). Une fois ajoutée, la demande devient un vrai changement.
       Le lien du haut ne montre plus que les **autres** demandes en cours (pas pour ce match, questions).
+      **Ajouter une demande = la faire dans Colosseo en même temps** (dit par Léa : « ce qu'on change dans nos fichiers
+      on le change dans Colosseo ») : bouton « Ajouter » (plus « Traiter ») ; un changement dont la ligne vient d'une
+      demande ajoutée depuis le match précédent (`demandes_produits.ligne_id` + `traite_le`) est **déjà coché Fait**
+      (« Fait avec la demande par … », case grisée) — pas de double étape.
       **« Pour ce soir »** (demandé par Léa, migration 26) : bloc sous le bilan pour les infos générales du match et
       les tâches hors sponsors (📝 info / ☐ tâche à cocher, qui / quand, ✕ supprimer) ; Régie / admin écrivent,
       Sponsoring lit ; le bilan compte les tâches restantes. Caché si la table n'existe pas encore.

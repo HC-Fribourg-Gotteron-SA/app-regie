@@ -25,6 +25,7 @@ const etat = {
   changements: [], passagesCe: [],
   notes: [], tableNotes: true,  // « Pour ce soir » : infos et tâches du match (hors sponsors)
   attente: [], demandesMatch: [], // produits de demandes pas encore ajoutés (tous / ceux de ce match)
+  traitees: new Map(),      // ligne -> produit de demande ajouté depuis le dernier match (= fait dans Colosseo)
   tableFait: true,          // false si la migration 22 n'est pas encore exécutée
 };
 
@@ -102,7 +103,7 @@ async function chargerMatch() {
   etat.changements = etat.precedent
     ? calculerChangements({ passagesAvant, passagesCe: etat.passagesCe, lignes: etat.lignes }) : [];
 
-  const [{ data: fait, error }, { data: notes, error: eNotes }, { data: attente }] = await Promise.all([
+  const [{ data: fait, error }, { data: notes, error: eNotes }, { data: attente }, { data: traitees }] = await Promise.all([
     sb.from('colosseo_fait').select('ligne_id, action, fait_par, fait_le').eq('match_id', m.id),
     sb.from('notes_match').select('id, type, texte, fait, fait_par, fait_le, cree_par, cree_le')
       .eq('match_id', m.id).order('cree_le'),
@@ -112,7 +113,13 @@ async function chargerMatch() {
                produit:produits(id, nom, ordre, famille, support),
                demande:demandes!inner(id, type, statut, created_at, sponsor_nom_saisi, sponsor:sponsors(nom))`)
       .is('traite_le', null).neq('demande.statut', 'traitee'),
+    // demandes ajoutées depuis le match précédent : le changement a été fait dans Colosseo en même temps
+    etat.precedent
+      ? sb.from('demandes_produits').select('ligne_id, traite_le, traite_par')
+          .not('ligne_id', 'is', null).gte('traite_le', etat.precedent.date_heure)
+      : Promise.resolve({ data: [] }),
   ]);
+  etat.traitees = new Map((traitees || []).map(t => [t.ligne_id, t]));
   etat.tableFait = !error;
   etat.fait = new Map((fait || []).map(f => [`${f.ligne_id}|${f.action}`, f]));
   etat.tableNotes = !eNotes;          // false si la migration 26 n'est pas encore exécutée
@@ -168,7 +175,13 @@ const trier = (a, b) => a.ordre - b.ordre || a.produit.localeCompare(b.produit) 
 // Affichage
 // ---------------------------------------------------------------------
 function afficher() {
-  const tous = etat.changements.map(c => ({ ...c, ...infos(c.ligne_id), fait: etat.fait.get(`${c.ligne_id}|${c.action}`) }));
+  // ajouté depuis une demande depuis le dernier match = déjà fait dans Colosseo (on le fait en même temps)
+  const tous = etat.changements.map(c => {
+    const inf = infos(c.ligne_id);
+    const t = etat.traitees.get(inf.pubId || c.ligne_id);
+    return { ...c, ...inf, fait: etat.fait.get(`${c.ligne_id}|${c.action}`)
+      || (t && { fait_par: t.traite_par, fait_le: t.traite_le, viaDemande: true }) };
+  });
   // anneau ajouté / enlevé en même temps que sa Pub pause tiers : une seule ligne (« avec anneau LED »)
   const pubs = new Set(tous.filter(i => !i.anneau).map(i => `${i.ligne_id}|${i.action}`));
   // demandes pas encore ajoutées sur leur fiche : à traiter d'abord, elles changeront la playlist
@@ -199,7 +212,7 @@ function afficher() {
   } else {
     bilan.className = 'carte bilan-match bilan-a-faire';
     bilan.innerHTML = `<strong>${reste} chose${reste > 1 ? 's' : ''} à faire dans Colosseo</strong>
-      <span class="doux">${demandes.length ? `· dont ${demandes.length} demande${demandes.length > 1 ? 's' : ''} à traiter d’abord` : ''}
+      <span class="doux">${demandes.length ? `· dont ${demandes.length} demande${demandes.length > 1 ? 's' : ''} à ajouter` : ''}
       ${items.length - reste ? `· ${items.length - reste} déjà faite${items.length - reste > 1 ? 's' : ''}` : ''}</span>` + plusTaches;
   }
   afficherNotes();
@@ -265,12 +278,12 @@ function carteDemande(i) {
       <div class="changement-icone" aria-hidden="true">📨</div>
       <div class="changement-texte">
         <div><span class="changement-verbe">${VERBE_DEMANDE[d.type] || 'Demande à ajouter'}</span> · <strong>${echapper(i.sponsor)}</strong>
-          <span class="doux petit">(reçue le ${dateCourte(d.created_at)} · pas encore traitée)</span></div>
+          <span class="doux petit">(reçue le ${dateCourte(d.created_at)} · à ajouter dans l’outil et dans Colosseo en même temps)</span></div>
         <div class="petit">${details.join(' · ')}</div>
         ${a.remarque_sponsoring ? `<div class="petit doux">Sponsoring : ${echapper(a.remarque_sponsoring)}</div>` : ''}
       </div>
       <div class="changement-actions">
-        ${estRegie ? `<a class="btn btn-principal" href="produit.html?id=${a.produit_id}">Traiter</a>`
+        ${estRegie ? `<a class="btn btn-principal" href="produit.html?id=${a.produit_id}">Ajouter</a>`
                    : '<span class="doux petit">en attente de la Régie</span>'}
       </div>
     </div>`;
@@ -308,12 +321,13 @@ function carteChangement(i) {
         ${details.length ? `<div class="petit">${details.join(' · ')}</div>` : ''}
         ${visuel ? `<div class="petit">${visuel}</div>` : ''}
         ${i.l?.consignes && i.action !== 'enlever' ? `<div class="petit doux">Remarque : ${echapper(i.l.consignes)}</div>` : ''}
-        ${fait ? `<div class="petit doux">Fait par ${echapper(etat.personnes.get(fait.fait_par) || '—')} à ${heure(fait.fait_le)}</div>` : ''}
+        ${fait ? `<div class="petit doux">Fait${fait.viaDemande ? ' avec la demande' : ''} par ${echapper(etat.personnes.get(fait.fait_par) || '—')}
+          ${fait.viaDemande && new Date(fait.fait_le).toDateString() !== new Date().toDateString() ? `le ${dateCourte(fait.fait_le)}` : ''} à ${heure(fait.fait_le)}</div>` : ''}
       </div>
       <div class="changement-actions">
         ${a?.storage_path && i.action !== 'enlever' ? `<button type="button" class="btn btn-discret" data-telecharger="${echapper(a.storage_path)}">Télécharger</button>` : ''}
         ${estRegie ? `<label class="case-fait"><input type="checkbox" data-fait="${i.ligne_id}|${i.action}" ${fait ? 'checked' : ''}
-          ${etat.tableFait ? '' : 'disabled'}> Fait</label>` : ''}
+          ${etat.tableFait && !fait?.viaDemande ? '' : 'disabled'}> Fait</label>` : ''}
       </div>
     </div>`;
 }
