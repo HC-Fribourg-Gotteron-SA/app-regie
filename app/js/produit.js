@@ -598,6 +598,7 @@ function listeVisuels(assets) {
         <span class="doux petit"> · déposé le ${dateCourte(a.depose_le)}</span></span>
       ${a.statut === 'archive' ? '<span class="badge">ancien</span>'
         : STATUT_ASSET[a.statut] ? `<span class="badge ${STATUT_ASSET[a.statut][1]}">${STATUT_ASSET[a.statut][0]}</span>` : ''}
+      ${a.storage_path ? `<button type="button" class="btn btn-discret" data-telecharger-visuel="${echapper(a.storage_path)}">Télécharger</button>` : ''}
     </li>`).join('')}</ul>`
     : '<p class="doux petit" style="margin:0">Aucun visuel pour l’instant.</p>';
 }
@@ -799,10 +800,22 @@ function fermerDetail() {
 }
 // Fermer le détail ouvert depuis une vue d'ensemble (Action scenes) ramène à cette vue
 function fermerParUtilisateur() {
+  // ouvert depuis Match du jour : on y retourne
+  const retour = new URLSearchParams(location.search).get('retour');
+  if (retour && /^[\w-]+\.html(\?[\w=&%-]*)?$/.test(retour)) { location.href = retour; return; }
   const depuisVue = new URLSearchParams(location.search).get('ligne');
   if (depuisVue && CATEGORIES_UNE_PAGE.has(etat.p?.categorie)) { location.href = lienCategorie(etat.p.categorie); return; }
   fermerDetail();
 }
+// Télécharger un visuel depuis le détail d'une diffusion
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-telecharger-visuel]');
+  if (!b) return;
+  const { data, error } = await sb.storage.from('assets').createSignedUrl(b.dataset.telechargerVisuel, 600, { download: true });
+  if (error) return notifier(`Téléchargement impossible : ${error.message}`, 'erreur');
+  location.href = data.signedUrl;
+});
+
 $('btn-fermer').addEventListener('click', fermerParUtilisateur);
 $('voile').addEventListener('click', fermerParUtilisateur);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('fenetre').hidden) fermerParUtilisateur(); });

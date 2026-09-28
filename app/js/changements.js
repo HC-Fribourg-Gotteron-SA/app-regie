@@ -45,9 +45,10 @@ function raisonRetrait(l) {
   return 'ne passe plus';
 }
 
-// Ce que la Régie fait concrètement, selon le type de produit
-export function consigne(action, famille) {
+// Ce que la Régie fait concrètement, selon le type de produit (le produit est en titre du groupe)
+export function consigne(action, famille, categorie = '') {
   if (action === 'visuel') return 'Remplacer le visuel';
+  if (categorie === 'Action scenes') return action === 'ajouter' ? 'Ajouter à l’action scene' : 'Enlever de l’action scene';
   if (famille === 'emplacement') return action === 'ajouter' ? 'Mettre le logo' : 'Enlever le logo · remettre Banner HCFG';
   if (famille === 'slide') return action === 'ajouter' ? 'Ajouter le logo sur la slide' : 'Enlever le logo de la slide';
   return action === 'ajouter' ? 'Ajouter à la playlist' : 'Enlever de la playlist';

@@ -13,7 +13,9 @@ const jourLocal = (d) => { const x = new Date(d); return `${x.getFullYear()}-${p
 const heure = (d) => new Date(d).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
 const jour = (d) => new Date(d).toLocaleDateString('fr-CH', { weekday: 'long', day: '2-digit', month: '2-digit' });
 const ICONES = { ajouter: '➕', enlever: '➖', visuel: '🔄' };
-const ORDRE_ACTIONS = { demande: -1, enlever: 0, ajouter: 1, visuel: 2 };
+// Bouton de chaque changement : ouvre la diffusion (fichier, son, remarques…) sur sa fiche
+const BOUTON_ACTION = { ajouter: 'Ajouter', visuel: 'Remplacer', enlever: 'Voir' };
+const ORDRE_ACTIONS ={ demande: -1, enlever: 0, ajouter: 1, visuel: 2 };
 
 const etat = {
   matchs: [], match: null, precedent: null,
@@ -25,7 +27,7 @@ const etat = {
   changements: [], passagesCe: [],
   notes: [], tableNotes: true,  // « Pour ce soir » : infos et tâches du match (hors sponsors)
   attente: [], demandesMatch: [], // produits de demandes pas encore ajoutés (tous / ceux de ce match)
-  traitees: new Map(),      // ligne -> produit de demande ajouté depuis le dernier match (= fait dans Colosseo)
+  traitees: new Map(),      // ligne -> produit de demande traité depuis le dernier match (info ; « Fait » reste à cocher)
   tableFait: true,          // false si la migration 22 n'est pas encore exécutée
 };
 
@@ -158,6 +160,7 @@ function infos(ligneId) {
     produit: l?.produit ? court(l.produit.nom) : 'Produit inconnu',
     ordre: l?.produit?.ordre ?? 100,
     famille: l?.produit?.famille,
+    categorie: l?.produit?.categorie,
     sponsor: l?.contrat?.sponsor?.nom || '—',
     priorite: l?.priorite ?? 1e9,
     empl: (l?.emplacements || []).map(e => e.emplacement).filter(Boolean).map(e => `${e.anneau}-${e.zone}-${e.position}`),
@@ -175,12 +178,11 @@ const trier = (a, b) => a.ordre - b.ordre || a.produit.localeCompare(b.produit) 
 // Affichage
 // ---------------------------------------------------------------------
 function afficher() {
-  // ajouté depuis une demande depuis le dernier match = déjà fait dans Colosseo (on le fait en même temps)
+  // « traitée » (demande ajoutée dans l'outil) ≠ « fait » (mis dans Colosseo) : on indique seulement la demande
   const tous = etat.changements.map(c => {
     const inf = infos(c.ligne_id);
-    const t = etat.traitees.get(inf.pubId || c.ligne_id);
-    return { ...c, ...inf, fait: etat.fait.get(`${c.ligne_id}|${c.action}`)
-      || (t && { fait_par: t.traite_par, fait_le: t.traite_le, viaDemande: true }) };
+    return { ...c, ...inf, fait: etat.fait.get(`${c.ligne_id}|${c.action}`),
+             traitee: etat.traitees.get(inf.pubId || c.ligne_id) };
   });
   // anneau ajouté / enlevé en même temps que sa Pub pause tiers : une seule ligne (« avec anneau LED »)
   const pubs = new Set(tous.filter(i => !i.anneau).map(i => `${i.ligne_id}|${i.action}`));
@@ -278,7 +280,7 @@ function carteDemande(i) {
       <div class="changement-icone" aria-hidden="true">📨</div>
       <div class="changement-texte">
         <div><span class="changement-verbe">${VERBE_DEMANDE[d.type] || 'Demande à ajouter'}</span> · <strong>${echapper(i.sponsor)}</strong>
-          <span class="doux petit">(reçue le ${dateCourte(d.created_at)} · à ajouter dans l’outil et dans Colosseo en même temps)</span></div>
+          <span class="doux petit">(reçue le ${dateCourte(d.created_at)} · pas encore traitée)</span></div>
         <div class="petit">${details.join(' · ')}</div>
         ${a.remarque_sponsoring ? `<div class="petit doux">Sponsoring : ${echapper(a.remarque_sponsoring)}</div>` : ''}
       </div>
@@ -316,18 +318,20 @@ function carteChangement(i) {
     <div class="changement changement-${i.action}${fait ? ' est-fait' : ''}">
       <div class="changement-icone" aria-hidden="true">${ICONES[i.action]}</div>
       <div class="changement-texte">
-        <div><span class="changement-verbe">${i.anneau ? consigneAnneau(i.action) : consigne(i.action, i.famille)}</span> · <strong>${echapper(i.sponsor)}</strong>
+        <div><span class="changement-verbe">${i.anneau ? consigneAnneau(i.action) : consigne(i.action, i.famille, i.categorie)}</span> · <strong>${echapper(i.sponsor)}</strong>
           <span class="doux petit">(${echapper(i.raison)})</span></div>
         ${details.length ? `<div class="petit">${details.join(' · ')}</div>` : ''}
         ${visuel ? `<div class="petit">${visuel}</div>` : ''}
         ${i.l?.consignes && i.action !== 'enlever' ? `<div class="petit doux">Remarque : ${echapper(i.l.consignes)}</div>` : ''}
-        ${fait ? `<div class="petit doux">Fait${fait.viaDemande ? ' avec la demande' : ''} par ${echapper(etat.personnes.get(fait.fait_par) || '—')}
-          ${fait.viaDemande && new Date(fait.fait_le).toDateString() !== new Date().toDateString() ? `le ${dateCourte(fait.fait_le)}` : ''} à ${heure(fait.fait_le)}</div>` : ''}
+        ${i.traitee ? `<div class="petit doux">Demande traitée par ${echapper(etat.personnes.get(i.traitee.traite_par) || '—')}
+          le ${dateCourte(i.traitee.traite_le)}</div>` : ''}
+        ${fait ? `<div class="petit doux">Fait dans Colosseo par ${echapper(etat.personnes.get(fait.fait_par) || '—')} à ${heure(fait.fait_le)}</div>` : ''}
       </div>
       <div class="changement-actions">
         ${a?.storage_path && i.action !== 'enlever' ? `<button type="button" class="btn btn-discret" data-telecharger="${echapper(a.storage_path)}">Télécharger</button>` : ''}
-        ${fait?.viaDemande ? '<span class="etat etat-ecran">✓ Fait</span>'      // ajouté depuis la demande = fait dans Colosseo
-          : estRegie ? `<label class="case-fait"><input type="checkbox" data-fait="${i.ligne_id}|${i.action}" ${fait ? 'checked' : ''}
+        ${i.l?.produit?.id ? `<a class="btn${i.action === 'enlever' ? '' : ' btn-principal'}" href="produit.html?id=${i.l.produit.id}&ligne=${i.l.id}&retour=${encodeURIComponent(`match-du-jour.html?match=${etat.match.id}`)}"
+          title="Ouvrir le détail : fichiers, son, remarques…">${BOUTON_ACTION[i.action]}</a>` : ''}
+        ${estRegie ? `<label class="case-fait"><input type="checkbox" data-fait="${i.ligne_id}|${i.action}" ${fait ? 'checked' : ''}
           ${etat.tableFait ? '' : 'disabled'}> Fait</label>` : ''}
       </div>
     </div>`;
