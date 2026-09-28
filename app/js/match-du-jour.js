@@ -8,10 +8,12 @@ const estRegie = ['regie', 'admin'].includes(profil.role);
 
 const $ = (id) => document.getElementById(id);
 const court = (nom) => (nom || '').replace(/^Action scene – /, 'Action scene · ');
+const pad = (n) => String(n).padStart(2, '0');
+const jourLocal = (d) => { const x = new Date(d); return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`; };
 const heure = (d) => new Date(d).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
 const jour = (d) => new Date(d).toLocaleDateString('fr-CH', { weekday: 'long', day: '2-digit', month: '2-digit' });
 const ICONES = { ajouter: '➕', enlever: '➖', visuel: '🔄' };
-const ORDRE_ACTIONS = { enlever: 0, ajouter: 1, visuel: 2 };
+const ORDRE_ACTIONS = { demande: -1, enlever: 0, ajouter: 1, visuel: 2 };
 
 const etat = {
   matchs: [], match: null, precedent: null,
@@ -22,6 +24,7 @@ const etat = {
   fait: new Map(),          // `${ligne}|${action}` -> { fait_par, fait_le }
   changements: [], passagesCe: [],
   notes: [], tableNotes: true,  // « Pour ce soir » : infos et tâches du match (hors sponsors)
+  attente: [], demandesMatch: [], // produits de demandes pas encore ajoutés (tous / ceux de ce match)
   tableFait: true,          // false si la migration 22 n'est pas encore exécutée
 };
 
@@ -99,26 +102,39 @@ async function chargerMatch() {
   etat.changements = etat.precedent
     ? calculerChangements({ passagesAvant, passagesCe: etat.passagesCe, lignes: etat.lignes }) : [];
 
-  const [{ data: fait, error }, { data: notes, error: eNotes }] = await Promise.all([
+  const [{ data: fait, error }, { data: notes, error: eNotes }, { data: attente }] = await Promise.all([
     sb.from('colosseo_fait').select('ligne_id, action, fait_par, fait_le').eq('match_id', m.id),
     sb.from('notes_match').select('id, type, texte, fait, fait_par, fait_le, cree_par, cree_le')
       .eq('match_id', m.id).order('cree_le'),
+    // produits de demandes pas encore ajoutés sur leur fiche
+    sb.from('demandes_produits')
+      .select(`demande_id, produit_id, type_vente, dates_matchs, avec_son, avec_anneau, duree_s, remarque_sponsoring,
+               produit:produits(id, nom, ordre, famille, support),
+               demande:demandes!inner(id, type, statut, created_at, sponsor_nom_saisi, sponsor:sponsors(nom))`)
+      .is('traite_le', null).neq('demande.statut', 'traitee'),
   ]);
   etat.tableFait = !error;
   etat.fait = new Map((fait || []).map(f => [`${f.ligne_id}|${f.action}`, f]));
   etat.tableNotes = !eNotes;          // false si la migration 26 n'est pas encore exécutée
   etat.notes = notes || [];
+  // celles qui concernent ce match : pour la saison, ou vendues pour ce jour de match
+  const jourMatch = jourLocal(m.date_heure);
+  etat.attente = attente || [];
+  etat.demandesMatch = etat.attente.filter(a => a.type_vente !== 'match' || (a.dates_matchs || []).includes(jourMatch));
 
   afficher();
   if (estRegie) compterDemandes();
 }
 
+// Les autres demandes en cours (pas pour ce match, questions, sans produit…) : un simple lien
 async function compterDemandes() {
-  const { count } = await sb.from('demandes').select('id', { count: 'exact', head: true }).in('statut', ['nouvelle', 'en_cours']);
+  const { data } = await sb.from('demandes').select('id').in('statut', ['nouvelle', 'en_cours', 'question']);
+  const ici = new Set(etat.demandesMatch.map(a => a.demande_id));
+  const autres = (data || []).filter(d => !ici.has(d.id)).length;
   const lien = $('demandes-attente');
-  lien.hidden = !count;
-  if (count) lien.innerHTML = `📨 <strong>${count} demande${count > 1 ? 's' : ''} pas encore traitée${count > 1 ? 's' : ''}</strong>
-    <span class="doux">— à regarder avant le match, elles peuvent changer la playlist →</span>`;
+  lien.hidden = !autres;
+  if (autres) lien.innerHTML = `📨 <strong>${autres} autre${autres > 1 ? 's' : ''} demande${autres > 1 ? 's' : ''} en cours</strong>
+    <span class="doux">— pas pour ce match (ou en attente d’une réponse) →</span>`;
 }
 
 // ---------------------------------------------------------------------
@@ -155,7 +171,14 @@ function afficher() {
   const tous = etat.changements.map(c => ({ ...c, ...infos(c.ligne_id), fait: etat.fait.get(`${c.ligne_id}|${c.action}`) }));
   // anneau ajouté / enlevé en même temps que sa Pub pause tiers : une seule ligne (« avec anneau LED »)
   const pubs = new Set(tous.filter(i => !i.anneau).map(i => `${i.ligne_id}|${i.action}`));
+  // demandes pas encore ajoutées sur leur fiche : à traiter d'abord, elles changeront la playlist
+  const demandes = etat.demandesMatch.map(a => ({
+    action: 'demande', dp: a, ligne_id: `${a.demande_id}|${a.produit_id}`,
+    produit: court(a.produit?.nom), ordre: a.produit?.ordre ?? 100, famille: a.produit?.famille,
+    sponsor: a.demande?.sponsor?.nom || a.demande?.sponsor_nom_saisi || '—', priorite: -1,
+  }));
   const items = tous.filter(i => !(i.anneau && i.action !== 'visuel' && pubs.has(`${i.pubId}|${i.action}`)))
+    .concat(demandes)
     .sort((a, b) => trier(a, b) || (a.anneau - b.anneau) || ORDRE_ACTIONS[a.action] - ORDRE_ACTIONS[b.action]);
   const reste = items.filter(i => !i.fait).length;
   const taches = etat.notes.filter(n => n.type === 'tache' && !n.fait).length;
@@ -176,7 +199,8 @@ function afficher() {
   } else {
     bilan.className = 'carte bilan-match bilan-a-faire';
     bilan.innerHTML = `<strong>${reste} chose${reste > 1 ? 's' : ''} à faire dans Colosseo</strong>
-      <span class="doux">${items.length - reste ? `· ${items.length - reste} déjà faite${items.length - reste > 1 ? 's' : ''}` : ''}</span>` + plusTaches;
+      <span class="doux">${demandes.length ? `· dont ${demandes.length} demande${demandes.length > 1 ? 's' : ''} à traiter d’abord` : ''}
+      ${items.length - reste ? `· ${items.length - reste} déjà faite${items.length - reste > 1 ? 's' : ''}` : ''}</span>` + plusTaches;
   }
   afficherNotes();
   if (!etat.tableFait && estRegie && items.length) {
@@ -226,7 +250,34 @@ function grouper(items) {
   return groupes;
 }
 
+// Demande pas encore ajoutée sur sa fiche produit : la traiter (elle deviendra « Ajouter », « Remplacer »…)
+const VERBE_DEMANDE = { suppression: 'Retrait demandé', changement_visuel: 'Nouveau visuel demandé' };
+function carteDemande(i) {
+  const a = i.dp, d = a.demande || {};
+  const details = [
+    a.type_vente === 'match' ? '<strong>vendu pour ce match</strong>' : 'toute la saison',
+    a.avec_son === true ? '<strong>avec son</strong>' : a.avec_son === false ? 'sans son' : '',
+    a.avec_anneau === true ? '<strong>avec anneau LED</strong>' : a.avec_anneau === false ? 'sans anneau LED' : '',
+    a.duree_s ? `${a.duree_s} s` : '',
+  ].filter(Boolean);
+  return `
+    <div class="changement changement-demande">
+      <div class="changement-icone" aria-hidden="true">📨</div>
+      <div class="changement-texte">
+        <div><span class="changement-verbe">${VERBE_DEMANDE[d.type] || 'Demande à ajouter'}</span> · <strong>${echapper(i.sponsor)}</strong>
+          <span class="doux petit">(reçue le ${dateCourte(d.created_at)} · pas encore traitée)</span></div>
+        <div class="petit">${details.join(' · ')}</div>
+        ${a.remarque_sponsoring ? `<div class="petit doux">Sponsoring : ${echapper(a.remarque_sponsoring)}</div>` : ''}
+      </div>
+      <div class="changement-actions">
+        ${estRegie ? `<a class="btn btn-principal" href="produit.html?id=${a.produit_id}">Traiter</a>`
+                   : '<span class="doux petit">en attente de la Régie</span>'}
+      </div>
+    </div>`;
+}
+
 function carteChangement(i) {
+  if (i.action === 'demande') return carteDemande(i);
   const a = etat.assets.get(i.asset_id);
   const details = [];
   if (i.empl.length) {

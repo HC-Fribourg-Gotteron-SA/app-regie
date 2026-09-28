@@ -352,6 +352,12 @@ Autres règles décidées :
       pause tiers (« avec anneau LED (visuel) »), sinon « Ajouter / Enlever l'anneau LED », « Remplacer le visuel de
       l'anneau LED » sous Pub pause tiers ; playlist : badge « + anneau LED ». Attention : `ligne_couplee_id` est posé
       **dans les deux sens** (Pub ↔ anneau) ; l'anneau se reconnaît à son produit **inactif**.
+      **Demandes pas encore traitées dans « À faire dans Colosseo »** (demandé par Léa) : les produits de demandes
+      non ajoutés qui concernent ce match (saison, ou « au match » avec cette date) apparaissent en tête de leur
+      produit (📨 « Demande à ajouter » / « Nouveau visuel demandé » / « Retrait demandé », son, anneau, durée,
+      remarque, bouton **Traiter** → fiche produit ; Sponsoring : « en attente de la Régie ») et comptent dans le
+      bilan (« dont N demandes à traiter d'abord »). Une fois ajoutée, la demande devient un vrai changement.
+      Le lien du haut ne montre plus que les **autres** demandes en cours (pas pour ce match, questions).
       **« Pour ce soir »** (demandé par Léa, migration 26) : bloc sous le bilan pour les infos générales du match et
       les tâches hors sponsors (📝 info / ☐ tâche à cocher, qui / quand, ✕ supprimer) ; Régie / admin écrivent,
       Sponsoring lit ; le bilan compte les tâches restantes. Caché si la table n'existe pas encore.

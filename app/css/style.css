@@ -464,6 +464,8 @@ table.tableau { width: 100%; border-collapse: collapse; background: var(--surfac
 .changement-ajouter .changement-verbe { color: var(--ok); }
 .changement-enlever .changement-verbe { color: var(--erreur); }
 .changement-visuel .changement-verbe { color: var(--info); }
+.changement-demande { background: var(--info-fond); }
+.changement-demande .changement-verbe { color: var(--info); }
 .changement-actions { display: flex; align-items: center; gap: .5rem; flex: none; }
 .case-fait { display: flex; align-items: center; gap: .35rem; margin: 0; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .case-fait input { width: 20px; height: 20px; accent-color: var(--ok); }
