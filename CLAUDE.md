@@ -370,7 +370,12 @@ Autres règles décidées :
       « Emplacement au match » = lignes au match (dates -> matchs du calendrier), et leur ligne saison de la Pub pause
       tiers n'est pas importée (durée/son/anneau reportés). Feuille « Nouveaux Sponsors » (historique) non importée.
       Garde-fou : table `imports_donnees` (import une seule fois). Annulation : lignes `created_by is null` sans demande.
-- [ ] Mise en ligne (hébergement statique) + SMTP Brevo
+- [ ] **Mise en ligne** (décidé : **dépôt GitHub privé + Netlify**, gratuit). Dépôt Git local créé (branche `main`,
+      premier commit ; identité Git du projet = Léa Talon). `.gitignore` : **jamais les données réelles**
+      (`import-airtable/`, `supabase/import_airtable_2026-27.sql`). `netlify.toml` : publie le dossier `app/` tel quel.
+      Reste : publier sur GitHub (VS Code → Contrôle de code source → « Publish Branch » → dépôt **privé**), relier
+      Netlify au dépôt, puis dans Supabase **Authentication → URL Configuration** : Site URL = adresse Netlify et
+      `https://<site>.netlify.app/**` dans Redirect URLs (mot de passe oublié). SMTP Brevo : plus tard, facultatif.
 
 ## Valeurs encore à confirmer
 
