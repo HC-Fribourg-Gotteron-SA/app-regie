@@ -335,6 +335,9 @@ function carteChangement(i) {
   const visuel = i.action === 'visuel'
     ? `Nouveau : <strong>${echapper(nomVisuel(i.asset_id) || '—')}</strong>${i.ancien_asset_id ? ` <span class="doux">· à la place de « ${echapper(nomVisuel(i.ancien_asset_id))} »</span>` : ''}`
     : nomVisuel(i.asset_id) ? `Visuel : ${echapper(nomVisuel(i.asset_id))}` : '';
+  // visuel connu seulement par son nom (import Airtable, démo) : pas de fichier à télécharger
+  const sansFichier = i.action !== 'enlever' && i.asset_id && !a?.storage_path
+    ? ' <span class="doux petit">· fichier pas dans l’outil</span>' : '';
   const fait = i.fait;
   return `
     <div class="changement changement-${i.action}${fait ? ' est-fait' : ''}">
@@ -343,7 +346,7 @@ function carteChangement(i) {
         <div><span class="changement-verbe">${i.anneau ? consigneAnneau(i.action) : consigne(i.action, i.famille, i.categorie)}</span> · <strong>${echapper(i.sponsor)}</strong>
           <span class="doux petit">(${echapper(i.raison)})</span></div>
         ${details.length ? `<div class="petit">${details.join(' · ')}</div>` : ''}
-        ${visuel ? `<div class="petit">${visuel}</div>` : ''}
+        ${visuel ? `<div class="petit">${visuel}${sansFichier}</div>` : ''}
         ${i.l?.consignes && i.action !== 'enlever' ? `<div class="petit doux">Remarque : ${echapper(i.l.consignes)}</div>` : ''}
         ${i.traitee ? `<div class="petit doux">Demande traitée par ${echapper(etat.personnes.get(i.traitee.traite_par) || '—')}
           le ${dateCourte(i.traitee.traite_le)}</div>` : ''}
