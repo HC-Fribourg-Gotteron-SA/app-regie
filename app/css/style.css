@@ -111,6 +111,7 @@ body.avec-menu main { margin-left: calc(var(--largeur-menu) + max(0px, (100vw - 
   background: none; border: 0; padding: .2rem 0; cursor: pointer;
 }
 .menu-compte a:hover, .lien-menu:hover { color: #fff; text-decoration: underline; }
+.menu-version { display: block; margin-top: .5rem; font-size: .7rem; color: #8a9ab3; }
 .barre-mobile, .voile-menu { display: none; }
 
 .marque { display: flex; align-items: center; gap: .65rem; color: #fff; text-decoration: none; }

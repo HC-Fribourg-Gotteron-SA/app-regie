@@ -4,6 +4,9 @@ import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Date de la version, affichée en bas du menu : à changer à chaque mise en ligne (pour vérifier que Netlify a publié)
+const VERSION = '29.09.2026';
+
 // ---------------------------------------------------------------------
 // Libellés affichés
 // ---------------------------------------------------------------------
@@ -189,6 +192,7 @@ function construireMenu(profil) {
       </div>
       <a href="mot-de-passe.html">Mot de passe</a>
       <button type="button" class="lien-menu" id="btn-deconnexion">Déconnexion</button>
+      <small class="menu-version" title="Version de l'outil en ligne">Version du ${VERSION}</small>
     </div>`;
 
   // barre du haut sur téléphone : ☰ + nom de l'outil
