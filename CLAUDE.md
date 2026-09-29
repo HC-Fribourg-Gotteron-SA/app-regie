@@ -14,7 +14,9 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    **efface les données de test** et on **réimporte ce qui passe actuellement** en Régie. À faire quand elle est prête :
    (a) ✅ écrit : `23_remise_a_zero.sql` (demandé par Léa pour tester sur une base vide ; exécution à confirmer) — efface sponsors, contrats, diffusions, passages, demandes, fichiers du bucket,
    documents_sponsors, colosseo_fait, journal, imports_donnees — et **garde** produits, emplacements, saisons, matchs,
-   profils ; (b) nouvel export Airtable (ou vérifié avec Colosseo) ; (c) script d'import qui intègre directement tout
+   profils ; (b) nouvel export Airtable (ou vérifié avec Colosseo) ; (c) ✅ fait le 29.09.2026 (`outils/import-airtable.mjs`
+   passe validee / visuel_attendu / priorite / priorite de l'anneau à la base, remplit les visuels des matchs passés,
+   refuse une base non vide ; ne génère plus la migration 15) — script d'import qui intègre directement tout
    ce qui a été corrigé après coup : ordre de diffusion (15), À l'écran (16 + 21 : LED toutes à l'écran sauf club),
    anneau de la pause tiers sur le produit inactif (17), visuel attendu (18), LED 6M = 2 emplacements, Banner HCFG
    = libre. Tout exécuter en **un seul bloc `do`** (piège du SQL Editor).

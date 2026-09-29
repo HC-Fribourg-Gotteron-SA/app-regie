@@ -104,10 +104,15 @@ let compteur = 0;
 const APRES = 1e6;     // placé après les lignes de la feuille du produit
 function ajouter(l) {
   const consignes = [...new Set((l.consignes || []).filter(Boolean))];
-  lignes.push({ type: 'saison', dates: [], empl: [], visuels: [], son: false, anneau: false, occ: 1,
+  lignes.push({ type: 'saison', dates: [], empl: [], visuels: [], son: false, anneau: false, occ: 1, valide: true,
                 ordre: ++compteur, ...l, consignes });
 }
-const nonValide = '⚠ Non validé saison 26/27 dans Airtable';
+// « ⏳ Nouveau visuel attendu » : repéré dans les remarques (comme la migration 18)
+const sansAccent = (t) => (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
+const attendu = (consignes) => /en attente|en attende|nouveaux? visuels? a mettre|nouveau arrive|modifier logo|changer logo/i
+  .test(sansAccent(consignes.join(' ')));
+// Emplacements réservés au club : NORD-OUEST = positions 10 à 14 des anneaux A (bande 3M) et C (bande 6M)
+const reserveClub = (anneau, position) => ['A', 'C'].includes(anneau) && position >= 10 && position <= 14;
 
 // ---------------------------------------------------------------------
 // LED 3M / LED 6M : une ligne CSV = un emplacement (ordre = position dans l'anneau)
@@ -128,9 +133,12 @@ function led(fichier, colZone, bande6M) {
     if (!c.nom) continue;
     const suivante = cases[i + 1];
     const paire = bande6M && suivante && suivante.nom === c.nom && suivante.anneau === c.anneau;
+    // LED : toutes « À l'écran » (décidé par Léa, migration 21), sauf le contenu du club et les emplacements
+    // réservés au club, qui gardent la case « Validation saison 26/27 » d'Airtable
     ajouter({ sponsor: c.nom, produit: paire ? 'LED 6M' : 'LED 3M',
               empl: paire ? [`${c.anneau}:${c.position}`, `${c.anneau}:${suivante.position}`] : [`${c.anneau}:${c.position}`],
-              consignes: [...c.remarques, c.valide ? null : nonValide] });
+              valide: c.valide || (c.nom !== 'HCFG' && !reserveClub(c.anneau, c.position)),
+              consignes: c.remarques });
     if (paire) i++;
   }
 }
@@ -182,7 +190,7 @@ for (const r of lireCsv('Pub pause tiers.csv')) {
   ajouter({ sponsor: nom, produit: 'Pub pause tiers', duree: secondes(r['Durée (h:mm:ss)']), son: oui(r.Son),
             anneau: oui(r['Anneau Led']), visuels: [r.Visuels], suspendue: desactive,
             motif: desactive ? [r['Validation régie'], r.Remarques].filter(Boolean).join(' — ') : null,
-            consignes: [desactive ? null : r.Remarques, valide(r['Validation saison 26/27']) ? null : nonValide] });
+            valide: valide(r['Validation saison 26/27']), consignes: [desactive ? null : r.Remarques] });
 }
 
 // ---------------------------------------------------------------------
@@ -193,23 +201,23 @@ for (const r of lireCsv('LED match.csv')) {
   const desactive = /d[ée]sactiv/i.test(r['Validation régie']);
   ajouter({ sponsor: sponsor(r.Entreprise), produit: 'Anneau LED', duree: secondes(r['Durée']), visuels: [r.Visuels],
             suspendue: desactive, motif: desactive ? [r['Validation régie'], r.Remarques].filter(Boolean).join(' — ') : null,
-            consignes: [desactive ? null : r.Remarques, valide(r['Validation saison 26/27']) ? null : nonValide] });
+            valide: valide(r['Validation saison 26/27']), consignes: [desactive ? null : r.Remarques] });
 }
 for (const r of lireCsv('Angles match.csv')) {
   if (!r.Entreprise) continue;
   const d = secondes(r['Durée vidéo']), t = secondes(r['Durée totale playlist']);
   ajouter({ sponsor: sponsor(r.Entreprise), produit: 'Angles match', duree: d, occ: d && t ? Math.max(1, Math.round(t / d)) : 1,
-            visuels: [r.Visuels], consignes: [r.Remarques, r['Saison/Match'], valide(r['Validation saison 26/27']) ? null : nonValide] });
+            visuels: [r.Visuels], valide: valide(r['Validation saison 26/27']), consignes: [r.Remarques, r['Saison/Match']] });
 }
 for (const r of lireCsv('Pub après Warmup.csv')) {
   if (!r.Entreprise) continue;
   ajouter({ sponsor: sponsor(r.Entreprise), produit: 'Pub après warm-up', son: oui(r.Son), visuels: [r.Visuel],
-            consignes: [r.Remarque, valide(r['Validation saison 26/27']) ? null : nonValide] });
+            valide: valide(r['Validation saison 26/27']), consignes: [r.Remarque] });
 }
 for (const r of lireCsv('LED Sportcafé.csv')) {
   if (!r.Entreprise) continue;
   ajouter({ sponsor: sponsor(r.Entreprise), produit: 'LED Sportcafé (9M)', visuels: [r.Visuels],
-            consignes: [r['Field 2'], valide(r['Validation saison 26/27']) ? null : nonValide] });
+            valide: valide(r['Validation saison 26/27']), consignes: [r['Field 2']] });
 }
 for (const r of lireCsv('Rings.csv')) {
   if (r.Entreprise) ajouter({ sponsor: sponsor(r.Entreprise), produit: r.Produit, consignes: [r.Remarques] });
@@ -223,7 +231,7 @@ for (const r of lireCsv('Action scene.csv')) {
   const visuels = (r['Vidéos'] || '').split(',').map(v => v.trim()).filter(Boolean);
   for (const e of r.Entreprise.split(',')) {
     ajouter({ sponsor: sponsor(e), produit: `Action scene – ${r.Produits}`, visuels,
-              consignes: [r.Remarque, valide(r['Validation saison 26/27']) ? null : nonValide] });
+              valide: valide(r['Validation saison 26/27']), consignes: [r.Remarque] });
   }
 }
 
@@ -240,7 +248,7 @@ function slides(fichier, colProduit, table) {
     const nom = sponsor(r.Entreprise);
     if (vus.has(`${nom}|${produit}`)) { ignores.push(`${fichier} : ${nom} en double sur ${produit} (importé une fois)`); continue; }
     vus.add(`${nom}|${produit}`);
-    ajouter({ sponsor: nom, produit, consignes: [r.Remarques, valide(r['Validation saison 26/27']) ? null : nonValide] });
+    ajouter({ sponsor: nom, produit, valide: valide(r['Validation saison 26/27']), consignes: [r.Remarques] });
   }
 }
 slides('Slide Ladies.csv', 'Slide Ladies', { legend: 'Ladies Legend Members', ailes: 'Ladies Ailes du Dragon', founder: 'Ladies Founder Members' });
@@ -253,14 +261,31 @@ slides('Slide Young Dragons.csv', 'Slides Young Dragons', { golden: 'Young Drago
 const q = (v) => v === null || v === undefined || v === '' ? 'null' : `'${String(v).replace(/'/g, "''")}'`;
 const tableau = (a, type) => a.length ? `array[${a.map(q).join(', ')}]::${type}[]` : `'{}'::${type}[]`;
 
+// Ordre de diffusion dans chaque produit = ordre des lignes dans les feuilles Airtable (« ordre »).
+// L'anneau LED d'une Pub pause tiers a sa propre ligne (produit technique) : rangé dans l'ordre des Pub pause tiers.
+const parProduitOrdre = new Map();
+for (const l of [...lignes].sort((a, b) => a.ordre - b.ordre)) {
+  const n = (parProduitOrdre.get(l.produit) || 0) + 1;
+  parProduitOrdre.set(l.produit, n);
+  l.priorite = n;
+}
+let rangAnneau = 0;
+for (const l of [...lignes].filter(l => l.anneau && l.produit === 'Pub pause tiers').sort((a, b) => a.ordre - b.ordre)) {
+  l.prioriteAnneau = ++rangAnneau;
+}
+for (const l of lignes) l.attendu = attendu(l.consignes);
+
 const sql = [];
 // Le SQL Editor de Supabase exécute les instructions une par une : tout le travail est donc fait
 // dans UN bloc « do $$ … $$ » (atomique : s'il échoue, rien n'est enregistré), sans table temporaire.
 sql.push(`-- =====================================================================
 -- Import des données Airtable (saison 2026-27) — généré par outils/import-airtable.mjs
--- À exécuter UNE fois dans Supabase > SQL Editor (après les migrations 01 → 13).
--- Pour tout retirer : supabase/import_airtable_annuler.sql
+-- À exécuter UNE fois dans Supabase > SQL Editor, sur une base vidée (23_remise_a_zero.sql),
+-- après les migrations 01 → 26. Pour tout retirer : supabase/import_airtable_annuler.sql
 -- ${sponsors.size} sponsors, ${lignes.length} diffusions.
+-- Intègre directement : ordre de diffusion = ordre des feuilles, « À l'écran » (LED toutes à l'écran
+-- sauf club), anneau de la Pub pause tiers compris dans la pub, « ⏳ visuel attendu », historique
+-- des matchs passés (pour la comparaison de Match du jour).
 -- =====================================================================
 
 create table if not exists imports_donnees (nom text primary key, le timestamptz not null default now());
@@ -271,7 +296,8 @@ alter table import_remarques enable row level security;
 -- Une diffusion
 create or replace function import_airtable_ligne(p_sponsor text, p_produit text, p_type type_vente, p_duree int, p_son boolean,
                                  p_occ int, p_consignes text, p_suspendue boolean, p_motif text, p_dates date[],
-                                 p_empl text[], p_visuels text[], p_anneau boolean)
+                                 p_empl text[], p_visuels text[], p_anneau boolean,
+                                 p_validee boolean, p_attendu boolean, p_priorite int, p_priorite_anneau int)
 returns void language plpgsql as $$
 declare
   v_sponsor uuid; v_produit produits; v_contrat uuid; v_ligne uuid; v_anneau uuid; v_saison uuid;
@@ -286,8 +312,9 @@ begin
   v_contrat := contrat_pour(v_sponsor, v_saison);
 
   insert into lignes_vendues (contrat_id, produit_id, type_vente, duree_s, avec_son, occurrences, consignes,
-                              suspendue, motif_suspension, statut)
-  values (v_contrat, v_produit.id, p_type, p_duree, p_son, p_occ, p_consignes, p_suspendue, p_motif, 'vendu')
+                              suspendue, motif_suspension, statut, validee, visuel_attendu, priorite)
+  values (v_contrat, v_produit.id, p_type, p_duree, p_son, p_occ, p_consignes, p_suspendue, p_motif, 'vendu',
+          p_validee, p_attendu, p_priorite)
   returning id into v_ligne;
 
   if p_type = 'match' then
@@ -307,11 +334,12 @@ begin
     select v_ligne, id from emplacements where anneau = split_part(e, ':', 1) and position = split_part(e, ':', 2)::int;
   end loop;
 
+  -- anneau LED de la Pub pause tiers : compris dans la pub (ligne couplée sur le produit technique, migration 17)
   if p_anneau and v_produit.lie_a_produit_id is not null then
     insert into lignes_vendues (contrat_id, produit_id, type_vente, duree_s, avec_son, consignes, suspendue,
-                                motif_suspension, statut, ligne_couplee_id)
-    values (v_contrat, v_produit.lie_a_produit_id, p_type, p_duree, false, 'Couplé à : ' || p_produit,
-            p_suspendue, p_motif, 'vendu', v_ligne)
+                                motif_suspension, statut, ligne_couplee_id, validee, priorite)
+    values (v_contrat, v_produit.lie_a_produit_id, p_type, p_duree, false, null,
+            p_suspendue, p_motif, 'vendu', v_ligne, p_validee, p_priorite_anneau)
     returning id into v_anneau;
     insert into lignes_matchs (ligne_id, match_id) select v_anneau, match_id from lignes_matchs where ligne_id = v_ligne;
     update lignes_vendues set ligne_couplee_id = v_anneau where id = v_ligne;
@@ -328,7 +356,14 @@ end $$;
 do $import$
 begin
   if exists (select 1 from imports_donnees where nom = ${q(MARQUE)}) then
-    raise exception 'Import déjà fait. Pour recommencer, exécutez d''abord supabase/import_airtable_annuler.sql';
+    raise exception 'Import déjà fait. Pour recommencer, exécutez d''abord supabase/23_remise_a_zero.sql';
+  end if;
+  if exists (select 1 from lignes_vendues) then
+    raise exception 'La base contient déjà des diffusions : exécutez d''abord supabase/23_remise_a_zero.sql';
+  end if;
+  if (select lie_a_produit_id from produits where nom = 'Pub pause tiers')
+     is distinct from (select id from produits where nom = 'Anneau LED pause tiers') then
+    raise exception 'Migration 17 manquante : l''anneau de la Pub pause tiers n''est pas configuré';
   end if;
   insert into imports_donnees (nom) values (${q(MARQUE)});
   delete from import_remarques;
@@ -344,77 +379,26 @@ ${[...sponsors.values()].map(s => `    (${q(s.nom)}, ${tableau([...s.variantes],
   -- Diffusions
 ${lignes.map(l => `  perform import_airtable_ligne(${q(l.sponsor)}, ${q(l.produit)}, '${l.type}', ${l.duree ?? 'null'}, ${l.son}, ${l.occ}, `
     + `${q(l.consignes.join('\n'))}, ${!!l.suspendue}, ${q(l.motif)}, ${tableau(l.dates, 'date')}, `
-    + `${tableau(l.empl, 'text')}, ${tableau(l.visuels.filter(Boolean), 'text')}, ${l.anneau});`).join('\n')}
+    + `${tableau(l.empl, 'text')}, ${tableau(l.visuels.filter(Boolean), 'text')}, ${l.anneau}, `
+    + `${l.valide}, ${l.attendu}, ${l.priorite}, ${l.prioriteAnneau ?? 'null'});`).join('\n')}
 
   alter table assets enable trigger assets_avant;
+
+  -- Matchs déjà joués : ils retiennent aussi leur visuel (point de départ de la comparaison de Match du jour)
+  update passages set asset_id = choisir_asset(ligne_id, match_id) where asset_id is null;
 end $import$;
 
-drop function import_airtable_ligne(text, text, type_vente, int, boolean, int, text, boolean, text, date[], text[], text[], boolean);
+drop function import_airtable_ligne(text, text, type_vente, int, boolean, int, text, boolean, text, date[], text[], text[], boolean,
+                                    boolean, boolean, int, int);
 
 -- Résumé : s'il y a des lignes « à vérifier », ce sont des points à regarder
 select message as "Résultat" from import_remarques
 union all select 'Import terminé : ' || (select count(*) from lignes_vendues where created_by is null and demande_id is null)
-                 || ' diffusions, ' || (select count(*) from sponsors where notes = ${q(MARQUE)}) || ' sponsors importés.';
+                 || ' diffusions (' || (select count(*) from lignes_vendues where validee and not suspendue)
+                 || ' à l''écran), ' || (select count(*) from sponsors where notes = ${q(MARQUE)}) || ' sponsors importés.';
 `);
 
 fs.writeFileSync(path.join(RACINE, 'supabase', 'import_airtable_2026-27.sql'), sql.join('\n'), 'utf8');
-
-// ---------------------------------------------------------------------
-// Ordre de diffusion des lignes importées (supabase/15_ordre_import_airtable.sql)
-// Les lignes importées sont retrouvées dans l'ordre où l'import les a créées (journal) :
-// pour chaque appel, la ligne principale puis, si « avec anneau », sa ligne Anneau LED couplée.
-// ---------------------------------------------------------------------
-const cles = [];
-for (const l of lignes) {
-  cles.push(l.ordre);
-  if (l.anneau && l.produit === 'Pub pause tiers') cles.push(2 * APRES + l.ordre);   // anneau couplé : après la feuille LED match
-}
-fs.writeFileSync(path.join(RACINE, 'supabase', '15_ordre_import_airtable.sql'), `-- =====================================================================
--- 15 — Ordre de diffusion = ordre des feuilles Airtable (généré par outils/import-airtable.mjs)
--- À exécuter une fois dans Supabase > SQL Editor, après 14 (et après l'import Airtable).
--- =====================================================================
--- Corrige la migration 14 : les diffusions importées reprennent la position de leur ligne
--- dans les feuilles Airtable (y compris les diffusions « au match » de la Pub pause tiers,
--- à leur place dans la feuille) ; tout ce qui a été ajouté hors import (depuis une demande,
--- même avant l'import) passe APRÈS, dans l'ordre d'ajout. Peut être exécuté plusieurs fois.
-
-do $ordre$
-declare n int;
-begin
-  select count(*) into n from lignes_vendues where created_by is null and demande_id is null;
-  if n <> ${cles.length} then
-    raise exception 'Trouvé % diffusions importées au lieu de ${cles.length} : ordre non modifié (import modifié entre-temps ?)', n;
-  end if;
-
-  with premier as (
-    select ligne_id, min(id) as id from journal
-    where table_nom = 'lignes_vendues' and action = 'insert' group by ligne_id
-  ),
-  importees as (
-    select l.id, row_number() over (order by p.id, l.id) as s
-    from lignes_vendues l join premier p on p.ligne_id = l.id
-    where l.created_by is null and l.demande_id is null
-  ),
-  cle (s, k) as (values
-${cles.map((k, i) => `    (${i + 1}, ${k})`).join(',\n')}
-  ),
-  rangs as (
-    select l.id,
-           row_number() over (partition by l.produit_id
-                              order by (i.id is null), coalesce(c.k, p.id), l.created_at, l.id) as rang
-    from lignes_vendues l
-    left join importees i on i.id = l.id
-    left join cle c on c.s = i.s
-    left join premier p on p.ligne_id = l.id
-  )
-  update lignes_vendues l set priorite = r.rang
-  from rangs r
-  where r.id = l.id and l.priorite is distinct from r.rang;
-end $ordre$;
-
-select 'Ordre de diffusion recalculé pour ' || count(*) || ' diffusions.' as "Résultat"
-from lignes_vendues where priorite is not null;
-`, 'utf8');
 
 fs.writeFileSync(path.join(RACINE, 'supabase', 'import_airtable_annuler.sql'), `-- =====================================================================
 -- Annule l'import Airtable (supprime les diffusions et sponsors importés)
@@ -442,6 +426,8 @@ begin
 end $annuler$;
 
 drop function if exists import_airtable_ligne(text, text, type_vente, int, boolean, int, text, boolean, text, date[], text[], text[], boolean);
+drop function if exists import_airtable_ligne(text, text, type_vente, int, boolean, int, text, boolean, text, date[], text[], text[], boolean,
+                                              boolean, boolean, int, int);
 
 select 'Annulation terminée : ' || (select count(*) from lignes_vendues where created_by is null and demande_id is null)
        || ' diffusion importée restante, ' || (select count(*) from sponsors where notes = ${q(MARQUE)})

@@ -24,6 +24,8 @@ begin
 end $annuler$;
 
 drop function if exists import_airtable_ligne(text, text, type_vente, int, boolean, int, text, boolean, text, date[], text[], text[], boolean);
+drop function if exists import_airtable_ligne(text, text, type_vente, int, boolean, int, text, boolean, text, date[], text[], text[], boolean,
+                                              boolean, boolean, int, int);
 
 select 'Annulation terminée : ' || (select count(*) from lignes_vendues where created_by is null and demande_id is null)
        || ' diffusion importée restante, ' || (select count(*) from sponsors where notes = 'Import Airtable 26/27')
