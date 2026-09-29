@@ -15,7 +15,10 @@ const jour = (d) => new Date(d).toLocaleDateString('fr-CH', { weekday: 'long', d
 const ICONES = { ajouter: '➕', enlever: '➖', visuel: '🔄' };
 // Bouton de chaque changement : ouvre la diffusion (fichier, son, remarques…) sur sa fiche
 const BOUTON_ACTION = { ajouter: 'Ajouter', visuel: 'Remplacer', enlever: 'Voir' };
-const ORDRE_ACTIONS ={ demande: -1, enlever: 0, ajouter: 1, visuel: 2 };
+const ORDRE_ACTIONS = { demande: -1, enlever: 0, ajouter: 1, visuel: 2 };
+// Ordre des produits dans la page : le Sponsor du match (produit et action scene) en premier (demandé par Léa),
+// puis l'ordre d'importance habituel
+const ordreProduit = (p) => /sponsor du match/i.test(p?.nom || '') ? -1 : (p?.ordre ?? 100);
 
 const etat = {
   matchs: [], match: null, precedent: null,
