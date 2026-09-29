@@ -1,7 +1,6 @@
 # Données réelles des sponsors : jamais dans Git (même dans un dépôt privé)
 import-airtable/
 supabase/import_airtable_2026-27.sql
-supabase/import_demandes_en_attente.sql
 
 # Fichiers système / éditeur
 .DS_Store
