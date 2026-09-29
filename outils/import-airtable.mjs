@@ -219,8 +219,12 @@ for (const r of lireCsv('LED Sportcafé.csv')) {
   ajouter({ sponsor: sponsor(r.Entreprise), produit: 'LED Sportcafé (9M)', visuels: [r.Visuels],
             valide: valide(r['Validation saison 26/27']), consignes: [r['Field 2']] });
 }
-for (const r of lireCsv('Rings.csv')) {
-  if (r.Entreprise) ajouter({ sponsor: sponsor(r.Entreprise), produit: r.Produit, consignes: [r.Remarques] });
+// Top Ring / Bottom Ring : une feuille chacun (l'entreprise est parfois dans « Field 3 »)
+for (const [fichier, produit] of [['Top Ring.csv', 'Top Ring'], ['Bottom Ring.csv', 'Bottom Ring']]) {
+  for (const r of lireCsv(fichier)) {
+    const e = r.Entreprise || r['Field 3'];
+    if (e) ajouter({ sponsor: sponsor(e), produit, consignes: [r.Remarques || r.Remarque] });
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -228,7 +232,8 @@ for (const r of lireCsv('Rings.csv')) {
 // ---------------------------------------------------------------------
 for (const r of lireCsv('Action scene.csv')) {
   if (!r.Entreprise) continue;
-  const visuels = (r['Vidéos'] || '').split(',').map(v => v.trim()).filter(Boolean);
+  // pièces jointes Airtable : « nom.mp4 (https://…) » -> on garde le nom (les liens expirent)
+  const visuels = (r['Vidéos'] || '').replace(/\s*\(https?:\/\/[^)]*\)/g, '').split(',').map(v => v.trim()).filter(Boolean);
   for (const e of r.Entreprise.split(',')) {
     ajouter({ sponsor: sponsor(e), produit: `Action scene – ${r.Produits}`, visuels,
               valide: valide(r['Validation saison 26/27']), consignes: [r.Remarque] });
