@@ -173,7 +173,7 @@ function infos(ligneId) {
     anneau: !!anneauDe,
     pubId: anneauDe?.id,
     produit: l?.produit ? court(l.produit.nom) : 'Produit inconnu',
-    ordre: l?.produit?.ordre ?? 100,
+    ordre: ordreProduit(l?.produit),
     famille: l?.produit?.famille,
     categorie: l?.produit?.categorie,
     sponsor: l?.contrat?.sponsor?.nom || '—',
@@ -204,7 +204,7 @@ function afficher() {
   // demandes pas encore ajoutées sur leur fiche : à traiter d'abord, elles changeront la playlist
   const demandes = etat.demandesMatch.map(a => ({
     action: 'demande', dp: a, ligne_id: `${a.demande_id}|${a.produit_id}`,
-    produit: court(a.produit?.nom), ordre: a.produit?.ordre ?? 100, famille: a.produit?.famille,
+    produit: court(a.produit?.nom), ordre: ordreProduit(a.produit), famille: a.produit?.famille,
     sponsor: a.demande?.sponsor?.nom || a.demande?.sponsor_nom_saisi || '—', priorite: -1,
   }));
   const items = tous.filter(i => !(i.anneau && i.action !== 'visuel' && pubs.has(`${i.pubId}|${i.action}`)))
