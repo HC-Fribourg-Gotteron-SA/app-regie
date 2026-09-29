@@ -388,7 +388,9 @@ Autres règles décidées :
       « Emplacement au match » = lignes au match (dates -> matchs du calendrier), et leur ligne saison de la Pub pause
       tiers n'est pas importée (durée/son/anneau reportés). Feuille « Nouveaux Sponsors » (historique) non importée.
       Garde-fou : table `imports_donnees` (import une seule fois). Annulation : lignes `created_by is null` sans demande.
-- [ ] **Mise en ligne** (décidé : **dépôt GitHub privé + Netlify**, gratuit). Dépôt Git local créé (branche `main`,
+- [ ] **Mise en ligne** (décidé : **dépôt GitHub privé + Netlify**, gratuit). Dépôt transféré le 29.09.2026 dans
+      l'organisation de l'entreprise : **`HC-Fribourg-Gotteron-SA/app-regie`** (remote `origin` mis à jour) ; Netlify à
+      relier au dépôt de l'organisation (Project configuration → Build & deploy → Manage repository). Dépôt Git local créé (branche `main`,
       premier commit ; identité Git du projet = Léa Talon). `.gitignore` : **jamais les données réelles**
       (`import-airtable/`, `supabase/import_airtable_2026-27.sql`). `netlify.toml` : publie le dossier `app/` tel quel.
       Reste : publier sur GitHub (VS Code → Contrôle de code source → « Publish Branch » → dépôt **privé**), relier
