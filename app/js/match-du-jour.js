@@ -310,7 +310,8 @@ function carteDemande(i) {
           : '<div class="petit" style="margin-top:.3rem">⏳ <strong>Fichier à venir</strong> <span class="doux">(pas encore envoyé par le Sponsoring)</span></div>'}
       </div>
       <div class="changement-actions">
-        ${estRegie ? `<a class="btn btn-principal" href="produit.html?id=${a.produit_id}">Ajouter</a>`
+        ${estRegie ? `<a class="btn btn-principal" title="Ouvrir la demande (comme dans Demandes)"
+            href="demandes.html?id=${a.demande_id}&retour=${encodeURIComponent(`match-du-jour.html?match=${etat.match.id}`)}">Ajouter</a>`
                    : '<span class="doux petit">en attente de la Régie</span>'}
       </div>
     </div>`;

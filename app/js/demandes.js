@@ -23,6 +23,11 @@ const etat = {
   mesDemandes: !estRegie,
   ouverte: new URLSearchParams(location.search).get('id'),
 };
+// Page d'où l'on vient (ex. Match du jour) : fermer la demande y ramène
+const RETOUR = (() => {
+  const r = new URLSearchParams(location.search).get('retour');
+  return r && /^[\w-]+\.html(\?[\w=&%-]*)?$/.test(r) ? r : null;
+})();
 
 $('mes-demandes').checked = etat.mesDemandes;
 $('sous-titre').textContent = estRegie
@@ -457,6 +462,8 @@ $('d-corps').addEventListener('click', async (e) => {
 });
 
 function fermer() {
+  // ouvert depuis Match du jour : on y retourne
+  if (RETOUR) { location.href = RETOUR; return; }
   $('fenetre').hidden = true;
   $('voile').hidden = true;
   document.body.classList.remove('fenetre-ouverte');
