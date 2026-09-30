@@ -21,6 +21,10 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    anneau de la pause tiers sur le produit inactif (17), visuel attendu (18), LED 6M = 2 emplacements, Banner HCFG
    = libre. Tout exécuter en **un seul bloc `do`** (piège du SQL Editor).
 
+0-ter. **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
+   2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
+   peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
+   Recette des tests (page claude.ai, commentaires + export) : https://claude.ai/artifact/AKvYKr63XcgFcWQF76MMbQ
 1. **Remarques Régie / admin + case « Validé » + détail au clic** (fait le 26.09.2026, migration 16, pas encore
    testé) : demander à Léa si c'est bon. Page Action scenes (28.09.2026) : rangées cliquables → fiche de la scène
    avec le détail ouvert (`produit.html?id=…&ligne=…`, retour vers la page Action scenes ; fermer le détail ✕ /
