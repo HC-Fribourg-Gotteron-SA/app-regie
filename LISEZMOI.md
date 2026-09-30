@@ -17,9 +17,11 @@
    - *Email Templates > Reset Password* : traduire l'e-mail en français (facultatif) ;
    - pour la production, brancher un SMTP (par exemple celui de Brevo), car l'envoi par défaut
      de Supabase est limité à quelques e-mails par heure.
-   Les adresses hors `@fribourg-gotteron.ch` sont refusées par la base.
+   Toutes les adresses e-mail sont acceptées (migration 27), mais garder **« Allow new users to sign up »
+   désactivé** (Authentication > Sign In / Providers) : seuls les admins créent les comptes, et un nouveau
+   compte ne voit rien tant qu'on ne lui a pas donné de rôle.
 4. Créer le premier compte : **Authentication > Users > Add user > Create new user**
-   (adresse @fribourg-gotteron.ch, un mot de passe, cocher *Auto Confirm User*), puis dans le SQL Editor :
+   (son adresse e-mail, un mot de passe, cocher *Auto Confirm User*), puis dans le SQL Editor :
    ```sql
    update profiles set role = 'admin', nom = 'Léa Talon'
    where email = 'lea.talon@fribourg-gotteron.ch';

@@ -252,8 +252,11 @@ Autres règles décidées :
 ## Sécurité
 
 - Rôles dans `profiles.role` : `sponsoring`, `regie`, `admin` ; `null` = compte en attente (ne voit rien).
-- Inscription publique désactivée : les comptes sont créés par un admin (Authentication > Users),
-  le trigger `handle_new_user` refuse les adresses hors `@fribourg-gotteron.ch`.
+- Inscription publique désactivée : les comptes sont créés par un admin (Authentication > Users).
+  **Toutes les adresses acceptées depuis la migration 27** (décidé par Léa le 30.09.2026 : comptes pour des
+  personnes hors club) : `handle_new_user` ne filtre plus le domaine, la page de connexion non plus. Garde-fous :
+  inscription publique **désactivée** dans les deux projets (Authentication > Sign In / Providers) + nouveau compte
+  **sans rôle** (ne voit rien) tant qu'un admin ne l'a pas activé.
 - Lecture : tous les membres. **Sponsoring = faire des demandes et consulter** (décidé par Léa, migration 24) :
   écrit seulement `demandes`, `demandes_produits`, fichiers du stockage et `documents_sponsors` de ses demandes.
   Sponsors, contrats, diffusions (lignes, matchs, emplacements), visuels, dépôt dans un dossier sponsor : Régie + admin.

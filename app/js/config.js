@@ -28,5 +28,5 @@ export const BASE_TEST_PRETE = !!BASES.test.url;
 export const SUPABASE_URL = BASES[choix].url;
 export const SUPABASE_KEY = BASES[choix].cle;
 
-// Seules ces adresses peuvent se connecter (la base le vérifie aussi).
-export const DOMAINE_AUTORISE = '@fribourg-gotteron.ch';
+// Toutes les adresses e-mail sont acceptées (migration 27) : les comptes sont créés par un admin et
+// n'ont aucun rôle (ne voient rien) tant qu'un admin ne les a pas activés.

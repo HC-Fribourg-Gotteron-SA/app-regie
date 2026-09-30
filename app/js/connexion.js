@@ -1,5 +1,4 @@
 import { sb } from './app.js';
-import { DOMAINE_AUTORISE } from './config.js';
 
 const $ = (id) => document.getElementById(id);
 // Page d'arrivée : la Régie commence par le match du jour, le Sponsoring par ses demandes
@@ -47,7 +46,7 @@ $('form-connexion').addEventListener('submit', async (e) => {
   const email = $('email').value.trim().toLowerCase();
   const password = $('mdp').value;
 
-  if (!email.endsWith(DOMAINE_AUTORISE)) return message(`Utilisez votre adresse ${DOMAINE_AUTORISE}.`, 'erreur');
+  if (!/^\S+@\S+\.\S+$/.test(email)) return message('Saisissez votre adresse e-mail.', 'erreur');
   if (!password) return message('Saisissez votre mot de passe.', 'erreur');
 
   occupe($('btn-connexion'), 'Connexion…');
@@ -80,7 +79,7 @@ $('lien-retour').addEventListener('click', () => basculer(false));
 $('form-oubli').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = $('email-oubli').value.trim().toLowerCase();
-  if (!email.endsWith(DOMAINE_AUTORISE)) return message(`Utilisez votre adresse ${DOMAINE_AUTORISE}.`, 'erreur');
+  if (!/^\S+@\S+\.\S+$/.test(email)) return message('Saisissez votre adresse e-mail.', 'erreur');
 
   occupe($('btn-oubli'), 'Envoi…');
   const { error } = await sb.auth.resetPasswordForEmail(email, {

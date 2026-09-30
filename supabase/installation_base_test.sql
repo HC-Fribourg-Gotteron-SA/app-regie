@@ -1,7 +1,7 @@
 -- =====================================================================
 -- INSTALLATION COMPLÈTE d'une base neuve (base de TEST) — généré par outils/installation-base-test.mjs
 -- À exécuter UNE fois dans le SQL Editor du projet de test (jamais sur la vraie base).
--- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26.
+-- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27.
 -- Ensuite : créer son compte (Authentication > Users), se mettre admin (voir en bas),
 -- importer le calendrier dans l'outil (.ics), puis lancer supabase/demo_donnees_test.sql.
 -- =====================================================================
@@ -2250,6 +2250,30 @@ create policy notes_match_ecriture on notes_match for all to authenticated
 select 'Table notes_match prête.' as "Résultat";
 
 
+-- #####################################################################
+-- 27_comptes_externes.sql
+-- #####################################################################
+-- =====================================================================
+-- 27 — Comptes pour des personnes hors @fribourg-gotteron.ch
+-- À exécuter sur LES DEUX bases (test puis vraie base), dans Supabase > SQL Editor, après 26.
+-- =====================================================================
+-- Décidé par Léa (30.09.2026) : on peut créer un compte pour quelqu'un d'extérieur au club.
+-- La sécurité reste la même :
+--   • les comptes sont créés par un admin (Authentication > Users) — l'inscription publique doit
+--     rester DÉSACTIVÉE dans Authentication > Sign In / Providers (« Allow new users to sign up » : off) ;
+--   • un nouveau compte n'a AUCUN rôle : il ne voit rien tant qu'un admin ne lui a pas donné
+--     sponsoring / regie / admin (update profiles set role = …).
+
+create or replace function handle_new_user() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into profiles (id, email) values (new.id, lower(new.email));
+  return new;
+end $$;
+
+select 'Toutes les adresses e-mail sont acceptées (compte sans rôle tant qu''un admin ne l''a pas activé).' as "Résultat";
+
+
 -- Après avoir créé ton compte dans Authentication > Users, lance ceci séparément :
 -- update profiles set role = 'admin', nom = 'Léa Talon' where email = 'lea.talon@fribourg-gotteron.ch';
-select 'Installation terminée : 24 fichiers.' as "Résultat";
+select 'Installation terminée : 25 fichiers.' as "Résultat";
