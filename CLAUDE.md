@@ -348,6 +348,9 @@ Autres règles décidées :
       vers `sponsors/<sponsor_id>/…` + ligne `documents_sponsors` (note « Import des dossiers de la saison 26-27 ») ;
       si le nom du fichier (sans extension) = nom d'un visuel importé sans fichier, l'asset reçoit `storage_path` →
       **Télécharger** dans Match du jour et les fiches. Ne jamais déposer à la main dans Supabase Storage.
+      Diffusion **sans fichier à elle** (ex. Sponsor du match importé sans nom de visuel) : Match du jour (carte) et le
+      détail d'une diffusion (section « Dossier du sponsor ») proposent les fichiers du **dossier du sponsor** avec
+      Télécharger (ceux du même produit d'abord). Signalé par Léa le 30.09.2026 (Comptoir Gruérien).
 - [ ] **Match du jour** (28.09.2026, migration 22 à exécuter, pas encore testé). **But n° 1 de l'outil : faciliter la
       vie de la Régie le jour de match, rester simple.** Décidé avec Léa : les playlists Colosseo **restent** d'un
       match à l'autre ; la Régie prépare **le jour du match** ; « changement » = **depuis le match précédent**.
