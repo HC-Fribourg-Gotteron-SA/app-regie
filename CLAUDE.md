@@ -375,7 +375,8 @@ Autres règles décidées :
       traitées, **À faire dans Colosseo** par produit (➖ enlever / ➕ ajouter / 🔄 remplacer le visuel, avec sponsor,
       raison, emplacement LED, son, visuel, Télécharger, case **Fait** partagée = table `colosseo_fait`), puis
       **Ce qui passe** (playlist repliée par produit, ordre de diffusion). Choix d'un autre match (liste).
-      Calcul : passages du match vs match précédent (même saison) ; un passage « passe » si statut prévu / diffusé.
+      Calcul : passages du match vs match précédent (**le dernier joué, même de la saison d'avant** : 1er match de
+      saison comparé à la fin de la saison précédente, décidé le 30.09.2026) ; un passage « passe » si statut prévu / diffusé.
       Migration 22 : `generer_passages` met les passages futurs en `suspendu` si la ligne n'est pas À l'écran ou
       est désactivée (les matchs passés restent figés = historique) ; point de départ aligné sur l'état actuel.
       **Le nom « Anneau LED pause tiers » ne doit jamais s'afficher** (rappel de Léa le 28.09.2026) : l'anneau fait
