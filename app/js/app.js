@@ -161,7 +161,7 @@ const icone = (nom) => `<svg viewBox="0 0 24 24" width="18" height="18" fill="no
 // Rubriques du menu : un titre, puis les onglets dessous
 const MENU = [
   { titre: 'Jour de match', liens: [
-    { href: 'match-du-jour.html', texte: 'Match du jour', icone: 'match' },
+    { href: 'match-du-jour.html', texte: 'Match du jour', icone: 'match', roles: ['regie', 'admin'] },
   ] },
   { titre: 'Demandes', liens: [
     { href: 'demandes.html', texte: 'Toutes les demandes', icone: 'demandes', compteur: 'demandes' },
@@ -192,10 +192,11 @@ function construireMenu(profil) {
     <a class="marque" href="${accueil}">${LOGO}
       <span class="marque-texte"><strong>Fribourg-Gottéron</strong><small>Sponsoring ↔ Régie</small></span>
     </a>
-    <nav>${MENU.map(r => `
+    <nav>${MENU.map(r => ({ ...r, liens: r.liens.filter(l => !l.roles || l.roles.includes(profil.role)) }))
+      .filter(r => r.liens.length).map(r => `
       <div class="menu-rubrique"${r.id ? ` id="${r.id}"` : ''}>
         <div class="menu-titre">${r.titre}</div>
-        ${r.liens.filter(l => !l.roles || l.roles.includes(profil.role)).map(l => `
+        ${r.liens.map(l => `
           <a href="${l.href}" class="${page === l.href || l.aussi?.includes(page) ? 'actif' : ''}">${icone(l.icone)}<span>${l.texte}</span>
             ${l.compteur ? `<span class="menu-compteur" data-compteur="${l.compteur}" hidden></span>` : ''}</a>`).join('')}
       </div>`).join('')}

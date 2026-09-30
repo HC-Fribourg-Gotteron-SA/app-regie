@@ -377,7 +377,8 @@ Autres règles décidées :
       vie de la Régie le jour de match, rester simple.** Décidé avec Léa : les playlists Colosseo **restent** d'un
       match à l'autre ; la Régie prépare **le jour du match** ; « changement » = **depuis le match précédent**.
       Page `match-du-jour.html` = page d'arrivée de la Régie / admin (connexion.js, logo du menu ; Sponsoring →
-      demandes) : bilan en une ligne (« N choses à faire dans Colosseo » / « ✓ Rien à changer »), demandes pas
+      demandes). **Réservée Régie / admin** (30.09.2026, Léa : le Sponsoring ne touche pas à Colosseo) : lien caché
+      du menu, « Accès réservé » sinon : bilan en une ligne (« N choses à faire dans Colosseo » / « ✓ Rien à changer »), demandes pas
       traitées, **À faire dans Colosseo** par produit (➖ enlever / ➕ ajouter / 🔄 remplacer le visuel, avec sponsor,
       raison, emplacement LED, son, visuel, Télécharger, case **Fait** partagée = table `colosseo_fait`), puis
       **Ce qui passe** (playlist repliée par produit, ordre de diffusion). Choix d'un autre match (liste).

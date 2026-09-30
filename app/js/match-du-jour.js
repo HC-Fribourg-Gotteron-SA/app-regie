@@ -3,7 +3,7 @@
 import { sb, exigerConnexion, echapper, dateCourte, notifier, toutesLesLignes, libelleFichier, taille } from './app.js';
 import { calculerChangements, consigne, PASSE } from './changements.js';
 
-const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
+const { profil } = await exigerConnexion({ roles: ['regie', 'admin'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
 
 const $ = (id) => document.getElementById(id);
