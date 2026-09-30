@@ -61,6 +61,9 @@ d'infos entre le **département Sponsoring** (vend des produits de visibilité a
   rouge sur la vraie base en local). Installer / mettre à jour la base de test : `node outils/installation-base-test.mjs`
   → `supabase/installation_base_test.sql` (toutes les migrations sauf 15 et 23), puis `demo_donnees_test.sql`.
   **Nouvelle migration = à exécuter sur LES DEUX bases** (test d'abord).
+  **Site de test en ligne** pour les collègues : tout site dont l'adresse contient « test » (ex. 2e site Netlify
+  `…-test.netlify.app`, même dépôt) utilise la base de test (`SITE_TEST`, bandeau orange). ⚠ L'adresse du vrai site ne
+  doit jamais contenir « test ». Les collègues ont besoin d'un compte dans le projet de test (Auth séparée).
 - **Front** : HTML + CSS + JS vanilla en modules ES, **sans build**. supabase-js v2 importé depuis
   `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm`. Lancé en local avec Live Server
   (`http://127.0.0.1:5500/app/index.html`).
