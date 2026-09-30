@@ -1,6 +1,7 @@
 -- =====================================================================
 -- DONNÉES FICTIVES pour faire tester l'outil aux collègues
--- À exécuter dans Supabase > SQL Editor, sur une base VIDE (après 23_remise_a_zero.sql).
+-- À exécuter dans Supabase > SQL Editor de la BASE DE TEST, sur une base vide (installation ou 23_remise_a_zero.sql).
+-- S'il n'y a aucun match passé au calendrier, un match fictif « HC Démo (match passé fictif) » est créé 3 jours avant.
 -- =====================================================================
 -- Tous les sponsors se terminent par « (démo) ». Rien de réel : on peut tout casser.
 -- Après les tests : 23_remise_a_zero.sql, puis le vrai import.
@@ -84,8 +85,17 @@ begin
   if v_saison is null then raise exception 'Aucune saison active.'; end if;
   select * into v_prochain  from matchs where saison_id = v_saison and date_heure >= date_trunc('day', now()) order by date_heure limit 1;
   select * into v_precedent from matchs where saison_id = v_saison and date_heure <  date_trunc('day', now()) order by date_heure desc limit 1;
-  if v_prochain.id is null or v_precedent.id is null then
-    raise exception 'Il faut au moins un match passé et un match à venir dans le calendrier.';
+  if v_prochain.id is null then
+    raise exception 'Il faut au moins un match à venir dans le calendrier (importer le .ics dans l''outil).';
+  end if;
+  -- Pas de match passé (le .ics ne contient souvent que les matchs à venir) : un match fictif 3 jours avant,
+  -- pour que Match du jour ait un « match précédent » à comparer
+  if v_precedent.id is null then
+    insert into matchs (saison_id, numero, date_heure, adversaire, type)
+    values (v_saison, (select coalesce(min(numero), 1) - 1 from matchs where saison_id = v_saison),
+            date_trunc('day', now()) - interval '3 days' + interval '19 hours 45 minutes',
+            'HC Démo (match passé fictif)', 'saison')
+    returning * into v_precedent;
   end if;
 
   alter table assets disable trigger assets_avant;   -- visuels créés directement « validés »
