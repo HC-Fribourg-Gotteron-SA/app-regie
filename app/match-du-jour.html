@@ -51,6 +51,21 @@
       <div id="playlist"></div>
     </section>
   </main>
+  <!-- Détail d'un changement (même présentation qu'une demande) -->
+  <div class="voile" id="voile" hidden></div>
+  <div class="fenetre" id="fenetre" hidden role="dialog" aria-modal="true" aria-labelledby="d-titre">
+    <div class="fenetre-entete">
+      <div>
+        <div class="surtitre" id="d-surtitre"></div>
+        <h2 id="d-titre"></h2>
+        <div id="d-sous-titre" class="doux petit" style="margin-top:.3rem"></div>
+      </div>
+      <button class="btn btn-discret" id="btn-fermer" aria-label="Fermer">✕</button>
+    </div>
+    <div class="fenetre-corps" id="d-corps"></div>
+    <div class="fenetre-pied" id="d-pied" hidden></div>
+  </div>
+
   <script type="module" src="js/match-du-jour.js"></script>
 </body>
 </html>
