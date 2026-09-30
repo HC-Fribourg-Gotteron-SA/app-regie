@@ -54,7 +54,13 @@ d'infos entre le **département Sponsoring** (vend des produits de visibilité a
 ## Stack
 
 - **Supabase** : Postgres, Auth (e-mail + mot de passe), Storage (bucket privé `assets`), RLS, Realtime.
-  Projet : `https://qxclmmzmhenudhvaikmp.supabase.co` (clé publishable dans `app/js/config.js`).
+  **Deux projets** (30.09.2026) : **vraie base** `https://qxclmmzmhenudhvaikmp.supabase.co` (en ligne, Netlify) et
+  **base de test** `https://euuglujtfyampnymwenz.supabase.co` (données fictives). `app/js/config.js` choisit tout seul :
+  **en local (Live Server) = base de TEST** (bandeau orange en bas de l'écran), en ligne = vraie base ; lien en bas du
+  menu (en local) « Passer sur la vraie base / Revenir sur la base de test » (localStorage `base-choisie`, bandeau
+  rouge sur la vraie base en local). Installer / mettre à jour la base de test : `node outils/installation-base-test.mjs`
+  → `supabase/installation_base_test.sql` (toutes les migrations sauf 15 et 23), puis `demo_donnees_test.sql`.
+  **Nouvelle migration = à exécuter sur LES DEUX bases** (test d'abord).
 - **Front** : HTML + CSS + JS vanilla en modules ES, **sans build**. supabase-js v2 importé depuis
   `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm`. Lancé en local avec Live Server
   (`http://127.0.0.1:5500/app/index.html`).

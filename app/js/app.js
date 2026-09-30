@@ -1,6 +1,21 @@
 ﻿// Base commune à toutes les pages : client Supabase, contrôle d'accès, menu, petits outils.
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
+import { SUPABASE_URL, SUPABASE_KEY, BASE, EN_LOCAL, BASE_TEST_PRETE } from './config.js';
+
+// Bandeau en local : sur quelle base on travaille (test = données fictives ; vraie base = attention)
+if (EN_LOCAL && BASE_TEST_PRETE) {
+  const bandeau = document.createElement('div');
+  bandeau.className = `bandeau-base bandeau-${BASE}`;
+  bandeau.textContent = BASE === 'test'
+    ? 'BASE DE TEST — données fictives, tu peux tout essayer'
+    : 'VRAIE BASE (en local) — attention, les modifications sont réelles';
+  document.body.prepend(bandeau);
+}
+// Changer de base en local (lien en bas du menu)
+export function changerDeBase() {
+  try { localStorage.setItem('base-choisie', BASE === 'test' ? 'prod' : 'test'); } catch { /* stockage indisponible */ }
+  location.href = 'index.html';
+}
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -193,7 +208,9 @@ function construireMenu(profil) {
       </div>
       <a href="mot-de-passe.html">Mot de passe</a>
       <button type="button" class="lien-menu" id="btn-deconnexion">Déconnexion</button>
-      <small class="menu-version" title="Version de l'outil en ligne">Version du ${VERSION}</small>
+      ${EN_LOCAL && BASE_TEST_PRETE ? `<button type="button" class="lien-menu" id="btn-base">${BASE === 'test'
+        ? 'Passer sur la vraie base' : 'Revenir sur la base de test'}</button>` : ''}
+      <small class="menu-version" title="Version de l'outil en ligne">Version du ${VERSION}${BASE === 'test' ? ' · base de test' : ''}</small>
     </div>`;
 
   // barre du haut sur téléphone : ☰ + nom de l'outil
@@ -207,6 +224,10 @@ function construireMenu(profil) {
   voile.hidden = true;
 
   document.body.prepend(menu, barre, voile);
+  document.getElementById('btn-base')?.addEventListener('click', () => {
+    if (BASE === 'test' && !confirm('Passer sur la VRAIE base ? Tout ce que tu feras sera réel (demandes, diffusions, fichiers).')) return;
+    changerDeBase();
+  });
   document.body.classList.add('avec-menu');
 
   const basculer = (ouvert) => {
