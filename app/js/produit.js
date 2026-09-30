@@ -44,6 +44,7 @@ const etat = {
   choix: new Map(),        // demande_id -> { emplacements: Set, ligne_id, date_fin, fichiers: [], semblables: [] }
   personnes: new Map(),    // id -> nom
   autres: [],              // diffusions d'un autre produit sur la bande de ce produit (LED 3M sur la bande 6M)
+  passees: [],             // sponsors au match dont tous les matchs sont passés (section « Matchs passés »)
   couplees: new Map(),     // id ligne couplée (anneau de la pause tiers) -> { assets }
   slides: [],              // vidéos des slides diffusées dans ce produit (Pub pause tiers), calculées
   ouverte: null,           // diffusion affichée dans la fenêtre de détail
@@ -60,7 +61,16 @@ const CHAMPS_LIGNE = `id, produit_id, type_vente, statut, avec_son, duree_s, occ
   assets(id, nom_visuel, statut, version, variante, depose_le, valide_le, motif_refus, storage_path, mime)`;
 
 // Diffusion de ce produit, ou d'un autre produit affichée ici (LED 3M sur la bande 6M)
-const trouverLigne = (id) => etat.lignes.find(x => x.id === id) || etat.autres.find(x => x.id === id);
+const trouverLigne = (id) => etat.lignes.find(x => x.id === id) || etat.autres.find(x => x.id === id)
+  || etat.passees.find(x => x.id === id);
+
+// Vendu « au match » et tous ses matchs sont passés (avant aujourd'hui)
+function matchsTousPasses(l) {
+  if (l.type_vente !== 'match') return false;
+  const dates = (l.matchs || []).map(m => m.match?.date_heure).filter(Boolean);
+  const debutJour = new Date(); debutJour.setHours(0, 0, 0, 0);
+  return dates.length > 0 && dates.every(d => new Date(d) < debutJour);
+}
 
 async function charger() {
   const [{ data: p, error }, { data: attente }, { data: lignes }, { data: matchs }] = await Promise.all([
@@ -82,8 +92,11 @@ async function charger() {
   etat.p = p;
   etat.attente = (attente || []).sort((a, b) => new Date(a.demande.created_at) - new Date(b.demande.created_at));
   // ordre de diffusion (priorite) ; sans rang : à la fin, dans l'ordre de création
-  etat.lignes = (lignes || []).sort((a, b) => (a.priorite ?? 1e9) - (b.priorite ?? 1e9)
+  const triees = (lignes || []).sort((a, b) => (a.priorite ?? 1e9) - (b.priorite ?? 1e9)
     || new Date(a.created_at) - new Date(b.created_at));
+  // sponsors « au match » dont tous les matchs sont passés : rangés dans « Matchs passés » (historique)
+  etat.passees = triees.filter(matchsTousPasses);
+  etat.lignes = triees.filter(l => !matchsTousPasses(l));
   etat.adversaires = new Map((matchs || []).map(m => [jourLocal(m.date_heure), m.adversaire]));
   if (p.lie_a_produit_id) {
     const { data } = await sb.from('produits').select('*').eq('id', p.lie_a_produit_id).maybeSingle();
@@ -436,6 +449,12 @@ function afficherLignes() {
   $('nb-sponsors').textContent = `· ${sponsors.size} sponsor${sponsors.size > 1 ? 's' : ''}`;
   $('vide').hidden = etat.lignes.length > 0 || etat.slides.length > 0 || etat.emplacements.length > 0;
 
+  // Matchs passés (repliés en bas)
+  $('bloc-passes').hidden = !etat.passees.length;
+  $('nb-passes').textContent = `(${etat.passees.length})`;
+  $('entete-passes').innerHTML = $('entete-lignes').innerHTML;
+  $('lignes-passes').innerHTML = etat.passees.map((l, rang) => rangeeLigne(l, rang, cols)).join('');
+
   if (p.famille === 'emplacement' && etat.emplacements.length) {
     $('lignes').innerHTML = rangeesEmplacements(cols);
     return;
@@ -647,6 +666,12 @@ $('lignes').addEventListener('click', async (e) => {
   if (e.target.closest('input, textarea, button, a, select, label')) return;
   const slide = e.target.closest('tr[data-slide]');
   if (slide) { location.href = `produit.html?id=${slide.dataset.slide}`; return; }
+  const tr = e.target.closest('tr[data-ligne]');
+  if (tr) ouvrirDetail(tr.dataset.ligne);
+});
+// Matchs passés : clic sur une ligne = même détail
+$('lignes-passes').addEventListener('click', (e) => {
+  if (e.target.closest('input, textarea, button, a, select, label')) return;
   const tr = e.target.closest('tr[data-ligne]');
   if (tr) ouvrirDetail(tr.dataset.ligne);
 });

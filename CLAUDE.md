@@ -178,6 +178,9 @@ Autres règles décidées :
   **Pub pause tiers = 4 cas** : vidéotron avec/sans son × avec/sans anneau LED. Dans la demande, le Sponsoring
   choisit obligatoirement le son (toutes les pubs vidéotron) et l'anneau (produits avec `lie_a_produit_id`).
 - Suspension temporaire d'une ligne (météo, trop de pub) sans toucher au contrat.
+- **Sponsors « au match » dont tous les matchs sont passés** (30.09.2026, validé par Léa) : quittent la liste principale
+  de la fiche produit → section repliée **« Matchs passés »** en bas (historique, cliquable) ; masqués sur la page
+  Action scenes. Rien n'est effacé. Match du jour les propose déjà à « Enlever » au match suivant (cocher Fait).
 - **Retirer un sponsor d'un produit sans demande** (28.09.2026) : bouton « Retirer de ce produit… » dans le détail
   d'une ligne (Régie / admin, confirmation) → `statut = 'termine'`, `date_fin = aujourd'hui` (ligne + anneau couplé) ;
   disparaît des listes, reste dans l'historique. Pas de suppression réelle (réservée à l'admin en base).

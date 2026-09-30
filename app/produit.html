@@ -37,6 +37,18 @@
         </div>
         <div class="vide" id="vide" hidden>Aucun sponsor sur ce produit pour l'instant.</div>
       </div>
+
+      <!-- Sponsors au match dont tous les matchs sont passés : rangés, pas effacés -->
+      <details class="carte bloc-passes" id="bloc-passes" hidden>
+        <summary><strong>Matchs passés</strong> <span class="doux" id="nb-passes"></span>
+          <span class="doux petit">· sponsors pris pour des matchs déjà joués (historique)</span></summary>
+        <div class="tableau-conteneur">
+          <table class="tableau tableau-diffusions">
+            <thead id="entete-passes"></thead>
+            <tbody id="lignes-passes"></tbody>
+          </table>
+        </div>
+      </details>
     </section>
   </main>
 

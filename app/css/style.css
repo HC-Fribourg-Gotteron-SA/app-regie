@@ -433,6 +433,12 @@ table.tableau { width: 100%; border-collapse: collapse; background: var(--surfac
   .onglets-produits { position: static; margin-top: 0; }
 }
 
+/* Fiche produit : sponsors au match dont les matchs sont passés */
+.bloc-passes { margin-top: 1rem; padding: 0; overflow: hidden; }
+.bloc-passes > summary { cursor: pointer; padding: .8rem 1.1rem; }
+.bloc-passes[open] > summary { border-bottom: 1px solid var(--bordure); }
+.bloc-passes tbody td { color: var(--texte-doux); }
+
 /* Importer des dossiers */
 .exemple-dossier { background: var(--surface-2); border: 1px solid var(--bordure); border-radius: 8px;
   padding: .6rem .8rem; margin: 0 0 .8rem; white-space: pre-wrap; overflow-x: auto; }

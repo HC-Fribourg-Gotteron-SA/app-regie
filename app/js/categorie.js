@@ -26,14 +26,18 @@ async function charger() {
   const [{ data: lignes }, { data: attente }] = await Promise.all([
     sb.from('lignes_vendues')
       .select(`id, produit_id, type_vente, statut, consignes, suspendue, motif_suspension, validee, visuel_attendu, date_fin, priorite,
-               contrat:contrats(sponsor:sponsors(nom)), matchs:lignes_matchs(match_id),
+               contrat:contrats(sponsor:sponsors(nom)), matchs:lignes_matchs(match_id, match:matchs(date_heure)),
                assets(nom_visuel, statut, depose_le)`)
       .in('produit_id', ids).not('statut', 'in', '(annule,termine)'),
     sb.from('demandes_produits').select('produit_id, demande:demandes!inner(statut)')
       .in('produit_id', ids).is('traite_le', null).neq('demande.statut', 'traitee'),
   ]);
   etat.lignes = new Map();
-  for (const l of lignes || []) {
+  // sponsors « au match » dont tous les matchs sont passés : plus affichés ici (historique sur la fiche de la scène)
+  const debutJour = new Date(); debutJour.setHours(0, 0, 0, 0);
+  const passe = (l) => l.type_vente === 'match' && (l.matchs || []).length > 0
+    && l.matchs.every(m => m.match?.date_heure && new Date(m.match.date_heure) < debutJour);
+  for (const l of (lignes || []).filter(x => !passe(x))) {
     if (!etat.lignes.has(l.produit_id)) etat.lignes.set(l.produit_id, []);
     etat.lignes.get(l.produit_id).push(l);
   }
