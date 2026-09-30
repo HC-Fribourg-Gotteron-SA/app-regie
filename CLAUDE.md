@@ -112,6 +112,8 @@ outil-regie/
     ├── calendrier.html / js/calendrier.js  ← matchs à domicile (lecture tous ; ajout/import/modif admin)
     ├── sponsors.html / js/sponsors.js      ← « Dossiers sponsors » : liste (avec produits / avec documents / tous)
     ├── sponsor.html / js/sponsor.js        ← dossier d'UN sponsor (?id=…) : ce qu'il a, documents reçus, demandes
+    ├── import-dossiers.html / js/import-dossiers.js ← import en masse d'un dossier (un sous-dossier par sponsor), Régie
+    ├── js/rapprochement.js ← calcul pur : nom de dossier -> sponsor, nom de fichier -> visuel (testable dans Node)
     ├── img/logo.jpg
     ├── js/app.js      ← client `sb`, exigerConnexion({roles}), menu, LIBELLES, outils (echapper, notifier…)
     ├── js/config.js
@@ -338,6 +340,14 @@ Autres règles décidées :
       une demande y sont inscrits automatiquement (demande.js ; nouveau sponsor : trigger quand la demande reçoit
       son sponsor_id) ; on peut aussi y déposer un document reçu hors demande (`sponsors/<sponsor_id>/<horodatage>__<fichier>`).
       Suppression d'un document : admin seulement (pas encore de bouton).
+      **Import en masse** (30.09.2026, demandé par Léa, pas encore testé) : menu Sponsors → « Importer des dossiers »
+      (Régie / admin ; lien de menu filtré par `roles`). Léa choisit un dossier (pas de zip) avec **un sous-dossier par
+      sponsor** ; aperçu : sous-dossier → sponsor (`rapprochement.js` : même nom, alias, puis « contient », marqué « à
+      vérifier » ; correction via une case avec liste), fichiers > 50 Mo refusés (limite Supabase gratuit, alerte au-delà
+      de ~900 Mo au total), déjà présents ignorés (même sponsor + nom + taille : on peut relancer). Envoi 3 à la fois
+      vers `sponsors/<sponsor_id>/…` + ligne `documents_sponsors` (note « Import des dossiers de la saison 26-27 ») ;
+      si le nom du fichier (sans extension) = nom d'un visuel importé sans fichier, l'asset reçoit `storage_path` →
+      **Télécharger** dans Match du jour et les fiches. Ne jamais déposer à la main dans Supabase Storage.
 - [ ] **Match du jour** (28.09.2026, migration 22 à exécuter, pas encore testé). **But n° 1 de l'outil : faciliter la
       vie de la Régie le jour de match, rester simple.** Décidé avec Léa : les playlists Colosseo **restent** d'un
       match à l'autre ; la Régie prépare **le jour du match** ; « changement » = **depuis le match précédent**.

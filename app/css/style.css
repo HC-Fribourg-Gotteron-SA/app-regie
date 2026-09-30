@@ -433,6 +433,13 @@ table.tableau { width: 100%; border-collapse: collapse; background: var(--surfac
   .onglets-produits { position: static; margin-top: 0; }
 }
 
+/* Importer des dossiers */
+.exemple-dossier { background: var(--surface-2); border: 1px solid var(--bordure); border-radius: 8px;
+  padding: .6rem .8rem; margin: 0 0 .8rem; white-space: pre-wrap; overflow-x: auto; }
+.barre-progression { height: 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--bordure);
+  overflow: hidden; margin: .5rem 0; }
+.barre-progression > div { height: 100%; width: 0; background: var(--ok); transition: width .2s; }
+
 /* Match du jour */
 .bilan-match { font-size: 1.05rem; margin-bottom: 1rem; }
 .bilan-a-faire { box-shadow: inset 5px 0 0 #e0a100, var(--ombre); }

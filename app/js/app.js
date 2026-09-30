@@ -158,6 +158,7 @@ const MENU = [
   ] },
   { titre: 'Sponsors', liens: [
     { href: 'sponsors.html', texte: 'Dossiers sponsors', icone: 'sponsors', aussi: ['sponsor.html'] },
+    { href: 'import-dossiers.html', texte: 'Importer des dossiers', icone: 'onglets', roles: ['regie', 'admin'] },
   ] },
   { titre: 'Saison', liens: [
     { href: 'matchs.html', texte: 'Par match', icone: 'match' },
@@ -179,7 +180,7 @@ function construireMenu(profil) {
     <nav>${MENU.map(r => `
       <div class="menu-rubrique"${r.id ? ` id="${r.id}"` : ''}>
         <div class="menu-titre">${r.titre}</div>
-        ${r.liens.map(l => `
+        ${r.liens.filter(l => !l.roles || l.roles.includes(profil.role)).map(l => `
           <a href="${l.href}" class="${page === l.href || l.aussi?.includes(page) ? 'actif' : ''}">${icone(l.icone)}<span>${l.texte}</span>
             ${l.compteur ? `<span class="menu-compteur" data-compteur="${l.compteur}" hidden></span>` : ''}</a>`).join('')}
       </div>`).join('')}

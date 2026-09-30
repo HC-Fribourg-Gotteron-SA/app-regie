@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Importer des dossiers — Sponsoring ↔ Régie</title>
+  <link rel="icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <a href="sponsors.html" class="lien-retour">← Dossiers sponsors</a>
+    <div class="titre-page">
+      <div>
+        <div class="surtitre">Dossiers sponsors</div>
+        <h1>Importer des dossiers</h1>
+        <p class="doux">Range d'un coup les fichiers reçus des sponsors : un sous-dossier par sponsor.</p>
+      </div>
+    </div>
+
+    <!-- 1. Choisir le dossier -->
+    <section class="carte etape">
+      <h2 class="etape-titre"><span class="etape-num">1</span> Choisir le dossier</h2>
+      <p class="petit" style="margin-top:0">Le dossier doit contenir <strong>un sous-dossier par sponsor</strong>, nommé comme le sponsor.
+        Pas besoin de zip : choisis le dossier directement.</p>
+      <pre class="petit doux exemple-dossier">Visuels saison 26-27/
+├── BCF/            FKB x Gotteron final 4K lauter.mp4, …
+├── Groupe E/       GRPE_TA_cube-HD.mp4, …
+└── Net+/           …</pre>
+      <label class="zone-depot" for="dossier">
+        Cliquer pour choisir le dossier
+        <input type="file" id="dossier" webkitdirectory directory multiple hidden>
+      </label>
+      <p class="aide">Fichiers de plus de 50 Mo : pas envoyés (limite de Supabase), signalés dans l'aperçu.</p>
+    </section>
+
+    <!-- 2. Aperçu -->
+    <section class="carte etape" id="bloc-apercu" hidden>
+      <h2 class="etape-titre"><span class="etape-num">2</span> Vérifier <span class="doux" id="resume-apercu"></span></h2>
+      <p class="petit" style="margin-top:0">Chaque sous-dossier est rattaché au sponsor le plus proche. Corrige la case
+        « Sponsor » si besoin (ou vide-la pour ne pas importer ce dossier).</p>
+      <datalist id="liste-sponsors"></datalist>
+      <div class="tableau-conteneur">
+        <table class="tableau non-cliquable">
+          <thead><tr><th>Dossier</th><th>Sponsor</th><th>Fichiers</th><th class="col-optionnelle">Reliés à un visuel</th></tr></thead>
+          <tbody id="apercu"></tbody>
+        </table>
+      </div>
+      <div id="avertissements"></div>
+    </section>
+
+    <!-- 3. Importer -->
+    <section class="carte etape" id="bloc-import" hidden>
+      <h2 class="etape-titre"><span class="etape-num">3</span> Importer</h2>
+      <p class="petit" style="margin-top:0" id="resume-import"></p>
+      <div class="barre-progression" id="progression" hidden><div id="progression-barre"></div></div>
+      <p class="petit" id="progression-texte" hidden></p>
+      <div class="actions" style="justify-content:flex-start">
+        <button type="button" class="btn btn-principal" id="btn-importer">Importer</button>
+      </div>
+      <div id="resultat"></div>
+    </section>
+  </main>
+  <script type="module" src="js/import-dossiers.js"></script>
+</body>
+</html>
