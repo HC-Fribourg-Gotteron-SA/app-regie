@@ -441,8 +441,11 @@ function ouvrirChangement(cleItem) {
 
   $('d-surtitre').textContent = i.anneau ? consigneAnneau(i.action) : TITRE_ACTION[i.action];
   $('d-titre').textContent = i.sponsor;
+  // état POUR CE MATCH (et pas la case « À l'écran » de la fiche, qui prêtait à confusion pour un retrait)
+  const passeCeMatch = etat.passagesCe.some(p => p.ligne_id === (i.anneau ? l.ligne_couplee_id : l.id) && PASSE.has(p.statut));
   $('d-sous-titre').innerHTML = (l.suspendue ? '<span class="etat etat-desactive">⏸ Désactivé</span>'
-      : l.validee ? '<span class="etat etat-ecran">À l’écran</span>' : '<span class="etat etat-non">Pas à l’écran</span>')
+      : passeCeMatch ? '<span class="etat etat-ecran">Passe à ce match</span>'
+      : '<span class="etat etat-non">Ne passe pas à ce match</span>')
     + (fait ? ' <span class="etat etat-ecran">✓ Fait dans Colosseo</span>' : ' <span class="etat etat-attente">à faire dans Colosseo</span>')
     + ` &nbsp;<span class="doux">${echapper(i.raison || '')}</span>`;
 
