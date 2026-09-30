@@ -762,6 +762,8 @@ function ouvrirDetail(id) {
           : `<h3>Visuels</h3>${listeVisuels(visuels)}`}
         </section>
 
+        <section class="detail-section" id="d-dossier" hidden></section>
+
         <section class="detail-section">
           <h3>Remarques</h3>
           ${estRegie
@@ -791,6 +793,28 @@ function ouvrirDetail(id) {
     </div>`;
   $('fenetre').hidden = $('voile').hidden = false;
   document.body.classList.add('fenetre-ouverte');
+  afficherDossierSponsor(l);
+}
+
+// Fichiers reçus pour ce sponsor (dossier sponsor), à télécharger : utile quand la diffusion n'a pas de fichier
+// (ex. Sponsor du match importé d'Airtable sans nom de visuel). Ceux de ce produit d'abord.
+async function afficherDossierSponsor(l) {
+  const zone = $('d-dossier');
+  const sponsorId = l.contrat?.sponsor?.id;
+  if (!zone || !sponsorId) return;
+  const { data, error } = await sb.from('documents_sponsors')
+    .select('nom, storage_path, taille_octets, produit_id, depose_le').eq('sponsor_id', sponsorId)
+    .order('depose_le', { ascending: false });
+  if (error || !data?.length || etat.ouverte !== l.id) return;
+  const docs = data.slice().sort((x, y) => (y.produit_id === l.produit_id) - (x.produit_id === l.produit_id));
+  zone.hidden = false;
+  zone.innerHTML = `
+    <h3>Dossier du sponsor <span class="doux petit">· ${docs.length} fichier${docs.length > 1 ? 's' : ''}</span></h3>
+    <ul class="liste-fichiers liste-documents" style="margin:0">${docs.slice(0, 10).map(d => `
+      <li><span>${echapper(d.nom)} <span class="doux petit">· reçu le ${dateCourte(d.depose_le)}${d.taille_octets ? ` · ${taille(d.taille_octets)}` : ''}</span></span>
+        <button type="button" class="btn btn-discret" data-telecharger-visuel="${echapper(d.storage_path)}">Télécharger</button></li>`).join('')}
+    </ul>
+    ${docs.length > 10 ? `<a class="petit" href="sponsor.html?id=${sponsorId}">Voir tout le dossier →</a>` : ''}`;
 }
 
 function fermerDetail() {

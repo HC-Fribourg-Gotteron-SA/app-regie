@@ -30,6 +30,7 @@ const etat = {
   changements: [], passagesCe: [],
   notes: [], tableNotes: true,  // « Pour ce soir » : infos et tâches du match (hors sponsors)
   attente: [], demandesMatch: [], // produits de demandes pas encore ajoutés (tous / ceux de ce match)
+  dossiers: new Map(),      // sponsor -> fichiers de son dossier (les plus récents d'abord)
   traitees: new Map(),      // ligne -> produit de demande traité depuis le dernier match (info ; « Fait » reste à cocher)
   tableFait: true,          // false si la migration 22 n'est pas encore exécutée
 };
@@ -46,11 +47,21 @@ async function charger() {
         .select(`id, produit_id, type_vente, avec_son, duree_s, consignes, suspendue, motif_suspension, validee, statut,
                  date_fin, priorite, created_at, ligne_couplee_id,
                  produit:produits(id, nom, categorie, ordre, famille, support, actif),
-                 contrat:contrats(sponsor:sponsors(nom)),
+                 contrat:contrats(sponsor_id, sponsor:sponsors(nom)),
                  emplacements:lignes_emplacements(emplacement:emplacements(anneau, zone, position))`).range(de, a)),
       toutesLesLignes((de, a) => sb.from('assets').select('id, nom_visuel, variante, storage_path').range(de, a)),
       sb.from('profiles').select('id, nom, email'),
     ]);
+    // dossiers sponsors (fichiers reçus) : proposés quand une diffusion n'a pas de fichier à elle
+    try {
+      const docs = await toutesLesLignes((de, a) => sb.from('documents_sponsors')
+        .select('sponsor_id, produit_id, nom, storage_path, taille_octets, depose_le').not('sponsor_id', 'is', null).range(de, a));
+      etat.dossiers = new Map();
+      for (const d of docs.sort((x, y) => new Date(y.depose_le) - new Date(x.depose_le))) {
+        if (!etat.dossiers.has(d.sponsor_id)) etat.dossiers.set(d.sponsor_id, []);
+        etat.dossiers.get(d.sponsor_id).push(d);
+      }
+    } catch { etat.dossiers = new Map(); }       // table pas encore créée (migration 19)
     etat.matchs = matchs;
     etat.lignes = new Map(lignes.map(l => [l.id, l]));
     // l'anneau LED de la Pub pause tiers fait partie de la Pub pause tiers (ligne couplée, produit technique inactif)
@@ -340,8 +351,19 @@ function carteChangement(i) {
     ? `Nouveau : <strong>${echapper(nomVisuel(i.asset_id) || '—')}</strong>${i.ancien_asset_id ? ` <span class="doux">· à la place de « ${echapper(nomVisuel(i.ancien_asset_id))} »</span>` : ''}`
     : nomVisuel(i.asset_id) ? `Visuel : ${echapper(nomVisuel(i.asset_id))}` : '';
   // visuel connu seulement par son nom (import Airtable, démo) : pas de fichier à télécharger
-  const sansFichier = i.action !== 'enlever' && i.asset_id && !a?.storage_path
+  // pas de fichier sur la diffusion : on propose les fichiers du dossier du sponsor (ceux de ce produit d'abord)
+  const sponsorId = i.l?.contrat?.sponsor_id;
+  const dossier = i.action !== 'enlever' && !a?.storage_path && sponsorId ? (etat.dossiers.get(sponsorId) || [])
+    .slice().sort((x, y) => (y.produit_id === i.l?.produit_id) - (x.produit_id === i.l?.produit_id)) : [];
+  const sansFichier = i.action !== 'enlever' && i.asset_id && !a?.storage_path && !dossier.length
     ? ' <span class="doux petit">· fichier pas dans l’outil</span>' : '';
+  const fichiersDossier = dossier.length ? `
+    <div class="petit" style="margin-top:.3rem">Dans le dossier du sponsor :</div>
+    <ul class="liste-fichiers liste-documents">${dossier.slice(0, 6).map(d => `
+      <li><span>${echapper(d.nom)}${d.taille_octets ? ` <span class="doux petit">${taille(d.taille_octets)}</span>` : ''}</span>
+        <button type="button" class="btn" data-telecharger="${echapper(d.storage_path)}">Télécharger</button></li>`).join('')}
+    </ul>
+    ${dossier.length > 6 ? `<a class="petit" href="sponsor.html?id=${sponsorId}">+ ${dossier.length - 6} autres dans le dossier →</a>` : ''}` : '';
   const fait = i.fait;
   return `
     <div class="changement changement-${i.action}${fait ? ' est-fait' : ''}">
@@ -351,6 +373,7 @@ function carteChangement(i) {
           <span class="doux petit">(${echapper(i.raison)})</span></div>
         ${details.length ? `<div class="petit">${details.join(' · ')}</div>` : ''}
         ${visuel ? `<div class="petit">${visuel}${sansFichier}</div>` : ''}
+        ${fichiersDossier}
         ${i.l?.consignes && i.action !== 'enlever' ? `<div class="petit doux">Remarque : ${echapper(i.l.consignes)}</div>` : ''}
         ${i.traitee ? `<div class="petit doux">Demande traitée par ${echapper(etat.personnes.get(i.traitee.traite_par) || '—')}
           le ${dateCourte(i.traitee.traite_le)}</div>` : ''}
