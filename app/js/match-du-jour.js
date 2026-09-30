@@ -96,7 +96,9 @@ function remplirChoix() {
 
 async function chargerMatch() {
   const m = etat.match;
-  const avant = etat.matchs.filter(x => x.saison_id === m.saison_id && new Date(x.date_heure) < new Date(m.date_heure));
+  // match précédent = le dernier joué avant celui-ci, même s'il est de la saison d'avant
+  // (premier match de la saison : on compare avec la fin de la saison précédente)
+  const avant = etat.matchs.filter(x => new Date(x.date_heure) < new Date(m.date_heure));
   etat.precedent = avant[avant.length - 1] || null;
 
   const aujourdhui = new Date().toDateString() === new Date(m.date_heure).toDateString();
@@ -104,7 +106,8 @@ async function chargerMatch() {
   $('m-surtitre').textContent = aujourdhui ? 'Match du jour' : passe ? 'Match passé' : 'Prochain match';
   $('m-titre').textContent = `${aujourdhui ? 'Ce soir' : jour(m.date_heure)} · contre ${m.adversaire}`;
   $('m-sous-titre').textContent = `${aujourdhui ? jour(m.date_heure) + ' · ' : ''}${heure(m.date_heure)} · match n° ${m.numero}`
-    + (etat.precedent ? ` · comparé au match du ${dateCourte(etat.precedent.date_heure)} contre ${etat.precedent.adversaire}` : '');
+    + (etat.precedent ? ` · comparé au match du ${dateCourte(etat.precedent.date_heure)} contre ${etat.precedent.adversaire}`
+      + (etat.precedent.saison_id !== m.saison_id ? ' (dernier match de la saison précédente)' : '') : '');
   $('quand-playlist').textContent = aujourdhui ? 'ce soir' : `le ${dateCourte(m.date_heure)}`;
   document.title = `${aujourdhui ? 'Match du jour' : 'Match'} — ${m.adversaire}`;
 
@@ -235,7 +238,7 @@ function afficher() {
   bilan.hidden = false;
   if (!etat.precedent) {
     bilan.className = 'carte bilan-match';
-    bilan.innerHTML = '<strong>Premier match de la saison</strong> <span class="doux">— pas de match précédent pour comparer : vérifiez toute la playlist ci-dessous.</span>' + plusTaches;
+    bilan.innerHTML = '<strong>Premier match enregistré dans l’outil</strong> <span class="doux">— pas de match précédent pour comparer : vérifiez toute la playlist ci-dessous.</span>' + plusTaches;
   } else if (!items.length) {
     bilan.className = `carte bilan-match ${taches ? 'bilan-a-faire' : 'bilan-pret'}`;
     bilan.innerHTML = '<strong>✓ Rien à changer dans Colosseo</strong> <span class="doux">— la playlist est la même qu’au match précédent.</span>' + plusTaches;
