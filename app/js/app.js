@@ -1,9 +1,9 @@
 ﻿// Base commune à toutes les pages : client Supabase, contrôle d'accès, menu, petits outils.
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { SUPABASE_URL, SUPABASE_KEY, BASE, EN_LOCAL, BASE_TEST_PRETE } from './config.js';
+import { SUPABASE_URL, SUPABASE_KEY, BASE, EN_LOCAL, SITE_TEST, BASE_TEST_PRETE } from './config.js';
 
-// Bandeau en local : sur quelle base on travaille (test = données fictives ; vraie base = attention)
-if (EN_LOCAL && BASE_TEST_PRETE) {
+// Bandeau en local / sur le site de test : sur quelle base on travaille (test = données fictives ; vraie base = attention)
+if ((EN_LOCAL || SITE_TEST) && BASE_TEST_PRETE) {
   const bandeau = document.createElement('div');
   bandeau.className = `bandeau-base bandeau-${BASE}`;
   bandeau.textContent = BASE === 'test'

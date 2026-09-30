@@ -6,14 +6,17 @@
 //   - prod : les vraies données (version en ligne, Netlify) ;
 //   - test : une copie vide + données fictives, pour essayer sans risque.
 // En local (Live Server : 127.0.0.1 / localhost), l'outil utilise la base de TEST (bandeau orange),
-// sauf si on bascule sur la vraie base avec le lien en bas du menu. En ligne : toujours la vraie base.
+// sauf si on bascule sur la vraie base avec le lien en bas du menu. En ligne : la vraie base,
+// sauf sur le site de test (adresse contenant « test ») qui utilise la base de test.
 const BASES = {
   prod: { url: 'https://qxclmmzmhenudhvaikmp.supabase.co', cle: 'sb_publishable_H8zdrsuxp3wpswxJvTRAkA_rgFgQJOH' },
   test: { url: 'https://euuglujtfyampnymwenz.supabase.co', cle: 'sb_publishable_ekXlCf8wI96H-JxbiPB4NQ_PN7nJJaT' },
 };
 
 export const EN_LOCAL = ['localhost', '127.0.0.1'].includes(location.hostname);
-let choix = EN_LOCAL ? 'test' : 'prod';
+// Site en ligne « de test » (adresse qui contient « test », ex. regie-hcfg-test.netlify.app) : base de test
+export const SITE_TEST = !EN_LOCAL && /test/i.test(location.hostname);
+let choix = EN_LOCAL || SITE_TEST ? 'test' : 'prod';
 try {
   const force = localStorage.getItem('base-choisie');
   if (EN_LOCAL && (force === 'prod' || force === 'test')) choix = force;
