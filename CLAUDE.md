@@ -324,7 +324,7 @@ Autres règles décidées :
   avec le total « à ajouter » visible même replié. Catégories dans `CATEGORIES_UNE_PAGE` (aujourd'hui « Action
   scenes ») : **une seule entrée** vers `categorie.html` (tableau de toutes les scènes, filtre toutes/vendues/libres),
   aussi une seule carte dans la vue d'ensemble ; chaque scène reste cliquable vers sa fiche (pour « Ajouter »).
-- **Variante à tester (28.09.2026) : fiches produit en onglets**, comme les feuilles d'un classeur Excel. Menu Produits
+- **Fiches produit en onglets = la façon d'ouvrir les produits** (01.10.2026 : Léa remplace « Vue d'ensemble » par les onglets ; menu Produits → « Fiches produit », compteur à ajouter ; lien « ← Tous les produits » retiré sauf retour Action scenes ; produits.html reste accessible mais n'est plus dans le menu). Historique : **variante à tester (28.09.2026) : fiches produit en onglets**, comme les feuilles d'un classeur Excel. Menu Produits
   → « Fiches en onglets » (`produit.html` sans id = dernier onglet ouvert, gardé en localStorage `dernier-onglet`,
   sinon le premier produit). Barre `ongletsProduits(zone, { produit | categorie })` dans `app.js`, en haut de
   `produit.html` et `categorie.html`, **sous le titre**, onglets grands et bien visibles (demandé par Léa), collante sur ordinateur : un onglet par produit dans l'ordre d'importance,

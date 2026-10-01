@@ -168,8 +168,8 @@ const MENU = [
     { href: 'demande.html', texte: 'Nouvelle demande', icone: 'nouvelle' },
   ] },
   { titre: 'Produits', id: 'menu-produits', liens: [
-    { href: 'produits.html', texte: 'Vue d’ensemble', icone: 'produits', compteur: 'a_ajouter' },
-    { href: 'produit.html', texte: 'Fiches en onglets', icone: 'onglets', aussi: ['categorie.html'] },
+    // « Vue d'ensemble » remplacée par les fiches en onglets (Léa, 01.10.2026 : « c'est la même chose »)
+    { href: 'produit.html', texte: 'Fiches produit', icone: 'produits', compteur: 'a_ajouter', aussi: ['categorie.html', 'produits.html'] },
   ] },
   { titre: 'Sponsors', liens: [
     { href: 'sponsors.html', texte: 'Dossiers sponsors', icone: 'sponsors', aussi: ['sponsor.html'] },

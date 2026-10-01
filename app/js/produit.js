@@ -127,7 +127,7 @@ async function charger() {
   // catégorie sur une seule page (Action scenes) : le retour ramène à cette page
   if (CATEGORIES_UNE_PAGE.has(p.categorie)) {
     const retour = document.querySelector('.lien-retour');
-    if (retour) { retour.href = lienCategorie(p.categorie); retour.textContent = `← ${p.categorie}`; }
+    if (retour) { retour.href = lienCategorie(p.categorie); retour.textContent = `← ${p.categorie}`; retour.hidden = false; }
   }
   $('p-nom').textContent = p.nom;
   $('p-description').textContent = [descriptionProduit(p), specsProduit(p),
