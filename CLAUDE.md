@@ -33,7 +33,8 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
      Traiter une demande = l'ajouter dans l'outil ET dans Colosseo en même temps (nouveau sponsor à la saison, nouveau
      logo / vidéo, retrait…). Puis on regarde le **spécial du match** (vendu pour ce match) et on l'ajoute dans Colosseo.
      **Match du jour = 2 blocs** : 1) « Demandes à traiter » (bouton Ajouter / Changer le visuel / Retirer → ouvre la
-     demande ; traitée = disparaît, pas de case Fait) ; 2) « Spécial de ce match » = changements des seules diffusions
+     demande ; traitée = reste affichée **grisée** « ✓ Ajouté par … le … » + Voir, demandé par Léa ; pas de case Fait ;
+     « Prendre en charge » retiré de Demandes, inutile) ; 2) « Spécial de ce match » = changements des seules diffusions
      **au match** (➕ ce soir, ➖ celles du match précédent, 🔄) avec case « Fait » + « Détails ». Les changements à la
      saison faits sur une fiche (retrait, case À l'écran) **ne sont pas listés** (Colosseo fait au même moment).
      Ne PAS remettre une liste de « tous les changements depuis le match précédent » (confusion Ajouter / Fait).
