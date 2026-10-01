@@ -1,11 +1,12 @@
-import { sb } from './app.js';
+import { sb, pageAccueil } from './app.js';
 
 const $ = (id) => document.getElementById(id);
-// Page d'arrivée : la Régie commence par le match du jour, le Sponsoring par ses demandes
+// Page d'arrivée : la Régie commence par le match du jour, le Sponsoring par ses demandes,
+// Chrono & animation par le run of show
 async function allerAccueil() {
   const { data: { user } } = await sb.auth.getUser();
   const { data: profil } = user ? await sb.from('profiles').select('role').eq('id', user.id).maybeSingle() : { data: null };
-  location.replace(['regie', 'admin'].includes(profil?.role) ? 'match-du-jour.html' : 'demandes.html');
+  location.replace(pageAccueil(profil?.role));
 }
 
 function message(texte, type) {

@@ -52,6 +52,18 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
      « Dans l'outil : enlevé automatiquement · Dans Colosseo : à enlever à la main ».
    - Slides « Aucun logo » dans la Pub pause tiers : normal si aucun logo des fiches Slides n'est « À l'écran ».
    - Téléphone : pas important (outil fait pour l'ordinateur), dit par Léa.
+0-quater. **Run of show (V1 du 01.10.2026, migration 30 à exécuter, pas encore testé)** : demandé par Léa sur le modèle
+   du « Jumbotron Operator Rundown » CHL (heure du face-off en haut, compte à rebours, « following », durée, action,
+   Cube, audio, speaker, instructions, lien, couleurs). Menu Jour de match → « Run of show » (`run-of-show.html?match=`
+   ou `?modele=`). Lignes placées par rapport à un **repère** : avant / après le face-off (heure du calendrier,
+   modifiable si retard), Pause 1 / Pause 2 / Fin du match (+ temps ; heure réelle cliquée par la Régie le soir même :
+   « ▶ Pause 1 commence » → `ros_matchs.reperes`), ou « à la suite » (= fin de la ligne précédente si sa durée est
+   connue). Colonnes V1 : Quand, Durée, Type (couleur), Action, Vidéotron, Audio, Speaker, LED, Instructions, Lien.
+   **Modèles** (`ros_modeles`) copiés pour un match puis ajustés ; « Enregistrer comme modèle ». Lecture : colonnes vides
+   cachées, horloge, « face-off dans … », **ligne en cours en bleu nuit** le jour du match, mise à jour en direct
+   (realtime), impression A4 paysage. **Rôle `animation` = « Chrono & animation »** : ne voit QUE le run of show (menu
+   filtré, accueil run-of-show.html, `est_membre()` l'exclut, lecture des matchs autorisée). Sponsoring : consulte.
+   À demander à Léa : colonnes OK ? import du fichier Excel CHL ? renommer un modèle (pas encore de bouton) ?
 0-ter. **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
@@ -141,7 +153,8 @@ outil-regie/
 │   ├── 26_notes_match.sql ← table notes_match : infos et tâches d'un match (« Pour ce soir »)
 │   ├── 27_comptes_externes.sql ← toutes les adresses e-mail acceptées (comptes créés par un admin)
 │   ├── 28_fichier_ajoute_apres.sql ← RPC fichier_ajoute_demande : fichier ajouté après la demande
-│   └── 29_ordre_produits_soiree.sql ← ordre des produits = déroulé de la soirée
+│   ├── 29_ordre_produits_soiree.sql ← ordre des produits = déroulé de la soirée
+│   └── 30_run_of_show.sql ← run of show (ros_modeles, ros_matchs, ros_lignes) + rôle « animation »
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
@@ -154,6 +167,8 @@ outil-regie/
     ├── produit.html / js/produit.js        ← fiche d'UN produit (?id=…) : « À ajouter » + sponsors du produit
     ├── categorie.html / js/categorie.js    ← une catégorie sur une page (?c=Action%20scenes) : toutes les scènes + sponsor
     ├── match-du-jour.html / js/match-du-jour.js ← « Match du jour » : à faire dans Colosseo + playlist (accueil Régie)
+    ├── run-of-show.html / js/run-of-show.js ← run of show d'un match ou d'un modèle (Régie modifie, tous consultent)
+    ├── js/ros-calcul.js   ← calcul pur des heures du run of show (testable dans Node)
     ├── js/changements.js  ← calcul pur des changements entre 2 matchs (testable dans Node)
     ├── js/traitement.js   ← LA carte de traitement d'un produit de demande (fiche produit + détail d'une demande)
     ├── matchs.html / js/matchs.js          ← « Par match » : ventes au match + demandes au match à ajouter, par match
@@ -171,7 +186,7 @@ outil-regie/
 Les fichiers SQL 01 → 12 ont été exécutés **dans l'ordre** sur le projet Supabase (septembre 2026 ; 10–12
 vérifiés le 25.09.2026 avec une requête qui teste leurs traces : colonnes / fonctions / valeurs).
 13 → 22 exécutés et testés : « tout bon » confirmé par Léa (session suivant le 28.09.2026).
-Pour modifier la base, **écrire un nouveau fichier** `supabase/30_….sql` (migration) plutôt que
+Pour modifier la base, **écrire un nouveau fichier** `supabase/31_….sql` (migration) plutôt que
 réécrire 01–04, et donner à Léa les instructions pour l'exécuter dans le SQL Editor.
 
 ## Modèle métier (à respecter)

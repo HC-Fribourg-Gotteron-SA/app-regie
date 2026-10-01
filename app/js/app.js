@@ -26,7 +26,7 @@ const VERSION = '30.09.2026';
 // Libellés affichés
 // ---------------------------------------------------------------------
 export const LIBELLES = {
-  role: { sponsoring: 'Sponsoring', regie: 'Régie', admin: 'Admin' },
+  role: { sponsoring: 'Sponsoring', regie: 'Régie', admin: 'Admin', animation: 'Chrono & animation' },
   type_demande: {
     nouveau_sponsor: 'Nouveau sponsor',
     ajout_produit: 'Ajout de produit',
@@ -153,6 +153,7 @@ const ICONES = {
   match:      '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   onglets:    '<path d="M3.5 19.5h17M3.5 19.5V8a1.5 1.5 0 0 1 1.5-1.5h4l1.5 2h9a1.5 1.5 0 0 1 1.5 1.5v9.5"/><path d="M13 6.5h3.5"/>',
   sponsors:   '<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
+  horaire:    '<path d="M5 4h14M5 9h14M5 14h9M5 19h9"/><circle cx="18" cy="17" r="3.2"/><path d="M18 15.6V17l1 .8"/>',
   produits:   '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
 };
 const icone = (nom) => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
@@ -162,6 +163,7 @@ const icone = (nom) => `<svg viewBox="0 0 24 24" width="18" height="18" fill="no
 const MENU = [
   { titre: 'Jour de match', liens: [
     { href: 'match-du-jour.html', texte: 'Match du jour', icone: 'match', roles: ['regie', 'admin'] },
+    { href: 'run-of-show.html', texte: 'Run of show', icone: 'horaire', roles: ['regie', 'admin', 'sponsoring', 'animation'] },
   ] },
   { titre: 'Demandes', liens: [
     { href: 'demandes.html', texte: 'Toutes les demandes', icone: 'demandes', compteur: 'demandes' },
@@ -183,7 +185,9 @@ const MENU = [
 
 function construireMenu(profil) {
   const page = location.pathname.split('/').pop() || 'index.html';
-  const accueil = ['regie', 'admin'].includes(profil.role) ? 'match-du-jour.html' : 'demandes.html';
+  const accueil = pageAccueil(profil.role);
+  // Chrono & animation : seulement les liens qui le nomment (run of show)
+  const visible = (l) => profil.role === 'animation' ? l.roles?.includes('animation') : !l.roles || l.roles.includes(profil.role);
 
   const menu = document.createElement('aside');
   menu.className = 'menu-lateral';
@@ -192,7 +196,7 @@ function construireMenu(profil) {
     <a class="marque" href="${accueil}">${LOGO}
       <span class="marque-texte"><strong>Fribourg-Gottéron</strong><small>Sponsoring ↔ Régie</small></span>
     </a>
-    <nav>${MENU.map(r => ({ ...r, liens: r.liens.filter(l => !l.roles || l.roles.includes(profil.role)) }))
+    <nav>${MENU.map(r => ({ ...r, liens: r.liens.filter(visible) }))
       .filter(r => r.liens.length).map(r => `
       <div class="menu-rubrique"${r.id ? ` id="${r.id}"` : ''}>
         <div class="menu-titre">${r.titre}</div>
@@ -238,9 +242,14 @@ function construireMenu(profil) {
   document.getElementById('btn-menu').onclick = () => basculer(true);
   voile.onclick = () => basculer(false);
   document.getElementById('btn-deconnexion').onclick = deconnecter;
+  if (profil.role === 'animation') return;
   compterDemandes(profil);
   menuProduits(profil);
 }
+
+// Page d'arrivée selon le rôle
+export const pageAccueil = (role) => ['regie', 'admin'].includes(role) ? 'match-du-jour.html'
+  : role === 'animation' ? 'run-of-show.html' : 'demandes.html';
 
 // Catégories trop longues pour une entrée par produit : une seule page (categorie.html?c=…)
 export const CATEGORIES_UNE_PAGE = new Set(['Action scenes']);

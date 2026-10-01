@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Run of show — Sponsoring ↔ Régie</title>
+  <link rel="icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="page-ros">
+    <div class="titre-page">
+      <div>
+        <div class="surtitre" id="r-surtitre">Run of show</div>
+        <h1 id="r-titre">Chargement…</h1>
+        <p class="doux" id="r-sous-titre"></p>
+      </div>
+      <div class="ros-choix">
+        <select id="choix-match" aria-label="Choisir un match" style="width:auto"></select>
+        <select id="choix-modele" aria-label="Modèles" style="width:auto" hidden></select>
+      </div>
+    </div>
+
+    <!-- Heure, face-off, pauses (le soir du match) -->
+    <div class="carte ros-barre" id="ros-barre" hidden>
+      <div class="ros-horloge"><span class="doux petit">Il est</span> <strong id="horloge">--:--:--</strong>
+        <span class="doux petit" id="avant-fo"></span></div>
+      <div class="ros-reperes" id="reperes"></div>
+      <div class="ros-outils">
+        <button type="button" class="btn" id="btn-edition" hidden>✏️ Modifier</button>
+        <button type="button" class="btn btn-discret" id="btn-imprimer">🖨 Imprimer</button>
+      </div>
+    </div>
+
+    <!-- Pas encore de run of show pour ce match -->
+    <section class="carte" id="vide" hidden>
+      <h3 style="margin-top:0">Pas encore de run of show pour ce match</h3>
+      <div id="vide-regie" hidden>
+        <p class="doux">Partez d'un modèle (copié pour ce match, le modèle ne change pas) ou d'une page vide.</p>
+        <div class="ros-creer">
+          <select id="modele-depart" style="width:auto"></select>
+          <button type="button" class="btn btn-principal" id="btn-creer">Créer le run of show</button>
+        </div>
+      </div>
+      <p class="doux" id="vide-lecture" hidden>La Régie ne l'a pas encore préparé.</p>
+    </section>
+
+    <!-- Le déroulé -->
+    <section id="bloc-lignes" hidden>
+      <div class="ros-tableau-cadre">
+        <table class="tableau ros-tableau" id="tableau">
+          <thead id="entete"></thead>
+          <tbody id="lignes"></tbody>
+        </table>
+      </div>
+      <div class="ros-pied" id="ros-pied" hidden>
+        <button type="button" class="btn" id="btn-ajouter">+ Ajouter une ligne</button>
+        <span class="espace"></span>
+        <button type="button" class="btn btn-discret" id="btn-vers-modele">Enregistrer comme modèle…</button>
+        <button type="button" class="btn btn-discret btn-danger" id="btn-supprimer" hidden>Supprimer…</button>
+      </div>
+      <p class="aide" id="aide-edition" hidden>Les modifications s'enregistrent dès que vous quittez un champ.
+        « Quand » : avant / après le face-off, après le début d'une pause ou de la fin du match, ou à la suite de la ligne
+        précédente (« following »). Temps en minutes:secondes (22:30) ou heures:minutes:secondes (1:00:00).</p>
+    </section>
+  </main>
+
+  <script type="module" src="js/run-of-show.js"></script>
+</body>
+</html>
