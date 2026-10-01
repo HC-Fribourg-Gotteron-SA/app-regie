@@ -64,6 +64,11 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    (realtime), impression A4 paysage. **Rôle `animation` = « Chrono & animation »** : ne voit QUE le run of show (menu
    filtré, accueil run-of-show.html, `est_membre()` l'exclut, lecture des matchs autorisée). Sponsoring : consulte.
    À demander à Léa : colonnes OK ? import du fichier Excel CHL ? renommer un modèle (pas encore de bouton) ?
+   **⚠ À REVOIR (01.10.2026)** : Léa trouve le principe des repères / comptes à rebours mal adapté (« 17:30 avant le
+   face-off » a donné 19:27). Elle veut **noter l'heure de chaque élément elle-même** et **mettre certains éléments en
+   avant**. Elle donne un **nouvel exemple** à la prochaine session : ne rien recoder avant. Questions en suspens :
+   heures pendant les pauses (heure approx. ou texte libre ?), « mettre en avant » = case Important / plusieurs
+   niveaux ?, bouton « décaler toutes les heures » si le face-off change ?
 0-ter. **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
