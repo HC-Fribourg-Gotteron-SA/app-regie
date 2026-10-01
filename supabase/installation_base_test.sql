@@ -1,7 +1,7 @@
 -- =====================================================================
 -- INSTALLATION COMPLÈTE d'une base neuve (base de TEST) — généré par outils/installation-base-test.mjs
 -- À exécuter UNE fois dans le SQL Editor du projet de test (jamais sur la vraie base).
--- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28.
+-- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29.
 -- Ensuite : créer son compte (Authentication > Users), se mettre admin (voir en bas),
 -- importer le calendrier dans l'outil (.ics), puis lancer supabase/demo_donnees_test.sql.
 -- =====================================================================
@@ -2326,6 +2326,36 @@ grant execute on function fichier_ajoute_demande(uuid, uuid, text) to authentica
 select 'Migration 28 OK : fichier_ajoute_demande()' as "Résultat";
 
 
+-- #####################################################################
+-- 29_ordre_produits_soiree.sql
+-- #####################################################################
+-- =====================================================================
+-- 29 — Ordre des produits = déroulé de la soirée
+-- À exécuter une fois dans Supabase > SQL Editor, sur la base de TEST puis sur la vraie base.
+-- Peut être exécuté plusieurs fois.
+-- =====================================================================
+-- Décidé par Léa (01.10.2026) : onglets, menu et listes dans l'ordre de la soirée.
+--   1 Action scenes, 2 Pub warm-up (pendant le warm-up), 3 Pub après warm-up, 4 Pub pause tiers,
+--   puis l'ordre d'avant : Angles match, Anneau LED, LED 3M / 6M, LED Sportcafé, Slides Young Dragons,
+--   Slides Ladies ; le reste (ex. Pub arrêt de jeu) à 100, par ordre alphabétique.
+
+update produits set ordre = 100;
+update produits set ordre = 1  where categorie = 'Action scenes';
+update produits set ordre = 2  where nom = 'Pub warm-up';
+update produits set ordre = 3  where nom = 'Pub après warm-up';
+update produits set ordre = 4  where nom = 'Pub pause tiers';
+update produits set ordre = 5  where nom = 'Angles match';
+update produits set ordre = 6  where nom = 'Anneau LED';
+update produits set ordre = 7  where nom in ('LED 3M', 'LED 6M');
+update produits set ordre = 8  where nom like 'LED Sportcaf%';
+update produits set ordre = 9  where categorie in ('Slides Young Dragons', 'Young Dragons');
+update produits set ordre = 10 where categorie in ('Slides Ladies', 'Ladies');
+
+select ordre as "Ordre", string_agg(nom, ', ' order by nom) as "Produits"
+from produits where actif and categorie is distinct from 'Action scenes'
+group by ordre order by ordre;
+
+
 -- Après avoir créé ton compte dans Authentication > Users, lance ceci séparément :
 -- update profiles set role = 'admin', nom = 'Léa Talon' where email = 'lea.talon@fribourg-gotteron.ch';
-select 'Installation terminée : 26 fichiers.' as "Résultat";
+select 'Installation terminée : 27 fichiers.' as "Résultat";

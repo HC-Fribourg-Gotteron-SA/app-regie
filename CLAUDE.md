@@ -140,7 +140,8 @@ outil-regie/
 │   ├── 25_regie_egal_admin.sql ← a_role() : regie et admin ont les mêmes droits
 │   ├── 26_notes_match.sql ← table notes_match : infos et tâches d'un match (« Pour ce soir »)
 │   ├── 27_comptes_externes.sql ← toutes les adresses e-mail acceptées (comptes créés par un admin)
-│   └── 28_fichier_ajoute_apres.sql ← RPC fichier_ajoute_demande : fichier ajouté après la demande
+│   ├── 28_fichier_ajoute_apres.sql ← RPC fichier_ajoute_demande : fichier ajouté après la demande
+│   └── 29_ordre_produits_soiree.sql ← ordre des produits = déroulé de la soirée
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
@@ -170,7 +171,7 @@ outil-regie/
 Les fichiers SQL 01 → 12 ont été exécutés **dans l'ordre** sur le projet Supabase (septembre 2026 ; 10–12
 vérifiés le 25.09.2026 avec une requête qui teste leurs traces : colonnes / fonctions / valeurs).
 13 → 22 exécutés et testés : « tout bon » confirmé par Léa (session suivant le 28.09.2026).
-Pour modifier la base, **écrire un nouveau fichier** `supabase/29_….sql` (migration) plutôt que
+Pour modifier la base, **écrire un nouveau fichier** `supabase/30_….sql` (migration) plutôt que
 réécrire 01–04, et donner à Léa les instructions pour l'exécuter dans le SQL Editor.
 
 ## Modèle métier (à respecter)
@@ -188,9 +189,9 @@ réécrire 01–04, et donner à Léa les instructions pour l'exécuter dans le 
 « Anneau LED » (le produit temps qui passe pendant le match), « LED Sportcafé », « Slides Ladies »,
 « Slides Young Dragons », « Vidéotron pub (warm-up, après warm-up, pause tiers, arrêt de jeu) », « Action scenes »…
 
-**Ordre par importance** (`produits.ordre`, migration 12 ; plus petit = plus important) : 1 Action scenes,
-2 Angles match, 3 Anneau LED, 4 Anneau LED 3M & 6M, 5 Pub pause tiers, 6 LED Sportcafé, 7 Slides Young Dragons,
-8 Slides Ladies, puis 100 pour tout le reste (alphabétique). Toujours trier `order('ordre').order('categorie').order('nom')` ;
+**Ordre = déroulé de la soirée** (`produits.ordre`, migrations 12 puis **29** du 01.10.2026 ; plus petit = d'abord) :
+1 Action scenes, 2 Pub warm-up, 3 Pub après warm-up, 4 Pub pause tiers, 5 Angles match, 6 Anneau LED, 7 LED 3M / 6M,
+8 LED Sportcafé, 9 Slides Young Dragons, 10 Slides Ladies, puis 100 pour tout le reste (alphabétique). Toujours trier `order('ordre').order('categorie').order('nom')` ;
 une catégorie se place selon son produit le plus important.
 
 **Action scenes** = animations affichées au moment d'une action du match (goal, temps mort, pénalité…).
