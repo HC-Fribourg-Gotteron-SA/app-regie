@@ -31,16 +31,16 @@ export function calculerChangements({ passagesAvant, passagesCe, lignes }) {
 }
 
 function raisonAjout(l, avant) {
-  if (avant) return 'de nouveau à l’écran (réactivé)';
+  if (avant) return 'de nouveau à l’écran';
   if (l?.type_vente === 'match') return 'vendu pour ce match';
   return 'nouveau';
 }
 
 function raisonRetrait(l) {
   if (!l) return 'retiré';
-  if (l.suspendue) return `désactivé${l.motif_suspension ? ` : ${l.motif_suspension}` : ''}`;
   if (['termine', 'annule'].includes(l.statut) || l.date_fin) return 'retiré';
-  if (!l.validee) return 'plus à l’écran';
+  // une seule notion « à l'écran » (l'ancien « désactivé » compte comme « plus à l'écran »)
+  if (!l.validee || l.suspendue) return `plus à l’écran${l.motif_suspension ? ` : ${l.motif_suspension}` : ''}`;
   if (l.type_vente === 'match') return 'vendu seulement pour un autre match';
   return 'ne passe plus';
 }

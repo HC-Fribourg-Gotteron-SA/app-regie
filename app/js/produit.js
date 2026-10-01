@@ -1,6 +1,6 @@
-import { sb, exigerConnexion, LIBELLES, echapper, dateCourte, notifier, taille, libelleFichier, depuis,
-         descriptionProduit, specsProduit, dimensionsAttendues, CATEGORIES_UNE_PAGE, lienCategorie,
-         ongletsProduits } from './app.js';
+import { sb, exigerConnexion, echapper, dateCourte, notifier, taille,
+         descriptionProduit, specsProduit, CATEGORIES_UNE_PAGE, lienCategorie, ongletsProduits } from './app.js';
+import { carteTraitement, CHAMPS_A_TRAITER } from './traitement.js';
 
 const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
@@ -25,13 +25,7 @@ try { localStorage.setItem('dernier-onglet', `produit.html?id=${idProduit}`); } 
 
 const pad = (n) => String(n).padStart(2, '0');
 const jourLocal = (d) => { const x = new Date(d); return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`; };
-const normaliser = (t) => (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
-const STATUT_LIGNE = {
-  brouillon: ['brouillon', ''], vendu: ['vendu', ''], fichiers_attendus: ['fichier attendu', 'badge-a-venir'],
-  a_valider: ['visuel à valider', 'statut-en_cours'], valide: ['validé', 'statut-traitee'],
-  programme: ['programmé', 'statut-traitee'], termine: ['terminé', ''], annule: ['annulé', ''],
-};
 const STATUT_ASSET = { a_valider: ['à valider', 'statut-en_cours'], valide: ['validé', 'statut-traitee'], refuse: ['refusé', 'statut-question'] };
 
 const etat = {
@@ -41,7 +35,6 @@ const etat = {
   lignes: [],              // diffusions en cours sur ce produit
   adversaires: new Map(),
   emplacements: [],        // plan LED (produits 3M / 6M)
-  choix: new Map(),        // demande_id -> { emplacements: Set, ligne_id, date_fin, fichiers: [], semblables: [] }
   personnes: new Map(),    // id -> nom
   autres: [],              // diffusions d'un autre produit sur la bande de ce produit (LED 3M sur la bande 6M)
   passees: [],             // sponsors au match dont tous les matchs sont passés (section « Matchs passés »)
@@ -64,6 +57,9 @@ const CHAMPS_LIGNE = `id, produit_id, type_vente, statut, avec_son, duree_s, occ
 const trouverLigne = (id) => etat.lignes.find(x => x.id === id) || etat.autres.find(x => x.id === id)
   || etat.passees.find(x => x.id === id);
 
+// Pub pause tiers : 1 avec son + anneau LED, 2 avec son sans anneau, 3 sans son + anneau, 4 sans son sans anneau
+const groupePauseTiers = (l) => (l.avec_son ? 0 : 2) + (l.ligne_couplee_id ? 0 : 1);
+
 // Vendu « au match » et tous ses matchs sont passés (avant aujourd'hui)
 function matchsTousPasses(l) {
   if (l.type_vente !== 'match') return false;
@@ -75,10 +71,7 @@ function matchsTousPasses(l) {
 async function charger() {
   const [{ data: p, error }, { data: attente }, { data: lignes }, { data: matchs }] = await Promise.all([
     sb.from('produits').select('*').eq('id', idProduit).maybeSingle(),
-    sb.from('demandes_produits')
-      .select(`demande_id, type_vente, dates_matchs, duree_s, avec_son, avec_anneau, remarque_sponsoring, remarque_regie,
-               demande:demandes!inner(id, type, statut, created_at, sponsor_id, sponsor_nom_saisi, remarque_sponsoring,
-                                      sponsor:sponsors(id, nom))`)
+    sb.from('demandes_produits').select(CHAMPS_A_TRAITER)
       .eq('produit_id', idProduit).is('traite_le', null).neq('demande.statut', 'traitee'),
     sb.from('lignes_vendues').select(CHAMPS_LIGNE).eq('produit_id', idProduit).not('statut', 'in', '(annule,termine)'),
     sb.from('matchs').select('date_heure, adversaire'),
@@ -92,8 +85,10 @@ async function charger() {
   etat.p = p;
   etat.attente = (attente || []).sort((a, b) => new Date(a.demande.created_at) - new Date(b.demande.created_at));
   // ordre de diffusion (priorite) ; sans rang : à la fin, dans l'ordre de création
-  const triees = (lignes || []).sort((a, b) => (a.priorite ?? 1e9) - (b.priorite ?? 1e9)
-    || new Date(a.created_at) - new Date(b.created_at));
+  // Pub pause tiers (produit avec anneau couplé) : d'abord par groupe (décidé par Léa le 01.10.2026)
+  const groupe = p?.lie_a_produit_id ? groupePauseTiers : () => 0;
+  const triees = (lignes || []).sort((a, b) => groupe(a) - groupe(b)
+    || (a.priorite ?? 1e9) - (b.priorite ?? 1e9) || new Date(a.created_at) - new Date(b.created_at));
   // sponsors « au match » dont tous les matchs sont passés : rangés dans « Matchs passés » (historique)
   etat.passees = triees.filter(matchsTousPasses);
   etat.lignes = triees.filter(l => !matchsTousPasses(l));
@@ -138,298 +133,21 @@ async function charger() {
   $('p-description').textContent = [descriptionProduit(p), specsProduit(p),
     p.capacite_s ? `max ${Math.round(p.capacite_s / 60)} min par match` : ''].filter(Boolean).join(' · ');
 
-  // état de travail de chaque demande à ajouter
-  for (const a of etat.attente) {
-    const existant = etat.choix.get(a.demande_id);
-    etat.choix.set(a.demande_id, existant || {
-      emplacements: new Set(), ligne_id: lignesDuSponsor(a.demande.sponsor_id)[0]?.id || '',
-      date_fin: jourLocal(new Date()), fichiers: [], semblables: [],
-    });
-  }
   afficherAttente();
   afficherLignes();
-  await Promise.all(etat.attente.map(a => Promise.all([chargerFichiers(a), chercherSemblables(a)])));
-}
-
-const lignesDuSponsor = (sponsorId) => sponsorId ? etat.lignes.filter(l => l.contrat?.sponsor?.id === sponsorId) : [];
-const nomSponsor = (d) => d.sponsor?.nom || d.sponsor_nom_saisi || '—';
-const matchsLisibles = (dates) => (dates || []).map(j =>
-  `${dateCourte(j + 'T12:00')}${etat.adversaires.has(j) ? ` · ${echapper(etat.adversaires.get(j))}` : ''}`);
-
-// Nouveau sponsor : même nom déjà dans l'outil (repris) ou noms qui ressemblent (avertissement)
-async function chercherSemblables(a) {
-  if (a.demande.sponsor_id || !a.demande.sponsor_nom_saisi) return;
-  const { data } = await sb.rpc('rechercher_sponsors', { q: a.demande.sponsor_nom_saisi, nb: 4 });
-  etat.choix.get(a.demande_id).semblables = data || [];
-  afficherCarte(a.demande_id);
 }
 
 // ---------------------------------------------------------------------
-// À ajouter
+// À ajouter : la même carte que dans le détail d'une demande (traitement.js)
 // ---------------------------------------------------------------------
 function afficherAttente() {
   $('bloc-a-ajouter').hidden = !etat.attente.length;
   $('nb-a-ajouter').textContent = etat.attente.length;
-  $('a-ajouter').innerHTML = etat.attente.map(a => `<div class="detail-produit carte-attente" data-demande="${a.demande_id}"></div>`).join('');
-  etat.attente.forEach(a => afficherCarte(a.demande_id));
-}
-
-function afficherCarte(idDemande) {
-  const el = document.querySelector(`[data-demande="${idDemande}"]`);
-  const a = etat.attente.find(x => x.demande_id === idDemande);
-  if (!el || !a) return;
-  const d = a.demande, c = etat.choix.get(idDemande), p = etat.p;
-  const existantes = lignesDuSponsor(d.sponsor_id);
-  const identique = c.semblables.find(s => normaliser(s.nom) === normaliser(d.sponsor_nom_saisi));
-  const proches = c.semblables.filter(s => s !== identique);
-
-  el.innerHTML = `
-    <div class="detail-entete">
-      <strong>${echapper(nomSponsor(d))}</strong>
-      ${d.sponsor ? '' : '<span class="badge badge-a-venir">nouveau sponsor</span>'}
-      <span class="badge">${LIBELLES.type_demande[d.type]}</span>
-      ${a.type_vente === 'match' ? '<span class="badge badge-match">Seulement certains matchs</span>' : '<span class="badge">Toute la saison</span>'}
-      ${a.avec_son === true ? '<span class="badge badge-son">Avec son</span>' : a.avec_son === false ? '<span class="badge">Sans son</span>' : ''}
-      ${a.avec_anneau === true ? '<span class="badge badge-son">+ Anneau LED</span>' : a.avec_anneau === false ? '<span class="badge">Sans anneau LED</span>' : ''}
-      ${a.duree_s ? `<span class="badge">${a.duree_s} s</span>` : ''}
-      <span class="doux petit description">Reçue ${depuis(d.created_at)}${d.statut === 'question' ? ' · <strong>question en cours au Sponsoring</strong>' : ''}</span>
-    </div>
-    ${!d.sponsor && identique ? `<p class="message message-info petit">« ${echapper(identique.nom)} » existe déjà dans l'outil : il sera repris.</p>` : ''}
-    ${!d.sponsor && !identique && proches.length ? `<p class="message message-info petit">Sera créé comme nouveau sponsor. Noms proches déjà dans l'outil :
-      ${proches.map(s => `<strong>${echapper(s.nom)}</strong>`).join(', ')}. Si c'est le même, corrigez la demande avant d'ajouter.</p>` : ''}
-    ${a.type_vente === 'match' ? `<p class="petit"><span class="titre-bloc">Matchs</span><br>${matchsLisibles(a.dates_matchs).join('<br>')}</p>` : ''}
-    ${a.remarque_sponsoring || d.remarque_sponsoring ? `<div class="titre-bloc">Remarque Sponsoring</div>
-      <div class="bloc-texte petit" style="margin-bottom:.7rem">${echapper([a.remarque_sponsoring, d.remarque_sponsoring].filter(Boolean).join('\n'))}</div>` : ''}
-    <div class="titre-bloc">Fichiers</div>
-    <div style="margin-bottom:.7rem">${blocFichiers(a, c)}</div>
-    ${estRegie && p.famille === 'emplacement' && !['suppression', 'changement_visuel'].includes(d.type) ? grilleEmplacements(idDemande, c) : ''}
-    ${estRegie ? actions(a, c, existantes) : ''}`;
-}
-
-function actions(a, c, existantes) {
-  const d = a.demande;
-  const choixLigne = existantes.length > 1 ? `
-    <select data-ligne style="width:auto">${existantes.map(l => `<option value="${l.id}" ${c.ligne_id === l.id ? 'selected' : ''}>
-      ${l.type_vente === 'saison' ? 'Saison' : 'Au match'} · ${STATUT_LIGNE[l.statut]?.[0] || l.statut} · depuis le ${dateCourte(l.created_at)}</option>`).join('')}
-    </select>` : '';
-  let principal;
-  if (d.type === 'suppression') {
-    principal = existantes.length
-      ? `${choixLigne}<label class="petit" style="margin:0">Dernier jour <input type="date" data-fin value="${c.date_fin}" style="width:auto"></label>
-         <button type="button" class="btn btn-principal" data-suite="retire">Retirer</button>`
-      : `<span class="petit doux">Pas de diffusion de ce sponsor sur ce produit dans l'outil.</span>
-         <button type="button" class="btn btn-principal" data-suite="ignore">Marquer comme fait</button>`;
-  } else if (d.type === 'changement_visuel' && existantes.length) {
-    principal = `${choixLigne}
-      <button type="button" class="btn" data-suite="ajoute">Ajouter comme nouvelle diffusion</button>
-      <button type="button" class="btn btn-principal" data-suite="visuel">Mettre le nouveau visuel</button>`;
-  } else {
-    principal = `<button type="button" class="btn btn-principal" data-suite="ajoute">Ajouter ✓</button>`;
+  $('a-ajouter').innerHTML = etat.attente.map(a => `<div data-demande="${a.demande_id}"></div>`).join('');
+  for (const a of etat.attente) {
+    carteTraitement(document.querySelector(`#a-ajouter [data-demande="${a.demande_id}"]`), a,
+      { estRegie, mode: 'produit', apres: charger });
   }
-  return `
-    <div class="actions-attente">
-      <a class="btn btn-discret" href="demandes.html?id=${d.id}">Voir la demande</a>
-      ${d.type !== 'suppression' || existantes.length ? '<button type="button" class="btn btn-discret" data-suite="ignore" data-confirmer>Ignorer</button>' : ''}
-      <span class="espace"></span>
-      ${principal}
-    </div>`;
-}
-
-// ---------------------------------------------------------------------
-// Fichiers joints au produit dans la demande
-// ---------------------------------------------------------------------
-async function chargerFichiers(a) {
-  const c = etat.choix.get(a.demande_id);
-  const dossier = `demandes/${a.demande_id}/${idProduit}`;
-  const { data } = await sb.storage.from('assets').list(dossier, { sortBy: { column: 'name', order: 'asc' } });
-  c.fichiers = (data || []).filter(f => f.id).map(f => {
-    const i = f.name.indexOf('__');
-    const role = i > 0 ? f.name.slice(0, i) : 'visuel';
-    const nomCourt = i > 0 ? f.name.slice(i + 2) : f.name;
-    return { role, nomCourt, storage_path: `${dossier}/${f.name}`, nom_visuel: nomCourt.replace(/\.[^.]+$/, ''),
-             mime: f.metadata?.mimetype || null, taille_octets: f.metadata?.size || null,
-             largeur_px: null, hauteur_px: null, duree_s: null, sonde: 'analyse…' };
-  });
-  afficherCarte(a.demande_id);
-  await Promise.all(c.fichiers.map(f => sonder(f)));
-  afficherCarte(a.demande_id);
-}
-
-function blocFichiers(a, c) {
-  const roles = ['visuel', ...(a.avec_anneau && etat.p.lie_a_produit_id ? ['anneau'] : [])];
-  return roles.map(role => {
-    const liste = c.fichiers.filter(f => f.role === role);
-    const cible = role === 'anneau' ? etat.anneau : etat.p;
-    return `
-      <div class="fichier-attendu">
-        <div class="petit"><strong>${libelleFichier(etat.p, role)}</strong>
-          ${liste.length ? '' : ' <span class="badge badge-a-venir">à venir</span>'}</div>
-        ${liste.map(f => `
-          <div class="visuel-infos">
-            <span class="petit">${echapper(f.nomCourt)}</span>
-            <span class="doux petit">${taille(f.taille_octets || 0)} · ${echapper(f.sonde)}</span>
-            ${controle(f, cible)}
-            <button type="button" class="btn btn-discret petit" data-fichier="${echapper(f.storage_path)}">Télécharger</button>
-          </div>`).join('')}
-      </div>`;
-  }).join('');
-}
-
-function controle(f, cible) {
-  const att = dimensionsAttendues(cible);
-  if (!att || !f.largeur_px) return '';
-  return f.largeur_px === att.l && f.hauteur_px === att.h
-    ? '<span class="badge statut-traitee">dimensions OK</span>'
-    : `<span class="badge statut-question">attendu ${att.l} × ${att.h} px</span>`;
-}
-
-// Lit les dimensions / la durée du fichier dans le navigateur
-async function sonder(f) {
-  const { data } = await sb.storage.from('assets').createSignedUrl(f.storage_path, 600);
-  const url = data?.signedUrl;
-  const video = /^video\//.test(f.mime || '') || /\.(mp4|mov|m4v|webm)$/i.test(f.storage_path);
-  const image = /^image\//.test(f.mime || '') || /\.(png|jpe?g|gif|webp|svg)$/i.test(f.storage_path);
-  const r = await new Promise((ok) => {
-    if (!url || (!video && !image)) return ok(null);
-    const delai = setTimeout(() => ok(null), 12000);
-    const fini = (v) => { clearTimeout(delai); ok(v); };
-    if (image) {
-      const img = new Image();
-      img.onload = () => fini({ l: img.naturalWidth, h: img.naturalHeight });
-      img.onerror = () => fini(null);
-      img.src = url;
-    } else {
-      const v = document.createElement('video');
-      v.preload = 'metadata';
-      v.onloadedmetadata = () => fini({ l: v.videoWidth, h: v.videoHeight, duree: v.duration });
-      v.onerror = () => fini(null);
-      v.src = url;
-    }
-  });
-  if (r?.l) {
-    f.largeur_px = r.l; f.hauteur_px = r.h;
-    if (r.duree && isFinite(r.duree)) f.duree_s = Math.round(r.duree * 100) / 100;
-    f.sonde = `${r.l} × ${r.h} px${f.duree_s ? ` · ${f.duree_s.toFixed(1)} s` : ''}`;
-  } else {
-    f.sonde = video || image ? 'dimensions non lues' : 'format non lu';
-  }
-}
-
-// ---------------------------------------------------------------------
-// LED 3M / 6M : on place le logo là où il y a un Banner HCFG (emplacement libre)
-// ---------------------------------------------------------------------
-function grilleEmplacements(idDemande, c) {
-  const requis = etat.p.emplacements_requis || 1;
-  const prisAilleurs = new Set([...etat.choix.entries()].filter(([id]) => id !== idDemande).flatMap(([, x]) => [...x.emplacements]));
-  // LED 6M : bande 6M seulement. LED 3M : bande 3M ; la bande 6M n'est proposée que s'il n'y a plus de place en 3M.
-  const bande = (e) => e.bande || (['A', 'B'].includes(e.anneau) ? '3M' : '6M');
-  const libre = (e) => !e.reserve_club && !e.ligne_id && !prisAilleurs.has(e.emplacement_id);
-  const est6M = /6M/.test(etat.p.nom);
-  const plein3M = !etat.emplacements.some(e => bande(e) === '3M' && libre(e));
-  const dejaSur6M = etat.emplacements.some(e => bande(e) === '6M' && c.emplacements.has(e.emplacement_id));
-  const bandes = est6M ? ['6M'] : plein3M || dejaSur6M ? ['3M', '6M'] : ['3M'];
-  const anneaux = ['A', 'B', 'C', 'D']
-    .map(a => [a, etat.emplacements.filter(e => e.anneau === a && bandes.includes(bande(e)))])
-    .filter(([, l]) => l.length);
-  return `
-    ${!est6M && plein3M ? `<p class="message message-info petit">Plus de place sur la bande 3M : le logo peut aller sur la bande 6M.</p>` : ''}
-    <div class="titre-bloc">Emplacement
-      <span class="compte-empl ${c.emplacements.size === requis ? 'ok' : ''}">${c.emplacements.size} / ${requis}</span></div>
-    <p class="aide" style="margin-top:0">Cliquez sur ${requis > 1 ? `${requis} cases « Banner HCFG »` : 'une case « Banner HCFG »'} pour y mettre le logo
-      (facultatif : on peut placer plus tard).</p>
-    <div class="legende-empl"><span class="case-empl libre"></span> Banner HCFG (libre) <span class="case-empl choisi"></span> choisi
-      <span class="case-empl occupe"></span> sponsor <span class="case-empl reserve"></span> réservé club</div>
-    <div class="plan-empl">${anneaux.map(([a, cases]) => `
-      <div class="anneau">
-        <div class="anneau-titre">Anneau ${a} <span class="doux">· bande ${cases[0].bande}</span></div>
-        <div class="anneau-zones">${[...new Set(cases.map(e => e.zone))].map(z => `
-          <div class="zone-empl"><div class="zone-nom">${echapper(z)}</div><div class="cases">
-            ${cases.filter(e => e.zone === z).map(e => {
-              const choisi = c.emplacements.has(e.emplacement_id);
-              const occupe = !!e.ligne_id || prisAilleurs.has(e.emplacement_id);
-              const cl = choisi ? 'choisi' : e.reserve_club ? 'reserve' : occupe ? 'occupe' : 'libre';
-              const titre = `${a}-${z}-${e.position} · ${e.reserve_club ? 'réservé club' : e.sponsor ? e.sponsor : prisAilleurs.has(e.emplacement_id) ? 'choisi pour une autre demande' : 'Banner HCFG (libre)'}`;
-              return `<button type="button" class="case-empl ${cl}" data-empl="${e.emplacement_id}" title="${echapper(titre)}"
-                        ${cl === 'reserve' || cl === 'occupe' ? 'disabled' : ''}>${e.position}</button>`;
-            }).join('')}</div></div>`).join('')}
-        </div>
-      </div>`).join('')}
-    </div>`;
-}
-
-// ---------------------------------------------------------------------
-// Interactions
-// ---------------------------------------------------------------------
-$('a-ajouter').addEventListener('change', (e) => {
-  const carte = e.target.closest('[data-demande]');
-  if (!carte) return;
-  const c = etat.choix.get(carte.dataset.demande);
-  if (e.target.dataset.ligne !== undefined) c.ligne_id = e.target.value;
-  if (e.target.dataset.fin !== undefined) c.date_fin = e.target.value;
-});
-
-$('a-ajouter').addEventListener('click', async (e) => {
-  const carte = e.target.closest('[data-demande]');
-  if (!carte) return;
-  const idDemande = carte.dataset.demande, c = etat.choix.get(idDemande);
-
-  const telecharger = e.target.closest('[data-fichier]');
-  if (telecharger) {
-    const { data, error } = await sb.storage.from('assets').createSignedUrl(telecharger.dataset.fichier, 600, { download: true });
-    if (error) return notifier(error.message, 'erreur');
-    location.href = data.signedUrl;
-    return;
-  }
-
-  const empl = e.target.closest('[data-empl]');
-  if (empl && !empl.disabled) {
-    const requis = etat.p.emplacements_requis || 1, id = empl.dataset.empl;
-    if (c.emplacements.has(id)) c.emplacements.delete(id);
-    else {
-      if (c.emplacements.size >= requis) c.emplacements.delete([...c.emplacements][0]);
-      c.emplacements.add(id);
-    }
-    etat.attente.forEach(a => afficherCarte(a.demande_id));   // un emplacement choisi ici n'est plus libre ailleurs
-    return;
-  }
-
-  const bouton = e.target.closest('[data-suite]');
-  if (bouton) await traiter(idDemande, bouton.dataset.suite, bouton);
-});
-
-async function traiter(idDemande, suite, bouton) {
-  const a = etat.attente.find(x => x.demande_id === idDemande), c = etat.choix.get(idDemande);
-  const requis = etat.p.emplacements_requis || 1;
-  if (suite === 'ignore' && bouton.hasAttribute('data-confirmer')
-      && !confirm(`Ignorer la demande de ${nomSponsor(a.demande)} pour ${etat.p.nom} ?\nRien ne sera programmé pour ce produit.`)) return;
-  if (suite === 'ajoute' && etat.p.famille === 'emplacement' && c.emplacements.size < requis
-      && !confirm(`Aucun emplacement choisi (ou pas assez) : le logo sera « à placer ».\nAjouter quand même ?`)) return;
-  if (suite === 'visuel' && !c.fichiers.length
-      && !confirm('Aucun fichier joint à cette demande pour ce produit. Continuer quand même ?')) return;
-
-  bouton.disabled = true;
-  const { data, error } = await sb.rpc('traiter_produit', {
-    p_demande: idDemande,
-    p_produit: idProduit,
-    p_suite: suite,
-    p_options: {
-      ligne_id: c.ligne_id || null,
-      date_fin: c.date_fin || null,
-      emplacements: suite === 'ajoute' ? [...c.emplacements] : [],
-      fichiers: ['ajoute', 'visuel'].includes(suite)
-        ? c.fichiers.filter(f => f.role !== 'anneau' || a.avec_anneau)
-            .map(({ role, storage_path, nom_visuel, mime, taille_octets, largeur_px, hauteur_px, duree_s }) =>
-              ({ role, storage_path, nom_visuel, mime, taille_octets, largeur_px, hauteur_px, duree_s }))
-        : [],
-    },
-  });
-  bouton.disabled = false;
-  if (error) return notifier(`Impossible (rien n'a été modifié) : ${error.message}`, 'erreur');
-
-  notifier({ ajoute: 'Ajouté au produit', visuel: 'Nouveau visuel envoyé en validation', retire: 'Diffusion arrêtée', ignore: 'Demande ignorée pour ce produit' }[suite]
-    + (data?.demande_traitee ? ' · la demande est complète : marquée « Traitée »' : ''));
-  etat.choix.delete(idDemande);
-  await charger();
 }
 
 // ---------------------------------------------------------------------
@@ -583,19 +301,21 @@ function rangeesSlides(cols, depart) {
 }
 
 // ---------------------------------------------------------------------
-// État d'une diffusion : ce qui compte pour la Régie
-//   à l'écran / pas à l'écran (case) · désactivé (motif) · nouveau visuel attendu
+// État d'une diffusion : UNE seule case « À l'écran » (décidé par Léa le 01.10.2026 : « à l'écran » et
+// « désactivé » c'est la même chose). Décocher demande une raison facultative (météo, trop de pub…),
+// gardée dans motif_suspension. Les anciennes lignes « désactivées » s'affichent « Pas à l'écran ».
+// + « nouveau visuel attendu »
 // ---------------------------------------------------------------------
-const classeEtat = (l) => l.suspendue ? 'desactivee' : l.validee ? '' : 'non-validee';
+const aLEcran = (l) => l.validee && !l.suspendue;
+const classeEtat = (l) => aLEcran(l) ? '' : 'non-validee';
+const libelleEtat = (l) => aLEcran(l) ? '<span class="etat etat-ecran">À l’écran</span>'
+  : `<span class="etat etat-non">Pas à l’écran</span>${l.motif_suspension ? ` <span class="doux petit">· ${echapper(l.motif_suspension)}</span>` : ''}`;
 
 function celluleEtat(l) {
-  const libelle = l.suspendue ? '<span class="etat etat-desactive">⏸ Désactivé</span>'
-    : l.validee ? '<span class="etat etat-ecran">À l’écran</span>'
-    : '<span class="etat etat-non">Pas à l’écran</span>';
-  return `<label class="cellule-etat" title="${echapper(l.suspendue ? `Désactivé : ${l.motif_suspension || 'sans motif'}` : '')}">
-      <input type="checkbox" class="case-validee" data-validee="${l.id}" ${l.validee ? 'checked' : ''}
+  return `<label class="cellule-etat">
+      <input type="checkbox" class="case-validee" data-validee="${l.id}" ${aLEcran(l) ? 'checked' : ''}
              ${estRegie ? '' : 'disabled'} aria-label="À l’écran">
-      ${libelle}</label>
+      ${libelleEtat(l)}</label>
     ${l.visuel_attendu ? '<span class="etat etat-attente" title="Nouveau visuel attendu (l’ancien passe en attendant)">⏳ visuel attendu</span>' : ''}`;
 }
 
@@ -636,12 +356,23 @@ async function modifierLigne(id, champs, succes) {
 
 document.addEventListener('change', async (e) => {
   const t = e.target;
-  if (t.dataset.validee || t.dataset.attendu) {
-    const id = t.dataset.validee || t.dataset.attendu;
-    const champs = t.dataset.validee ? { validee: t.checked } : { visuel_attendu: t.checked };
-    const message = t.dataset.validee ? (t.checked ? 'À l’écran' : 'Retiré de l’écran')
-                                      : (t.checked ? 'Nouveau visuel attendu' : 'Plus de visuel attendu');
-    if (!(await modifierLigne(id, champs, message))) { t.checked = !t.checked; return; }
+  if (t.dataset.validee) {
+    // une seule case : cocher = à l'écran ; décocher = pas à l'écran, avec une raison facultative
+    const id = t.dataset.validee;
+    let champs;
+    if (t.checked) champs = { validee: true, suspendue: false, motif_suspension: null };
+    else {
+      const raison = prompt('Pas à l’écran : pourquoi ? (facultatif, ex. météo, trop de pub)', '');
+      if (raison === null) { t.checked = true; return; }
+      champs = { validee: false, suspendue: false, motif_suspension: raison.trim() || null };
+    }
+    if (!(await modifierLigne(id, champs, t.checked ? 'À l’écran' : 'Plus à l’écran'))) { t.checked = !t.checked; return; }
+    rafraichirLigne(id);
+  } else if (t.dataset.attendu) {
+    const id = t.dataset.attendu;
+    if (!(await modifierLigne(id, { visuel_attendu: t.checked }, t.checked ? 'Nouveau visuel attendu' : 'Plus de visuel attendu'))) {
+      t.checked = !t.checked; return;
+    }
     rafraichirLigne(id);
   } else if (t.dataset.remarqueLigne) {
     const texte = t.value.trim() || null;
@@ -688,22 +419,6 @@ function rafraichirLigne(id) {
   if (etat.ouverte === id) ouvrirDetail(id);
 }
 
-// Désactiver (avec motif) / réactiver — depuis le détail
-document.addEventListener('click', async (e) => {
-  const b = e.target.closest('[data-desactiver], [data-reactiver]');
-  if (!b) return;
-  const id = b.dataset.desactiver || b.dataset.reactiver;
-  let champs;
-  if (b.dataset.desactiver) {
-    const motif = prompt('Motif de la désactivation (ex. météo, trop de pub) :');
-    if (motif === null) return;
-    champs = { suspendue: true, motif_suspension: motif.trim() || null };
-  } else {
-    champs = { suspendue: false, motif_suspension: null };
-  }
-  if (await modifierLigne(id, champs, champs.suspendue ? 'Diffusion désactivée' : 'Diffusion réactivée')) rafraichirLigne(id);
-});
-
 // Retirer un sponsor du produit (sans demande « Suppression ») : la diffusion est terminée aujourd'hui,
 // elle disparaît de la liste mais reste dans l'historique (avec son anneau LED couplé)
 document.addEventListener('click', async (e) => {
@@ -748,8 +463,7 @@ function ouvrirDetail(id) {
   $('d-surtitre').textContent = rang ? `${p.nom} · n° ${rang} dans l'ordre de diffusion`
     : `${l.produit?.nom || p.nom} · placé sur la bande de ${p.nom}`;
   $('d-titre').textContent = l.contrat?.sponsor?.nom || '—';
-  $('d-sous-titre').innerHTML = (l.suspendue ? '<span class="etat etat-desactive">⏸ Désactivé</span>'
-      : l.validee ? '<span class="etat etat-ecran">À l’écran</span>' : '<span class="etat etat-non">Pas à l’écran</span>')
+  $('d-sous-titre').innerHTML = libelleEtat(l)
     + (l.visuel_attendu ? ' <span class="etat etat-attente">⏳ visuel attendu</span>' : '');
 
   const info = (titre, valeur) => valeur ? `<dt>${titre}</dt><dd>${valeur}</dd>` : '';
@@ -759,10 +473,11 @@ function ouvrirDetail(id) {
         <section class="detail-section encart">
           <h3>État</h3>
           <label class="case-grande">
-            <input type="checkbox" data-validee="${l.id}" ${l.validee ? 'checked' : ''} ${estRegie ? '' : 'disabled'}>
-            <span><strong>À l’écran</strong> — la diffusion passe
-              ${l.validee_le ? `<span class="doux petit">(${l.validee ? 'coché' : 'décoché'} le ${dateCourte(l.validee_le)}
-                par ${echapper(etat.personnes.get(l.validee_par) || '—')})</span>` : ''}</span>
+            <input type="checkbox" data-validee="${l.id}" ${aLEcran(l) ? 'checked' : ''} ${estRegie ? '' : 'disabled'}>
+            <span><strong>À l’écran</strong> — la diffusion passe ; décocher = elle ne passe plus (raison facultative)
+              ${l.validee_le ? `<span class="doux petit">(${aLEcran(l) ? 'coché' : 'décoché'} le ${dateCourte(l.validee_le)}
+                par ${echapper(etat.personnes.get(l.validee_par) || '—')})</span>` : ''}
+              ${!aLEcran(l) && l.motif_suspension ? `<span class="petit">Raison : <strong>${echapper(l.motif_suspension)}</strong></span>` : ''}</span>
           </label>
           <label class="case-grande" style="margin-top:.6rem">
             <input type="checkbox" data-attendu="${l.id}" ${l.visuel_attendu ? 'checked' : ''} ${estRegie ? '' : 'disabled'}>
@@ -770,10 +485,6 @@ function ouvrirDetail(id) {
               <span class="doux petit">(s’enlève tout seul quand le nouveau visuel est validé)</span></span>
           </label>
           <div class="ligne-desactivation">
-            ${l.suspendue
-              ? `<p class="message message-erreur petit" style="margin:0">⏸ Désactivé : ${echapper(l.motif_suspension || 'sans motif')}</p>
-                 ${estRegie ? `<button type="button" class="btn" data-reactiver="${l.id}">Réactiver</button>` : ''}`
-              : estRegie ? `<button type="button" class="btn btn-discret" data-desactiver="${l.id}">⏸ Désactiver temporairement…</button>` : ''}
             ${estRegie ? `<button type="button" class="btn btn-discret btn-danger" data-retirer-ligne="${l.id}">Retirer de ce produit…</button>` : ''}
           </div>
         </section>

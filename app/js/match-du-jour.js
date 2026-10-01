@@ -13,8 +13,6 @@ const jourLocal = (d) => { const x = new Date(d); return `${x.getFullYear()}-${p
 const heure = (d) => new Date(d).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
 const jour = (d) => new Date(d).toLocaleDateString('fr-CH', { weekday: 'long', day: '2-digit', month: '2-digit' });
 const ICONES = { ajouter: '➕', enlever: '➖', visuel: '🔄' };
-// Bouton de chaque changement : ouvre la diffusion (fichier, son, remarques…) sur sa fiche
-const BOUTON_ACTION = { ajouter: 'Ajouter', visuel: 'Remplacer', enlever: 'Voir' };
 const ORDRE_ACTIONS = { demande: -1, enlever: 0, ajouter: 1, visuel: 2 };
 // Ordre des produits dans la page : le Sponsor du match (produit et action scene) en premier (demandé par Léa),
 // puis l'ordre d'importance habituel
@@ -46,7 +44,7 @@ async function charger() {
       toutesLesLignes((de, a) => sb.from('lignes_vendues')
         .select(`id, produit_id, type_vente, avec_son, duree_s, consignes, suspendue, motif_suspension, validee, statut,
                  date_fin, priorite, created_at, ligne_couplee_id,
-                 produit:produits(id, nom, categorie, ordre, famille, support, actif),
+                 produit:produits(id, nom, categorie, ordre, famille, support, actif, lie_a_produit_id),
                  contrat:contrats(sponsor_id, sponsor:sponsors(nom)), demande_id,
                  matchs:lignes_matchs(match:matchs(date_heure, adversaire)),
                  emplacements:lignes_emplacements(emplacement:emplacements(anneau, zone, position))`).range(de, a)),
@@ -196,6 +194,9 @@ function infos(ligneId) {
     categorie: l?.produit?.categorie,
     sponsor: l?.contrat?.sponsor?.nom || '—',
     priorite: l?.priorite ?? 1e9,
+    // Pub pause tiers : avec son + anneau, avec son, sans son + anneau, sans son sans anneau (décidé par Léa)
+    groupe: l?.produit?.lie_a_produit_id
+      ? (l.avec_son ? 0 : 2) + (etat.lignes.get(l.ligne_couplee_id)?.produit?.actif === false ? 0 : 1) : 0,
     empl: (l?.emplacements || []).map(e => e.emplacement).filter(Boolean).map(e => `${e.anneau}-${e.zone}-${e.position}`),
     video: l?.produit?.support === 'Vidéotron' && !anneauDe,
   };
@@ -205,17 +206,21 @@ const assetAnneau = (l) => l?.ligne_couplee_id && etat.passagesCe.find(p => p.li
 const consigneAnneau = (action) => ({ ajouter: 'Ajouter l’anneau LED', enlever: 'Enlever l’anneau LED',
   visuel: 'Remplacer le visuel de l’anneau LED' })[action];
 const nomVisuel = (id) => { const a = etat.assets.get(id); return a ? a.nom_visuel + (a.variante ? ` (${a.variante})` : '') : ''; };
-const trier = (a, b) => a.ordre - b.ordre || a.produit.localeCompare(b.produit) || a.priorite - b.priorite;
+const trier = (a, b) => a.ordre - b.ordre || a.produit.localeCompare(b.produit)
+  || (a.groupe ?? 0) - (b.groupe ?? 0) || a.priorite - b.priorite;
 
 // ---------------------------------------------------------------------
 // Affichage
 // ---------------------------------------------------------------------
 function afficher() {
-  // « traitée » (demande ajoutée dans l'outil) ≠ « fait » (mis dans Colosseo) : on indique seulement la demande
+  // Une action par ligne (décidé par Léa le 01.10.2026) : une demande ajoutée depuis le match précédent
+  // compte comme faite (on l'a mise dans Colosseo en l'ajoutant) ; les autres lignes ont la case « Fait »
   const tous = etat.changements.map(c => {
     const inf = infos(c.ligne_id);
-    return { ...c, ...inf, fait: etat.fait.get(`${c.ligne_id}|${c.action}`),
-             traitee: etat.traitees.get(inf.pubId || c.ligne_id) };
+    const traitee = etat.traitees.get(inf.pubId || c.ligne_id);
+    return { ...c, ...inf, traitee,
+             fait: etat.fait.get(`${c.ligne_id}|${c.action}`)
+               || (traitee ? { auto: true, fait_par: traitee.traite_par, fait_le: traitee.traite_le } : null) };
   });
   // anneau ajouté / enlevé en même temps que sa Pub pause tiers : une seule ligne (« avec anneau LED »)
   const pubs = new Set(tous.filter(i => !i.anneau).map(i => `${i.ligne_id}|${i.action}`));
@@ -379,16 +384,17 @@ function carteChangement(i) {
         ${details.length ? `<div class="petit">${details.join(' · ')}</div>` : ''}
         ${visuel ? `<div class="petit">${visuel}${sansFichier}</div>` : ''}
         ${fichiersDossier}
+        ${i.action === 'enlever' ? '<div class="petit"><strong>Déjà enlevé dans l’outil</strong> <span class="doux">— reste à l’enlever à la main dans Colosseo, puis cocher « Fait »</span></div>' : ''}
         ${i.l?.consignes && i.action !== 'enlever' ? `<div class="petit doux">Remarque : ${echapper(i.l.consignes)}</div>` : ''}
-        ${i.traitee ? `<div class="petit doux">Demande traitée par ${echapper(etat.personnes.get(i.traitee.traite_par) || '—')}
-          le ${dateCourte(i.traitee.traite_le)}</div>` : ''}
-        ${fait ? `<div class="petit doux">Fait dans Colosseo par ${echapper(etat.personnes.get(fait.fait_par) || '—')} à ${heure(fait.fait_le)}</div>` : ''}
+        ${fait?.auto ? `<div class="petit doux">✓ Ajouté depuis la demande par ${echapper(etat.personnes.get(fait.fait_par) || '—')}
+          le ${dateCourte(fait.fait_le)} : compte comme fait</div>`
+          : fait ? `<div class="petit doux">Fait dans Colosseo par ${echapper(etat.personnes.get(fait.fait_par) || '—')} à ${heure(fait.fait_le)}</div>` : ''}
       </div>
       <div class="changement-actions">
         ${a?.storage_path && i.action !== 'enlever' ? `<button type="button" class="btn btn-discret" data-telecharger="${echapper(a.storage_path)}">Télécharger</button>` : ''}
-        ${i.l ? `<button type="button" class="btn${i.action === 'enlever' ? '' : ' btn-principal'}" data-ouvrir="${i.ligne_id}|${i.action}"
-          title="Ouvrir le détail : fichiers, matchs, remarques…">${BOUTON_ACTION[i.action]}</button>` : ''}
-        ${estRegie ? `<label class="case-fait"><input type="checkbox" data-fait="${i.ligne_id}|${i.action}" ${fait ? 'checked' : ''}
+        ${i.l ? `<button type="button" class="btn btn-discret" data-ouvrir="${i.ligne_id}|${i.action}"
+          title="Fichiers, matchs, remarques…">Détails</button>` : ''}
+        ${estRegie && !fait?.auto ? `<label class="case-fait"><input type="checkbox" data-fait="${i.ligne_id}|${i.action}" ${fait ? 'checked' : ''}
           ${etat.tableFait ? '' : 'disabled'}> Fait</label>` : ''}
       </div>
     </div>`;
@@ -446,8 +452,7 @@ function ouvrirChangement(cleItem) {
   $('d-titre').textContent = i.sponsor;
   // état POUR CE MATCH (et pas la case « À l'écran » de la fiche, qui prêtait à confusion pour un retrait)
   const passeCeMatch = etat.passagesCe.some(p => p.ligne_id === (i.anneau ? l.ligne_couplee_id : l.id) && PASSE.has(p.statut));
-  $('d-sous-titre').innerHTML = (l.suspendue ? '<span class="etat etat-desactive">⏸ Désactivé</span>'
-      : passeCeMatch ? '<span class="etat etat-ecran">Passe à ce match</span>'
+  $('d-sous-titre').innerHTML = (passeCeMatch ? '<span class="etat etat-ecran">Passe à ce match</span>'
       : '<span class="etat etat-non">Ne passe pas à ce match</span>')
     + (fait ? ' <span class="etat etat-ecran">✓ Fait dans Colosseo</span>' : ' <span class="etat etat-attente">à faire dans Colosseo</span>')
     + ` &nbsp;<span class="doux">${echapper(i.raison || '')}</span>`;
@@ -460,8 +465,9 @@ function ouvrirChangement(cleItem) {
           <div class="details-produits">
             <div class="detail-produit">
               <div class="suivi-produit ${fait ? 'fait' : ''}">
-                ${fait ? `✓ Fait dans Colosseo par ${echapper(etat.personnes.get(fait.fait_par) || '—')} à ${heure(fait.fait_le)}`
-                       : (i.anneau ? consigneAnneau(i.action) : consigne(i.action, i.famille, i.categorie))}
+                ${fait?.auto ? `✓ Ajouté depuis la demande par ${echapper(etat.personnes.get(fait.fait_par) || '—')} le ${dateCourte(fait.fait_le)}`
+                  : fait ? `✓ Fait dans Colosseo par ${echapper(etat.personnes.get(fait.fait_par) || '—')} à ${heure(fait.fait_le)}`
+                  : (i.anneau ? consigneAnneau(i.action) : consigne(i.action, i.famille, i.categorie))}
                 <a href="produit.html?id=${l.produit?.id}&ligne=${l.id}&retour=${encodeURIComponent(`match-du-jour.html?match=${etat.match.id}`)}">Ouvrir la fiche →</a>
               </div>
               <div class="detail-entete">
@@ -495,7 +501,8 @@ function ouvrirChangement(cleItem) {
                 </div>
                 <div>
                   <div class="titre-bloc">Pourquoi ce changement</div>
-                  <div class="bloc-texte petit">${echapper(i.raison || '—')}${l.suspendue && l.motif_suspension ? `<br>${echapper(l.motif_suspension)}` : ''}</div>
+                  <div class="bloc-texte petit">${echapper(i.raison || '—')}${l.motif_suspension ? `<br>${echapper(l.motif_suspension)}` : ''}${i.action === 'enlever'
+                    ? '<br>Déjà enlevé dans l’outil : reste à l’enlever à la main dans Colosseo.' : ''}</div>
                 </div>
               </div>
             </div>
@@ -512,7 +519,8 @@ function ouvrirChangement(cleItem) {
               : 'Import Airtable'}</dd>
             ${i.traitee ? `<dt>Demande traitée par</dt><dd>${echapper(etat.personnes.get(i.traitee.traite_par) || '—')}
               <div class="doux petit">${dateCourte(i.traitee.traite_le)}</div></dd>` : ''}
-            <dt>Dans Colosseo</dt><dd>${fait ? `✓ Fait par ${echapper(etat.personnes.get(fait.fait_par) || '—')}
+            <dt>Dans Colosseo</dt><dd>${fait?.auto ? 'Compte comme fait (ajouté depuis la demande)'
+              : fait ? `✓ Fait par ${echapper(etat.personnes.get(fait.fait_par) || '—')}
               <div class="doux petit">à ${heure(fait.fait_le)}</div>` : '<span class="doux">Pas encore fait</span>'}</dd>
           </dl>
         </div>
@@ -521,7 +529,7 @@ function ouvrirChangement(cleItem) {
 
   $('d-pied').innerHTML = `
     <span class="indication">Match du ${dateCourte(etat.match.date_heure)} · contre ${echapper(etat.match.adversaire)}</span>
-    ${estRegie && etat.tableFait ? `<button type="button" class="btn btn-principal" data-basculer-fait="${i.ligne_id}|${i.action}">
+    ${estRegie && etat.tableFait && !fait?.auto ? `<button type="button" class="btn btn-principal" data-basculer-fait="${i.ligne_id}|${i.action}">
       ${fait ? 'Marquer « pas encore fait »' : '✓ Fait dans Colosseo'}</button>` : ''}`;
   $('d-pied').hidden = false;
   $('fenetre').hidden = $('voile').hidden = false;

@@ -21,6 +21,27 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    anneau de la pause tiers sur le produit inactif (17), visuel attendu (18), LED 6M = 2 emplacements, Banner HCFG
    = libre. Tout exécuter en **un seul bloc `do`** (piège du SQL Editor).
 
+00. **Recette du 01.10.2026 : corrections faites, à faire tester par Léa** (migration **28** à exécuter sur les deux
+   bases) — décisions prises avec Léa :
+   - **Traitement partout pareil** : `app/js/traitement.js` = LA carte de traitement d'un produit de demande (fichiers,
+     dimensions, plan LED, remarques Sponsoring / Régie, Ajouter ✓ / Mettre le nouveau visuel / Retirer / Ignorer).
+     Utilisée sur la fiche produit (« À ajouter », mode `produit`) ET dans le détail d'une demande (mode `demande`) ;
+     Match du jour ouvre la demande. Ne jamais recréer une 2e façon de traiter.
+   - **Une seule case « À l'écran »** : plus de « Désactivé » à l'écran. Décocher = `validee = false` + raison facultative
+     dans `motif_suspension` (`suspendue` remis à false) ; anciennes lignes `suspendue` affichées « Pas à l'écran ».
+   - **Match du jour, une action par ligne** : demande pas ajoutée = bouton « Ajouter » (ouvre la demande) ; changement
+     venant d'une demande ajoutée depuis le match précédent = **compte comme fait** (auto, pas de case) ; autres lignes =
+     case « Fait » + bouton discret « Détails ». Lignes ➖ : « Déjà enlevé dans l'outil, reste à l'enlever dans Colosseo ».
+   - **Fichier arrivé après la demande = option A** : « + Ajouter un fichier » sur chaque produit de la demande
+     (Sponsoring et Régie) → RPC `fichier_ajoute_demande` (28) : produit déjà ajouté → revient à traiter avec
+     « Mettre le nouveau visuel » sur la même diffusion (`ligne_id` gardé), demande traitée → « Nouvelle ».
+   - **Pub pause tiers** (fiche + Match du jour) : groupes avec son + anneau, avec son, sans son + anneau, sans son
+     sans anneau, puis ordre de diffusion.
+   - Demande « changement de visuel » / « suppression » : seuls les produits que le sponsor a sont proposés.
+     « Suppression » en badge rouge dans la liste des demandes.
+   - Sponsoring : ne voit plus Match du jour, Par match, Calendrier.
+   - Slides « Aucun logo » dans la Pub pause tiers : normal si aucun logo des fiches Slides n'est « À l'écran ».
+   - Téléphone : pas important (outil fait pour l'ordinateur), dit par Léa.
 0-ter. **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
@@ -107,7 +128,9 @@ outil-regie/
 │   │                           saisons / matchs / comptes ; fichiers du bucket à supprimer à la main (Storage)
 │   ├── 24_droits_sponsoring.sql ← Sponsoring = demandes + consultation (RLS)
 │   ├── 25_regie_egal_admin.sql ← a_role() : regie et admin ont les mêmes droits
-│   └── 26_notes_match.sql ← table notes_match : infos et tâches d'un match (« Pour ce soir »)
+│   ├── 26_notes_match.sql ← table notes_match : infos et tâches d'un match (« Pour ce soir »)
+│   ├── 27_comptes_externes.sql ← toutes les adresses e-mail acceptées (comptes créés par un admin)
+│   └── 28_fichier_ajoute_apres.sql ← RPC fichier_ajoute_demande : fichier ajouté après la demande
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
@@ -121,6 +144,7 @@ outil-regie/
     ├── categorie.html / js/categorie.js    ← une catégorie sur une page (?c=Action%20scenes) : toutes les scènes + sponsor
     ├── match-du-jour.html / js/match-du-jour.js ← « Match du jour » : à faire dans Colosseo + playlist (accueil Régie)
     ├── js/changements.js  ← calcul pur des changements entre 2 matchs (testable dans Node)
+    ├── js/traitement.js   ← LA carte de traitement d'un produit de demande (fiche produit + détail d'une demande)
     ├── matchs.html / js/matchs.js          ← « Par match » : ventes au match + demandes au match à ajouter, par match
     ├── calendrier.html / js/calendrier.js  ← matchs à domicile (lecture tous ; ajout/import/modif admin)
     ├── sponsors.html / js/sponsors.js      ← « Dossiers sponsors » : liste (avec produits / avec documents / tous)
@@ -136,7 +160,7 @@ outil-regie/
 Les fichiers SQL 01 → 12 ont été exécutés **dans l'ordre** sur le projet Supabase (septembre 2026 ; 10–12
 vérifiés le 25.09.2026 avec une requête qui teste leurs traces : colonnes / fonctions / valeurs).
 13 → 22 exécutés et testés : « tout bon » confirmé par Léa (session suivant le 28.09.2026).
-Pour modifier la base, **écrire un nouveau fichier** `supabase/27_….sql` (migration) plutôt que
+Pour modifier la base, **écrire un nouveau fichier** `supabase/29_….sql` (migration) plutôt que
 réécrire 01–04, et donner à Léa les instructions pour l'exécuter dans le SQL Editor.
 
 ## Modèle métier (à respecter)
@@ -445,10 +469,7 @@ Autres règles décidées :
 - Largeur du visuel de l'anneau LED et capacité de l'anneau (vides).
 - Les 5 emplacements NORD-OUEST « réservés club » par bande : peut-on y mettre un logo sponsor (ils affichent
   aussi Banner HCFG) ? Pour l'instant non cliquables.
-- **Fichier qui arrive après la demande** (c'est le Sponsoring qui fournit les visuels) : procédure pas encore
-  choisie par Léa. Options proposées : A) le Sponsoring complète la demande (bouton « Ajouter le fichier » sur
-  les produits « à venir », Régie prévenue) — recommandé, éventuellement + C ; B) nouvelle demande
-  « changement de visuel » ; C) la Régie dépose elle-même le fichier reçu par e-mail.
+- ~~Fichier qui arrive après la demande~~ : **option A choisie le 01.10.2026** (voir point 00 en haut).
 
 ## Pièges connus
 

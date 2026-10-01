@@ -46,8 +46,8 @@ function afficherProduits(lignes) {
   $('nb-produits').textContent = lignes.length ? `(${lignes.length})` : '';
   $('produits').innerHTML = lignes.map(l => {
     const n = l.matchs?.length || 0;
-    const etatTxt = l.suspendue ? `<span class="etat etat-desactive" title="${echapper(l.motif_suspension || '')}">⏸ Désactivé</span>`
-      : l.validee ? '<span class="etat etat-ecran">À l’écran</span>' : '<span class="etat etat-non">Pas à l’écran</span>';
+    const etatTxt = l.validee && !l.suspendue ? '<span class="etat etat-ecran">À l’écran</span>'
+      : `<span class="etat etat-non" title="${echapper(l.motif_suspension || '')}">Pas à l’écran</span>`;
     return `<tr data-produit="${l.produit.id}">
       <td><strong>${echapper(court(l.produit.nom))}</strong>
         ${l.ligne_couplee_id ? ' <span class="doux petit">+ anneau LED</span>' : ''}</td>

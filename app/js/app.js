@@ -176,8 +176,8 @@ const MENU = [
     { href: 'import-dossiers.html', texte: 'Importer des dossiers', icone: 'onglets', roles: ['regie', 'admin'] },
   ] },
   { titre: 'Saison', liens: [
-    { href: 'matchs.html', texte: 'Par match', icone: 'match' },
-    { href: 'calendrier.html', texte: 'Calendrier des matchs', icone: 'calendrier' },
+    { href: 'matchs.html', texte: 'Par match', icone: 'match', roles: ['regie', 'admin'] },
+    { href: 'calendrier.html', texte: 'Calendrier des matchs', icone: 'calendrier', roles: ['regie', 'admin'] },
   ] },
 ];
 

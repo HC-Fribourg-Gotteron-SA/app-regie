@@ -1,6 +1,6 @@
 import { sb, exigerConnexion, LIBELLES, echapper, dateCourte, notifier } from './app.js';
 
-const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
+const { profil } = await exigerConnexion({ roles: ['regie', 'admin'] });
 const estAdmin = ['regie', 'admin'].includes(profil.role);   // Régie = mêmes droits que l'admin (migration 25)
 
 const $ = (id) => document.getElementById(id);

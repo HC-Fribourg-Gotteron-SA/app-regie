@@ -322,6 +322,7 @@ function choisirSponsor(s) {
     : `<strong>${echapper(s.nom)}</strong>`;
   if (s.nouveau) document.querySelector('input[name=type][value=nouveau_sponsor]').checked = true;
   majResume();
+  filtrerProduitsDuSponsor();
 }
 
 $('btn-changer-sponsor').addEventListener('click', () => {
@@ -330,7 +331,46 @@ $('btn-changer-sponsor').addEventListener('click', () => {
   $('bloc-recherche').hidden = false;
   $('recherche-sponsor').focus();
   majResume();
+  filtrerProduitsDuSponsor();
 });
+
+// ---------------------------------------------------------------------
+// Changement de visuel / suppression : seulement les produits que le sponsor a déjà
+// ---------------------------------------------------------------------
+const TYPES_PRODUITS_DU_SPONSOR = ['changement_visuel', 'suppression'];
+const produitsDuSponsor = new Map();      // id sponsor -> Set(id produit)
+
+async function filtrerProduitsDuSponsor() {
+  const type = document.querySelector('input[name=type]:checked')?.value;
+  const limiter = TYPES_PRODUITS_DU_SPONSOR.includes(type) && etat.sponsor && !etat.sponsor.nouveau;
+  let ids = null;
+  if (limiter) {
+    if (!produitsDuSponsor.has(etat.sponsor.id)) {
+      const { data } = await sb.from('lignes_vendues').select('produit_id, contrat:contrats!inner(sponsor_id)')
+        .eq('contrat.sponsor_id', etat.sponsor.id).not('statut', 'in', '(annule,termine)');
+      produitsDuSponsor.set(etat.sponsor.id, new Set((data || []).map(l => l.produit_id)));
+    }
+    ids = produitsDuSponsor.get(etat.sponsor.id);
+  }
+  document.querySelectorAll('#produits details').forEach(groupe => {
+    let visibles = 0;
+    groupe.querySelectorAll('input[name=produit]').forEach(c => {
+      const ok = !ids || ids.has(c.value);
+      c.closest('label').classList.toggle('hors-sponsor', !ok);
+      if (!ok && c.checked) { c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true })); }
+      if (ok) visibles++;
+    });
+    groupe.classList.toggle('hors-sponsor', !visibles);
+  });
+  const aide = $('aide-produits-sponsor');
+  aide.hidden = !limiter;
+  if (limiter) {
+    aide.textContent = ids.size
+      ? `Seuls les produits que ${etat.sponsor.nom} a actuellement sont proposés (${ids.size}).`
+      : `${etat.sponsor.nom} n'a actuellement aucun produit dans l'outil : rien à changer ou à supprimer.`;
+  }
+}
+$('types').addEventListener('change', filtrerProduitsDuSponsor);
 
 // ---------------------------------------------------------------------
 // Envoi

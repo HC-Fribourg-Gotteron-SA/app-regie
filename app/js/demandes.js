@@ -1,5 +1,6 @@
 import { sb, exigerConnexion, LIBELLES, echapper, dateCourte, dateHeure, notifier, debounce, taille, libelleFichier,
          depuis, initiales } from './app.js';
+import { carteTraitement, CHAMPS_A_TRAITER, ajouterFichierDemande, boutonAjoutFichier } from './traitement.js';
 
 const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
@@ -94,12 +95,15 @@ const matchsLisibles = (dates) => (dates || []).map(j =>
 
 function blocProduits(d) {
   if (!d.produits.length) return '<p class="doux">Aucun produit.</p>';
-  return `<div class="details-produits">${d.produits.map(x => `
+  return `<div class="details-produits">${d.produits.map(x => estRegie && !x.traite_le && d.statut !== 'traitee'
+    // pas encore traité : la même carte que sur la fiche produit (Ajouter, plan LED, fichiers…)
+    ? `<div data-carte-traitement="${x.produit?.id}"><span class="doux petit">${echapper(x.produit?.nom || '')} : chargement…</span></div>`
+    : `
     <div class="detail-produit" data-produit="${x.produit?.id}">
       <div class="suivi-produit ${x.traite_le ? 'fait' : ''}">
         ${x.traite_le
           ? `✓ ${SUITES[x.suite] || 'Traité'} le ${dateHeure(x.traite_le)} par ${echapper(etat.personnes.get(x.traite_par) || '—')}`
-          : `À ajouter sur la fiche produit`}
+          : `En attente de la Régie`}
         <a href="produit.html?id=${x.produit?.id}">Ouvrir la fiche →</a>
       </div>
       <div class="detail-entete">
@@ -167,7 +171,9 @@ function afficher() {
       <tr data-id="${d.id}" class="ligne-${d.statut}${d.id === etat.ouverte ? ' selectionnee' : ''}">
         <td>
           <div class="demande-sponsor">${echapper(nomSponsor(d))}</div>
-          <div class="demande-sous">${LIBELLES.type_demande[d.type]}${d.sponsor ? '' : ' · <strong>nouveau sponsor</strong>'}</div>
+          <div class="demande-sous">${d.type === 'suppression'
+            ? `<span class="badge badge-suppression">✕ ${LIBELLES.type_demande[d.type]}</span>`
+            : LIBELLES.type_demande[d.type]}${d.sponsor ? '' : ' · <strong>nouveau sponsor</strong>'}</div>
           ${produits.length ? `<div class="puces-produits">
             ${produits.slice(0, 4).map(n => `<span class="puce-produit">${echapper(n)}</span>`).join('')}
             ${produits.length > 4 ? `<span class="puce-produit">+${produits.length - 4}</span>` : ''}</div>` : ''}
@@ -272,6 +278,21 @@ async function ouvrir(id, { silencieux = false } = {}) {
   chargerFichiers(d.id);
   chargerFichiersProduits(d);
   chargerHistorique(d.id);
+  afficherTraitements(d);
+}
+
+// Produits pas encore traités (Régie) : la carte de traitement, identique à celle de la fiche produit
+async function afficherTraitements(d) {
+  const zones = [...document.querySelectorAll('#d-corps [data-carte-traitement]')];
+  if (!zones.length) return;
+  const { data, error } = await sb.from('demandes_produits').select(CHAMPS_A_TRAITER)
+    .eq('demande_id', d.id).is('traite_le', null);
+  if (error) { notifier(`Chargement impossible : ${error.message}`, 'erreur'); return; }
+  if (etat.ouverte !== d.id) return;
+  for (const zone of zones) {
+    const a = (data || []).find(x => x.produit_id === zone.dataset.carteTraitement);
+    if (a) carteTraitement(zone, a, { estRegie, mode: 'demande', apres: async () => { await charger(); ouvrir(d.id); } });
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -327,6 +348,9 @@ function decrireEvenement(j) {
     }
   }
   if (a.reponse_regie !== n.reponse_regie) return { ...base, titre: 'Réponse de la Régie modifiée', texte: n.reponse_regie };
+  if (a.remarque_sponsoring !== n.remarque_sponsoring && /— Fichier ajouté le/.test(n.remarque_sponsoring || '')) {
+    return { ...base, titre: 'Fichier ajouté', texte: (n.remarque_sponsoring || '').slice((a.remarque_sponsoring || '').length).replace(/^\s*— /, '').trim() };
+  }
   if (a.sponsor_id !== n.sponsor_id) return { ...base, titre: 'Sponsor rattaché' };
   return null;
 }
@@ -343,7 +367,7 @@ function piedRegie(d) {
     return `<span class="indication">Demande traitée. Rouvrir ne supprime pas ce qui a été programmé.</span>
             <button class="btn" data-statut="en_cours">Rouvrir</button>`;
   }
-  return `<span class="indication">Les produits s'ajoutent depuis leur fiche ; la demande passe en « Traitée » quand tout est ajouté.</span>
+  return `<span class="indication">Ajoutez chaque produit ci-dessus (ou sur sa fiche, c’est la même chose) ; la demande passe en « Traitée » quand tout est fait.</span>
     ${d.statut !== 'en_cours' ? '<button class="btn" data-statut="en_cours">Prendre en charge</button>' : ''}
     <button class="btn" data-statut="question">Poser une question</button>
     <button class="btn" data-statut="traitee" title="Normalement automatique quand tous les produits sont ajoutés">Marquer comme traitée</button>`;
@@ -447,15 +471,34 @@ async function chargerFichiersProduits(d) {
             ${liste.length ? '' : ' <span class="badge badge-a-venir">à venir</span>'}</div>
           ${liste.length ? `<ul class="liste-fichiers" style="margin:.25rem 0 0">${liste.map(f =>
             ligneFichier(`${dossier}/${f.name}`, f.nomCourt, f.metadata?.size)).join('')}</ul>` : ''}
+          ${x.suite === 'retire' || x.suite === 'ignore' ? '' : boutonAjoutFichier(role)}
         </div>`;
     }).join('');
   }));
 }
 
+// Fichier arrivé après la demande : le Sponsoring (ou la Régie) l'ajoute au produit.
+// Si le produit était déjà ajouté, il revient « à traiter » : la Régie met le nouveau visuel (migration 28).
+$('d-corps').addEventListener('change', async (e) => {
+  const t = e.target.closest('[data-ajout-fichier]');
+  if (!t || t.closest('[data-traitement]') || !t.files?.length) return;   // les cartes de traitement gèrent les leurs
+  const d = etat.demandes.find(x => x.id === etat.ouverte);
+  const produitId = t.closest('[data-produit]')?.dataset.produit;
+  if (!d || !produitId) return;
+  const fichier = t.files[0];
+  notifier(`Envoi de ${fichier.name}…`);
+  try {
+    await ajouterFichierDemande({ demandeId: d.id, produitId, sponsorId: d.sponsor?.id, role: t.dataset.ajoutFichier, fichier });
+    notifier(estRegie ? 'Fichier ajouté' : 'Fichier ajouté : la Régie est prévenue');
+  } catch (err) { notifier(err.message, 'erreur'); }
+  await charger();
+  ouvrir(d.id);
+});
+
 // Téléchargement (un seul écouteur pour tous les boutons du détail)
 $('d-corps').addEventListener('click', async (e) => {
   const b = e.target.closest('[data-fichier]');
-  if (!b) return;
+  if (!b || b.closest('[data-traitement]')) return;
   const { data, error } = await sb.storage.from('assets').createSignedUrl(b.dataset.fichier, 600, { download: true });
   if (error) { notifier(error.message, 'erreur'); return; }
   location.href = data.signedUrl;

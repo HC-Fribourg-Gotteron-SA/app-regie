@@ -207,6 +207,7 @@ textarea { min-height: 90px; resize: vertical; }
 .statut-traitee  { background: var(--ok-fond); color: var(--ok); }
 .badge-match, .badge-a-venir { background: var(--alerte-fond); color: var(--alerte); }
 .badge-son { background: var(--info-fond); color: var(--info); }
+.badge-suppression { background: var(--erreur); color: #fff; font-weight: 700; }
 .badge::before { content: none; }
 .statut-nouvelle::before, .statut-en_cours::before, .statut-question::before, .statut-traitee::before {
   content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor;
@@ -688,3 +689,8 @@ body.fenetre-ouverte { overflow: hidden; }
   .barre-envoi .btn { flex: 1; }
   .carte { padding: 1.1rem; }
 }
+
+/* Demande « changement de visuel » / « suppression » : produits que le sponsor n'a pas, masqués */
+.groupes-produits .hors-sponsor { display: none !important; }
+/* « + Ajouter un fichier » (fichier reçu après la demande) */
+.bouton-fichier { display: inline-flex; margin-top: .3rem; cursor: pointer; }

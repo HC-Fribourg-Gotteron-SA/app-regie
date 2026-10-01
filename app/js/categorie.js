@@ -71,8 +71,8 @@ function afficher() {
     lignes.forEach((l, i) => {
       const visuel = (l.assets || []).filter(a => a.statut !== 'archive')
         .sort((a, b) => new Date(b.depose_le) - new Date(a.depose_le))[0];
-      const etatTxt = (l.suspendue ? `<span class="etat etat-desactive" title="${echapper(l.motif_suspension || '')}">⏸ Désactivé</span>`
-        : l.validee ? '<span class="etat etat-ecran">À l’écran</span>' : '<span class="etat etat-non">Pas à l’écran</span>')
+      const etatTxt = (l.validee && !l.suspendue ? '<span class="etat etat-ecran">À l’écran</span>'
+        : `<span class="etat etat-non" title="${echapper(l.motif_suspension || '')}">Pas à l’écran</span>`)
         + (l.visuel_attendu ? ' <span class="etat etat-attente">⏳ visuel attendu</span>' : '');
       rangees.push(`<tr data-lien="produit.html?id=${p.id}&ligne=${l.id}" title="Ouvrir le détail">
         <td>${i === 0 ? nom : ''}</td>

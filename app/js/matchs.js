@@ -1,6 +1,6 @@
 import { sb, exigerConnexion, LIBELLES, echapper, dateHeure, notifier } from './app.js';
 
-await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
+await exigerConnexion({ roles: ['regie', 'admin'] });
 
 const $ = (id) => document.getElementById(id);
 const pad = (n) => String(n).padStart(2, '0');
