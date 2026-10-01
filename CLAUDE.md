@@ -435,8 +435,8 @@ Autres règles décidées :
       Bouton de la demande = « Ajouter » (pour Léa, « traiter » et « ajouter » c'est pareil). Mais **« traitée » ≠
       « fait »** (corrigé par Léa) : traitée = ajoutée dans l'outil ; fait = mis dans Colosseo. Donc PAS de « Fait »
       automatique : le changement issu d'une demande affiche « Demande traitée par … le … » (info) et garde sa case Fait.
-      **Libellés** : le produit est en titre du groupe (ne pas le répéter) ; Action scenes : « Ajouter à l'action scene »
-      / « Enlever de l'action scene » (pas « playlist »). **Chaque changement a un bouton** (Ajouter / Remplacer / Voir)
+      **Libellés** (01.10.2026, demandé par Léa) : « Ajouter à <produit> » / « Enlever de <produit> » (ex. « Ajouter à
+      Sponsor du match », « Ajouter à Action scene · Goal ») ; LED : « Mettre le logo » / « remettre Banner HCFG ». **Chaque changement a un bouton** (Ajouter / Remplacer / Voir)
       qui ouvre la diffusion sur sa fiche (`produit.html?id=…&ligne=…&retour=match-du-jour.html?match=…` : détail
       ouvert, visuels avec **Télécharger** ; fermer = retour au Match du jour).
       **« Pour ce soir »** (demandé par Léa, migration 26) : bloc sous le bilan pour les infos générales du match et

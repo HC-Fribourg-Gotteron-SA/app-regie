@@ -46,10 +46,11 @@ function raisonRetrait(l) {
 }
 
 // Ce que la Régie fait concrètement, selon le type de produit (le produit est en titre du groupe)
-export function consigne(action, famille, categorie = '') {
+// « Ajouter à <produit> » / « Enlever de <produit> » (demandé par Léa le 01.10.2026 : ex. « Ajouter à Sponsor du match ») ;
+// LED 3M / 6M : on parle du logo et du Banner HCFG
+export function consigne(action, famille, categorie = '', produit = '') {
   if (action === 'visuel') return 'Remplacer le visuel';
-  if (categorie === 'Action scenes') return action === 'ajouter' ? 'Ajouter à l’action scene' : 'Enlever de l’action scene';
   if (famille === 'emplacement') return action === 'ajouter' ? 'Mettre le logo' : 'Enlever le logo · remettre Banner HCFG';
-  if (famille === 'slide') return action === 'ajouter' ? 'Ajouter le logo sur la slide' : 'Enlever le logo de la slide';
-  return action === 'ajouter' ? 'Ajouter à la playlist' : 'Enlever de la playlist';
+  const nom = produit || (categorie === 'Action scenes' ? 'l’action scene' : 'la playlist');
+  return action === 'ajouter' ? `Ajouter à ${nom}` : `Enlever de ${nom}`;
 }

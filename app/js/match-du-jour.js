@@ -379,7 +379,7 @@ function carteChangement(i) {
     <div class="changement changement-${i.action}${fait ? ' est-fait' : ''}">
       <div class="changement-icone" aria-hidden="true">${ICONES[i.action]}</div>
       <div class="changement-texte">
-        <div><span class="changement-verbe">${i.anneau ? consigneAnneau(i.action) : consigne(i.action, i.famille, i.categorie)}</span> · <strong>${echapper(i.sponsor)}</strong>
+        <div><span class="changement-verbe">${i.anneau ? consigneAnneau(i.action) : consigne(i.action, i.famille, i.categorie, i.produit)}</span> · <strong>${echapper(i.sponsor)}</strong>
           <span class="doux petit">(${echapper(i.raison)})</span></div>
         ${details.length ? `<div class="petit">${details.join(' · ')}</div>` : ''}
         ${visuel ? `<div class="petit">${visuel}${sansFichier}</div>` : ''}
@@ -467,7 +467,7 @@ function ouvrirChangement(cleItem) {
               <div class="suivi-produit ${fait ? 'fait' : ''}">
                 ${fait?.auto ? `✓ Ajouté depuis la demande par ${echapper(etat.personnes.get(fait.fait_par) || '—')} le ${dateCourte(fait.fait_le)}`
                   : fait ? `✓ Fait dans Colosseo par ${echapper(etat.personnes.get(fait.fait_par) || '—')} à ${heure(fait.fait_le)}`
-                  : (i.anneau ? consigneAnneau(i.action) : consigne(i.action, i.famille, i.categorie))}
+                  : (i.anneau ? consigneAnneau(i.action) : consigne(i.action, i.famille, i.categorie, i.produit))}
                 <a href="produit.html?id=${l.produit?.id}&ligne=${l.id}&retour=${encodeURIComponent(`match-du-jour.html?match=${etat.match.id}`)}">Ouvrir la fiche →</a>
               </div>
               <div class="detail-entete">
