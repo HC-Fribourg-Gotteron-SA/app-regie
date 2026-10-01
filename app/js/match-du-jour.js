@@ -131,13 +131,17 @@ async function chargerMatch() {
                produit:produits(id, nom, ordre, famille, support),
                demande:demandes!inner(id, type, statut, created_at, sponsor_nom_saisi, sponsor:sponsors(nom))`)
       .is('traite_le', null).neq('demande.statut', 'traitee'),
-    // demandes ajoutées depuis le match précédent : le changement a été fait dans Colosseo en même temps
-    etat.precedent
-      ? sb.from('demandes_produits').select('ligne_id, traite_le, traite_par')
-          .not('ligne_id', 'is', null).gte('traite_le', etat.precedent.date_heure)
-      : Promise.resolve({ data: [] }),
+    // demandes traitées depuis le match précédent (jusqu'au lendemain de ce match) : restent affichées, grisées
+    sb.from('demandes_produits')
+      .select(`demande_id, produit_id, type_vente, dates_matchs, avec_son, avec_anneau, duree_s, remarque_sponsoring,
+               ligne_id, suite, traite_le, traite_par,
+               produit:produits(id, nom, ordre, famille, support),
+               demande:demandes!inner(id, type, statut, created_at, sponsor_nom_saisi, sponsor:sponsors(nom))`)
+      .not('traite_le', 'is', null)
+      .gte('traite_le', (etat.precedent ? new Date(etat.precedent.date_heure) : new Date(new Date(m.date_heure) - 7 * 864e5)).toISOString())
+      .lte('traite_le', new Date(new Date(m.date_heure).getTime() + 864e5).toISOString()),
   ]);
-  etat.traitees = new Map((traitees || []).map(t => [t.ligne_id, t]));
+  etat.traitees = new Map((traitees || []).filter(t => t.ligne_id).map(t => [t.ligne_id, t]));
   etat.tableFait = !error;
   etat.fait = new Map((fait || []).map(f => [`${f.ligne_id}|${f.action}`, f]));
   etat.tableNotes = !eNotes;          // false si la migration 26 n'est pas encore exécutée
@@ -145,7 +149,10 @@ async function chargerMatch() {
   // celles qui concernent ce match : pour la saison, ou vendues pour ce jour de match
   const jourMatch = jourLocal(m.date_heure);
   etat.attente = attente || [];
-  etat.demandesMatch = etat.attente.filter(a => a.type_vente !== 'match' || (a.dates_matchs || []).includes(jourMatch));
+  const pourCeMatch = (a) => a.type_vente !== 'match' || (a.dates_matchs || []).includes(jourMatch);
+  etat.demandesMatch = etat.attente.filter(pourCeMatch);
+  // déjà traitées pour ce match : affichées grisées sous les demandes à traiter (demandé par Léa)
+  etat.demandesFaites = (traitees || []).filter(pourCeMatch);
   await chargerFichiersDemandes(etat.demandesMatch);
 
   afficher();
@@ -234,11 +241,14 @@ function afficher() {
   const items = tous.filter(i => !(i.anneau && i.action !== 'visuel' && pubs.has(`${i.pubId}|${i.action}`)))
     .sort((a, b) => trier(a, b) || (a.anneau - b.anneau) || ORDRE_ACTIONS[a.action] - ORDRE_ACTIONS[b.action]);
   etat.items = items;
-  const demandes = etat.demandesMatch.map(a => ({
-    action: 'demande', dp: a, ligne_id: `${a.demande_id}|${a.produit_id}`,
+  // à traiter, puis déjà traitées (grisées, restent visibles pour le suivi)
+  const versItem = (faite) => (a) => ({
+    action: 'demande', dp: a, faite, ligne_id: `${a.demande_id}|${a.produit_id}`,
     produit: court(a.produit?.nom), ordre: ordreProduit(a.produit), famille: a.produit?.famille,
-    sponsor: a.demande?.sponsor?.nom || a.demande?.sponsor_nom_saisi || '—', priorite: -1,
-  })).sort(trier);
+    sponsor: a.demande?.sponsor?.nom || a.demande?.sponsor_nom_saisi || '—', priorite: faite ? 1 : 0,
+  });
+  const demandes = etat.demandesMatch.map(versItem(false)).sort(trier);
+  const toutesDemandes = demandes.concat((etat.demandesFaites || []).map(versItem(true))).sort(trier);
   const reste = items.filter(i => !i.fait).length;
   const taches = etat.notes.filter(n => n.type === 'tache' && !n.fait).length;
 
@@ -260,9 +270,9 @@ function afficher() {
   }
 
   // 1. demandes à traiter, groupées par produit
-  $('bloc-demandes').hidden = !demandes.length;
-  $('nb-demandes').textContent = demandes.length ? `· ${demandes.length}` : '';
-  $('demandes').innerHTML = [...grouper(demandes)].map(([produit, liste]) => `
+  $('bloc-demandes').hidden = !toutesDemandes.length;
+  $('nb-demandes').textContent = toutesDemandes.length ? `· ${demandes.length} / ${toutesDemandes.length} à traiter` : '';
+  $('demandes').innerHTML = [...grouper(toutesDemandes)].map(([produit, liste]) => `
     <div class="carte groupe-colosseo">
       <div class="groupe-titre">${echapper(produit)}</div>
       ${liste.map(carteDemande).join('')}
@@ -313,8 +323,23 @@ function grouper(items) {
 // Demande à traiter : dans l'outil (même fenêtre que dans Demandes) et dans Colosseo en même temps
 const VERBE_DEMANDE = { suppression: 'Retrait demandé', changement_visuel: 'Nouveau visuel demandé' };
 const BOUTON_DEMANDE = { suppression: 'Retirer', changement_visuel: 'Changer le visuel' };
+const SUITE_FAITE = { ajoute: 'Ajouté', visuel: 'Nouveau visuel mis', retire: 'Retiré', ignore: 'Ignoré' };
 function carteDemande(i) {
   const a = i.dp, d = a.demande || {};
+  if (i.faite) {                 // déjà traitée : grisée, reste visible
+    return `
+    <div class="changement changement-demande est-fait">
+      <div class="changement-icone" aria-hidden="true">📨</div>
+      <div class="changement-texte">
+        <div><span class="changement-verbe">${VERBE_DEMANDE[d.type] || 'Nouveau'}</span> · <strong>${echapper(i.sponsor)}</strong></div>
+        <div class="petit doux">✓ ${SUITE_FAITE[a.suite] || 'Traité'} par ${echapper(etat.personnes.get(a.traite_par) || '—')}
+          le ${dateCourte(a.traite_le)} à ${heure(a.traite_le)}</div>
+      </div>
+      <div class="changement-actions">
+        <a class="btn btn-discret" href="demandes.html?id=${a.demande_id}&retour=${encodeURIComponent(`match-du-jour.html?match=${etat.match.id}`)}">Voir</a>
+      </div>
+    </div>`;
+  }
   const details = [
     a.type_vente === 'match' ? '<strong>vendu pour ce match</strong>' : 'toute la saison',
     a.avec_son === true ? '<strong>avec son</strong>' : a.avec_son === false ? 'sans son' : '',
