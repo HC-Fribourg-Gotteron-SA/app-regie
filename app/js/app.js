@@ -1,4 +1,4 @@
-﻿// Base commune à toutes les pages : client Supabase, contrôle d'accès, menu, petits outils.
+// Base commune à toutes les pages : client Supabase, contrôle d'accès, menu, petits outils.
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { SUPABASE_URL, SUPABASE_KEY, BASE, EN_LOCAL, SITE_TEST, BASE_TEST_PRETE } from './config.js';
 
@@ -20,7 +20,7 @@ export function changerDeBase() {
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Date de la version, affichée en bas du menu : à changer à chaque mise en ligne (pour vérifier que Netlify a publié)
-const VERSION = '30.09.2026';
+const VERSION = '01.10.2026';
 
 // ---------------------------------------------------------------------
 // Libellés affichés
