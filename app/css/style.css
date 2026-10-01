@@ -694,3 +694,5 @@ body.fenetre-ouverte { overflow: hidden; }
 .groupes-produits .hors-sponsor { display: none !important; }
 /* « + Ajouter un fichier » (fichier reçu après la demande) */
 .bouton-fichier { display: inline-flex; margin-top: .3rem; cursor: pointer; }
+/* Sponsor au match, pas encore dans la playlist (entre dans Colosseo le jour de son match) */
+.etat-prevu { background: var(--info-fond); color: var(--info); }

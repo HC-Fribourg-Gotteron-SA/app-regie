@@ -386,6 +386,23 @@ export function echapper(v) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+// Sponsor vendu « au match » : comme dans Colosseo, il n'entre dans la playlist que le jour de son match
+// (décidé avec Léa le 01.10.2026). Libellé à afficher à la place de « À l'écran » ; null pour une vente à la saison.
+// l.matchs = [{ match: { date_heure } }]
+export function etatAuMatch(l) {
+  if (l.type_vente !== 'match') return null;
+  const dates = (l.matchs || []).map(m => m.match?.date_heure).filter(Boolean).map(d => new Date(d)).sort((a, b) => a - b);
+  if (dates.some(d => d.toDateString() === new Date().toDateString())) {
+    return '<span class="etat etat-ecran">À l’écran ce soir</span>';
+  }
+  const debut = new Date(); debut.setHours(0, 0, 0, 0);
+  const prochain = dates.find(d => d >= debut);
+  if (!prochain) return '<span class="etat etat-non">Match passé</span>';
+  const ensuite = dates.filter(d => d > prochain).length;
+  return `<span class="etat etat-prevu" title="Pas encore dans la playlist : à ajouter dans Colosseo le jour du match">📅 Prévu le ${
+    prochain.toLocaleDateString('fr-CH', { day: '2-digit', month: '2-digit' })}</span>${ensuite ? ` <span class="doux petit">+${ensuite} match${ensuite > 1 ? 's' : ''}</span>` : ''}`;
+}
+
 export function dateCourte(d) {
   if (!d) return '';
   return new Date(d).toLocaleDateString('fr-CH', { day: '2-digit', month: '2-digit', year: 'numeric' });

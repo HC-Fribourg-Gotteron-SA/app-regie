@@ -32,7 +32,7 @@ export function calculerChangements({ passagesAvant, passagesCe, lignes }) {
 
 function raisonAjout(l, avant) {
   if (avant) return 'de nouveau à l’écran';
-  if (l?.type_vente === 'match') return 'vendu pour ce match';
+  if (l?.type_vente === 'match') return 'vendu pour ce match : il entre dans la playlist ce jour-là';
   return 'nouveau';
 }
 
@@ -41,7 +41,7 @@ function raisonRetrait(l) {
   if (['termine', 'annule'].includes(l.statut) || l.date_fin) return 'retiré';
   // une seule notion « à l'écran » (l'ancien « désactivé » compte comme « plus à l'écran »)
   if (!l.validee || l.suspendue) return `plus à l’écran${l.motif_suspension ? ` : ${l.motif_suspension}` : ''}`;
-  if (l.type_vente === 'match') return 'vendu seulement pour un autre match';
+  if (l.type_vente === 'match') return 'son match est passé';
   return 'ne passe plus';
 }
 

@@ -384,7 +384,7 @@ function carteChangement(i) {
         ${details.length ? `<div class="petit">${details.join(' · ')}</div>` : ''}
         ${visuel ? `<div class="petit">${visuel}${sansFichier}</div>` : ''}
         ${fichiersDossier}
-        ${i.action === 'enlever' ? '<div class="petit"><strong>Déjà enlevé dans l’outil</strong> <span class="doux">— reste à l’enlever à la main dans Colosseo, puis cocher « Fait »</span></div>' : ''}
+        ${i.action === 'enlever' ? '<div class="petit">Dans l’outil : enlevé automatiquement · <strong>Dans Colosseo : à enlever à la main</strong>, puis cocher « Fait »</div>' : ''}
         ${i.l?.consignes && i.action !== 'enlever' ? `<div class="petit doux">Remarque : ${echapper(i.l.consignes)}</div>` : ''}
         ${fait?.auto ? `<div class="petit doux">✓ Ajouté depuis la demande par ${echapper(etat.personnes.get(fait.fait_par) || '—')}
           le ${dateCourte(fait.fait_le)} : compte comme fait</div>`
@@ -502,7 +502,7 @@ function ouvrirChangement(cleItem) {
                 <div>
                   <div class="titre-bloc">Pourquoi ce changement</div>
                   <div class="bloc-texte petit">${echapper(i.raison || '—')}${l.motif_suspension ? `<br>${echapper(l.motif_suspension)}` : ''}${i.action === 'enlever'
-                    ? '<br>Déjà enlevé dans l’outil : reste à l’enlever à la main dans Colosseo.' : ''}</div>
+                    ? '<br>Dans l’outil : enlevé automatiquement. Dans Colosseo : à enlever à la main.' : ''}</div>
                 </div>
               </div>
             </div>

@@ -40,6 +40,10 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    - Demande « changement de visuel » / « suppression » : seuls les produits que le sponsor a sont proposés.
      « Suppression » en badge rouge dans la liste des demandes.
    - Sponsoring : ne voit plus Match du jour, Par match, Calendrier.
+   - **Fiche produit = playlist Colosseo** (Léa) : un sponsor « au match » n'entre dans la playlist que le jour de son
+     match. Sur les fiches et la page Action scenes, au lieu de « À l'écran » : « 📅 Prévu le JJ.MM » avant,
+     « À l'écran ce soir » le jour J, puis « Matchs passés » (`etatAuMatch()` dans app.js). Match du jour : ➖ =
+     « Dans l'outil : enlevé automatiquement · Dans Colosseo : à enlever à la main ».
    - Slides « Aucun logo » dans la Pub pause tiers : normal si aucun logo des fiches Slides n'est « À l'écran ».
    - Téléphone : pas important (outil fait pour l'ordinateur), dit par Léa.
 0-ter. **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =

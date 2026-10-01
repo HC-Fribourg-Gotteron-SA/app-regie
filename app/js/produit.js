@@ -1,5 +1,5 @@
 import { sb, exigerConnexion, echapper, dateCourte, notifier, taille,
-         descriptionProduit, specsProduit, CATEGORIES_UNE_PAGE, lienCategorie, ongletsProduits } from './app.js';
+         descriptionProduit, specsProduit, CATEGORIES_UNE_PAGE, lienCategorie, ongletsProduits, etatAuMatch } from './app.js';
 import { carteTraitement, CHAMPS_A_TRAITER } from './traitement.js';
 
 const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
@@ -308,7 +308,7 @@ function rangeesSlides(cols, depart) {
 // ---------------------------------------------------------------------
 const aLEcran = (l) => l.validee && !l.suspendue;
 const classeEtat = (l) => aLEcran(l) ? '' : 'non-validee';
-const libelleEtat = (l) => aLEcran(l) ? '<span class="etat etat-ecran">À l’écran</span>'
+const libelleEtat = (l) => aLEcran(l) ? (etatAuMatch(l) || '<span class="etat etat-ecran">À l’écran</span>')
   : `<span class="etat etat-non">Pas à l’écran</span>${l.motif_suspension ? ` <span class="doux petit">· ${echapper(l.motif_suspension)}</span>` : ''}`;
 
 function celluleEtat(l) {
