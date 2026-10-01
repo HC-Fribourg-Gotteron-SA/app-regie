@@ -368,7 +368,6 @@ function piedRegie(d) {
             <button class="btn" data-statut="en_cours">Rouvrir</button>`;
   }
   return `<span class="indication">Ajoutez chaque produit ci-dessus (ou sur sa fiche, c’est la même chose) ; la demande passe en « Traitée » quand tout est fait.</span>
-    ${d.statut !== 'en_cours' ? '<button class="btn" data-statut="en_cours">Prendre en charge</button>' : ''}
     <button class="btn" data-statut="question">Poser une question</button>
     <button class="btn" data-statut="traitee" title="Normalement automatique quand tous les produits sont ajoutés">Marquer comme traitée</button>`;
 }
