@@ -39,9 +39,17 @@
     <!-- Demandes pas encore traitées (Régie) -->
     <a class="carte lien-demandes-attente" id="demandes-attente" href="demandes.html" hidden></a>
 
-    <!-- À faire dans Colosseo : seulement ce qui change depuis le match précédent -->
+    <!-- 1. Demandes à traiter : on les ajoute dans l'outil et dans Colosseo en même temps -->
+    <section id="bloc-demandes" hidden style="margin-bottom:1.75rem">
+      <h3>Demandes à traiter <span class="doux" id="nb-demandes"></span></h3>
+      <p class="aide" style="margin-top:-.3rem">Ajouter = dans l'outil et dans Colosseo en même temps. Une fois ajoutée, la demande disparaît d'ici.</p>
+      <div id="demandes"></div>
+    </section>
+
+    <!-- 2. Spécial de ce match (vendu pour un match précis) : à ajouter / enlever dans Colosseo -->
     <section id="bloc-a-faire" hidden style="margin-bottom:1.75rem">
-      <h3>À faire dans Colosseo <span class="doux" id="nb-a-faire"></span></h3>
+      <h3>Spécial de ce match <span class="doux" id="nb-a-faire"></span></h3>
+      <p class="aide" style="margin-top:-.3rem">Déjà dans l'outil : seulement à faire dans Colosseo, puis cocher « Fait ».</p>
       <div id="a-faire"></div>
     </section>
 

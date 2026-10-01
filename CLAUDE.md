@@ -29,9 +29,14 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
      Match du jour ouvre la demande. Ne jamais recréer une 2e façon de traiter.
    - **Une seule case « À l'écran »** : plus de « Désactivé » à l'écran. Décocher = `validee = false` + raison facultative
      dans `motif_suspension` (`suspendue` remis à false) ; anciennes lignes `suspendue` affichées « Pas à l'écran ».
-   - **Match du jour, une action par ligne** : demande pas ajoutée = bouton « Ajouter » (ouvre la demande) ; changement
-     venant d'une demande ajoutée depuis le match précédent = **compte comme fait** (auto, pas de case) ; autres lignes =
-     case « Fait » + bouton discret « Détails ». Lignes ➖ : « Déjà enlevé dans l'outil, reste à l'enlever dans Colosseo ».
+   - **Comment la Régie travaille (expliqué par Léa, 01.10.2026 — à respecter)** : TOUT se fait le jour du match.
+     Traiter une demande = l'ajouter dans l'outil ET dans Colosseo en même temps (nouveau sponsor à la saison, nouveau
+     logo / vidéo, retrait…). Puis on regarde le **spécial du match** (vendu pour ce match) et on l'ajoute dans Colosseo.
+     **Match du jour = 2 blocs** : 1) « Demandes à traiter » (bouton Ajouter / Changer le visuel / Retirer → ouvre la
+     demande ; traitée = disparaît, pas de case Fait) ; 2) « Spécial de ce match » = changements des seules diffusions
+     **au match** (➕ ce soir, ➖ celles du match précédent, 🔄) avec case « Fait » + « Détails ». Les changements à la
+     saison faits sur une fiche (retrait, case À l'écran) **ne sont pas listés** (Colosseo fait au même moment).
+     Ne PAS remettre une liste de « tous les changements depuis le match précédent » (confusion Ajouter / Fait).
    - **Fichier arrivé après la demande = option A** : « + Ajouter un fichier » sur chaque produit de la demande
      (Sponsoring et Régie) → RPC `fichier_ajoute_demande` (28) : produit déjà ajouté → revient à traiter avec
      « Mettre le nouveau visuel » sur la même diffusion (`ligne_id` gardé), demande traitée → « Nouvelle ».

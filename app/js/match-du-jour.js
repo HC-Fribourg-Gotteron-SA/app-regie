@@ -212,60 +212,66 @@ const trier = (a, b) => a.ordre - b.ordre || a.produit.localeCompare(b.produit)
 // ---------------------------------------------------------------------
 // Affichage
 // ---------------------------------------------------------------------
+// Comment la Régie travaille le jour du match (expliqué par Léa le 01.10.2026) :
+//   1. Demandes à traiter : on ajoute le sponsor dans l'outil ET dans Colosseo en même temps
+//      (nouveau sponsor à la saison, nouveau logo / vidéo, retrait…). Traitée = disparaît d'ici.
+//   2. Spécial de ce match : ce qui est vendu pour un match précis (Sponsor du match, action scene…) est déjà
+//      dans l'outil ; il reste à l'ajouter dans Colosseo ce soir, et à enlever le spécial du match précédent → « Fait ».
+//   Les changements à la saison faits sur une fiche (retrait, case À l'écran) ne sont pas listés : on fait
+//   Colosseo au moment où on les fait dans l'outil.
 function afficher() {
-  // Une action par ligne (décidé par Léa le 01.10.2026) : une demande ajoutée depuis le match précédent
-  // compte comme faite (on l'a mise dans Colosseo en l'ajoutant) ; les autres lignes ont la case « Fait »
-  const tous = etat.changements.map(c => {
-    const inf = infos(c.ligne_id);
-    const traitee = etat.traitees.get(inf.pubId || c.ligne_id);
-    return { ...c, ...inf, traitee,
-             fait: etat.fait.get(`${c.ligne_id}|${c.action}`)
-               || (traitee ? { auto: true, fait_par: traitee.traite_par, fait_le: traitee.traite_le } : null) };
-  });
+  // spécial = diffusions vendues « au match » (l'anneau de la pause tiers suit sa Pub pause tiers)
+  const auMatch = (inf) => inf.l?.type_vente === 'match';
+  let changements = etat.changements;
+  if (!etat.precedent) {        // pas de match précédent : tout le spécial de ce soir est à ajouter
+    changements = etat.passagesCe.filter(p => PASSE.has(p.statut))
+      .map(p => ({ action: 'ajouter', ligne_id: p.ligne_id, asset_id: p.asset_id, raison: 'vendu pour ce match' }));
+  }
+  const tous = changements.map(c => ({ ...c, ...infos(c.ligne_id), fait: etat.fait.get(`${c.ligne_id}|${c.action}`) }))
+    .filter(auMatch);
   // anneau ajouté / enlevé en même temps que sa Pub pause tiers : une seule ligne (« avec anneau LED »)
   const pubs = new Set(tous.filter(i => !i.anneau).map(i => `${i.ligne_id}|${i.action}`));
-  // demandes pas encore ajoutées sur leur fiche : à traiter d'abord, elles changeront la playlist
+  const items = tous.filter(i => !(i.anneau && i.action !== 'visuel' && pubs.has(`${i.pubId}|${i.action}`)))
+    .sort((a, b) => trier(a, b) || (a.anneau - b.anneau) || ORDRE_ACTIONS[a.action] - ORDRE_ACTIONS[b.action]);
+  etat.items = items;
   const demandes = etat.demandesMatch.map(a => ({
     action: 'demande', dp: a, ligne_id: `${a.demande_id}|${a.produit_id}`,
     produit: court(a.produit?.nom), ordre: ordreProduit(a.produit), famille: a.produit?.famille,
     sponsor: a.demande?.sponsor?.nom || a.demande?.sponsor_nom_saisi || '—', priorite: -1,
-  }));
-  const items = tous.filter(i => !(i.anneau && i.action !== 'visuel' && pubs.has(`${i.pubId}|${i.action}`)))
-    .concat(demandes)
-    .sort((a, b) => trier(a, b) || (a.anneau - b.anneau) || ORDRE_ACTIONS[a.action] - ORDRE_ACTIONS[b.action]);
-  etat.items = items;
+  })).sort(trier);
   const reste = items.filter(i => !i.fait).length;
   const taches = etat.notes.filter(n => n.type === 'tache' && !n.fait).length;
-  const plusTaches = taches ? ` <span class="doux">· ${taches} tâche${taches > 1 ? 's' : ''} pour ce soir</span>` : '';
 
   // bilan en une ligne
+  const morceaux = [
+    demandes.length ? `${demandes.length} demande${demandes.length > 1 ? 's' : ''} à traiter` : '',
+    reste ? `${reste} spécial${reste > 1 ? 'aux' : ''} à faire dans Colosseo` : '',
+    taches ? `${taches} tâche${taches > 1 ? 's' : ''} pour ce soir` : '',
+  ].filter(Boolean);
   const bilan = $('bilan');
   bilan.hidden = false;
-  if (!etat.precedent) {
-    bilan.className = 'carte bilan-match';
-    bilan.innerHTML = '<strong>Premier match enregistré dans l’outil</strong> <span class="doux">— pas de match précédent pour comparer : vérifiez toute la playlist ci-dessous.</span>' + plusTaches;
-  } else if (!items.length) {
-    bilan.className = `carte bilan-match ${taches ? 'bilan-a-faire' : 'bilan-pret'}`;
-    bilan.innerHTML = '<strong>✓ Rien à changer dans Colosseo</strong> <span class="doux">— la playlist est la même qu’au match précédent.</span>' + plusTaches;
-  } else if (!reste) {
-    bilan.className = `carte bilan-match ${taches ? 'bilan-a-faire' : 'bilan-pret'}`;
-    bilan.innerHTML = `<strong>✓ Colosseo est prêt</strong> <span class="doux">— les ${items.length} changements sont faits.</span>` + plusTaches;
-  } else {
-    bilan.className = 'carte bilan-match bilan-a-faire';
-    bilan.innerHTML = `<strong>${reste} chose${reste > 1 ? 's' : ''} à faire dans Colosseo</strong>
-      <span class="doux">${demandes.length ? `· dont ${demandes.length} demande${demandes.length > 1 ? 's' : ''} à ajouter` : ''}
-      ${items.length - reste ? `· ${items.length - reste} déjà faite${items.length - reste > 1 ? 's' : ''}` : ''}</span>` + plusTaches;
-  }
+  bilan.className = `carte bilan-match ${morceaux.length ? 'bilan-a-faire' : 'bilan-pret'}`;
+  bilan.innerHTML = morceaux.length
+    ? `<strong>${morceaux.join(' · ')}</strong>${items.length - reste ? ` <span class="doux">· ${items.length - reste} spécial${items.length - reste > 1 ? 'aux' : ''} déjà fait${items.length - reste > 1 ? 's' : ''}</span>` : ''}`
+    : '<strong>✓ Tout est prêt</strong> <span class="doux">— pas de demande à traiter ni de spécial à changer pour ce match.</span>';
   afficherNotes();
   if (!etat.tableFait && estRegie && items.length) {
     bilan.innerHTML += '<p class="message message-erreur petit" style="margin:.6rem 0 0">Les cases « Fait » ne s’enregistrent pas encore : exécutez la migration 22 dans Supabase.</p>';
   }
 
-  // à faire, groupé par produit
+  // 1. demandes à traiter, groupées par produit
+  $('bloc-demandes').hidden = !demandes.length;
+  $('nb-demandes').textContent = demandes.length ? `· ${demandes.length}` : '';
+  $('demandes').innerHTML = [...grouper(demandes)].map(([produit, liste]) => `
+    <div class="carte groupe-colosseo">
+      <div class="groupe-titre">${echapper(produit)}</div>
+      ${liste.map(carteDemande).join('')}
+    </div>`).join('');
+
+  // 2. spécial de ce match, groupé par produit
   $('bloc-a-faire').hidden = !items.length;
-  $('nb-a-faire').textContent = items.length ? `· ${reste} / ${items.length}` : '';
-  const groupes = grouper(items);
-  $('a-faire').innerHTML = [...groupes].map(([produit, liste]) => `
+  $('nb-a-faire').textContent = items.length ? `· ${reste} / ${items.length} à faire` : '';
+  $('a-faire').innerHTML = [...grouper(items)].map(([produit, liste]) => `
     <div class="carte groupe-colosseo">
       <div class="groupe-titre">${echapper(produit)}</div>
       ${liste.map(carteChangement).join('')}
@@ -304,8 +310,9 @@ function grouper(items) {
   return groupes;
 }
 
-// Demande pas encore ajoutée sur sa fiche produit : la traiter (elle deviendra « Ajouter », « Remplacer »…)
+// Demande à traiter : dans l'outil (même fenêtre que dans Demandes) et dans Colosseo en même temps
 const VERBE_DEMANDE = { suppression: 'Retrait demandé', changement_visuel: 'Nouveau visuel demandé' };
+const BOUTON_DEMANDE = { suppression: 'Retirer', changement_visuel: 'Changer le visuel' };
 function carteDemande(i) {
   const a = i.dp, d = a.demande || {};
   const details = [
@@ -318,8 +325,8 @@ function carteDemande(i) {
     <div class="changement changement-demande">
       <div class="changement-icone" aria-hidden="true">📨</div>
       <div class="changement-texte">
-        <div><span class="changement-verbe">${VERBE_DEMANDE[d.type] || 'Demande à ajouter'}</span> · <strong>${echapper(i.sponsor)}</strong>
-          <span class="doux petit">(reçue le ${dateCourte(d.created_at)} · pas encore traitée)</span></div>
+        <div><span class="changement-verbe">${VERBE_DEMANDE[d.type] || 'Nouveau'}</span> · <strong>${echapper(i.sponsor)}</strong>
+          <span class="doux petit">(demande reçue le ${dateCourte(d.created_at)})</span></div>
         <div class="petit">${details.join(' · ')}</div>
         ${a.remarque_sponsoring ? `<div class="petit doux">Sponsoring : ${echapper(a.remarque_sponsoring)}</div>` : ''}
         ${d.type === 'suppression' ? '' : (a.fichiers || []).length ? `
@@ -331,8 +338,8 @@ function carteDemande(i) {
           : '<div class="petit" style="margin-top:.3rem">⏳ <strong>Fichier à venir</strong> <span class="doux">(pas encore envoyé par le Sponsoring)</span></div>'}
       </div>
       <div class="changement-actions">
-        ${estRegie ? `<a class="btn btn-principal" title="Ouvrir la demande (comme dans Demandes)"
-            href="demandes.html?id=${a.demande_id}&retour=${encodeURIComponent(`match-du-jour.html?match=${etat.match.id}`)}">Ajouter</a>`
+        ${estRegie ? `<a class="btn btn-principal" title="Ouvrir la demande pour la traiter (comme dans Demandes)"
+            href="demandes.html?id=${a.demande_id}&retour=${encodeURIComponent(`match-du-jour.html?match=${etat.match.id}`)}">${BOUTON_DEMANDE[d.type] || 'Ajouter'}</a>`
                    : '<span class="doux petit">en attente de la Régie</span>'}
       </div>
     </div>`;
@@ -386,15 +393,13 @@ function carteChangement(i) {
         ${fichiersDossier}
         ${i.action === 'enlever' ? '<div class="petit">Dans l’outil : enlevé automatiquement · <strong>Dans Colosseo : à enlever à la main</strong>, puis cocher « Fait »</div>' : ''}
         ${i.l?.consignes && i.action !== 'enlever' ? `<div class="petit doux">Remarque : ${echapper(i.l.consignes)}</div>` : ''}
-        ${fait?.auto ? `<div class="petit doux">✓ Ajouté depuis la demande par ${echapper(etat.personnes.get(fait.fait_par) || '—')}
-          le ${dateCourte(fait.fait_le)} : compte comme fait</div>`
-          : fait ? `<div class="petit doux">Fait dans Colosseo par ${echapper(etat.personnes.get(fait.fait_par) || '—')} à ${heure(fait.fait_le)}</div>` : ''}
+        ${fait ? `<div class="petit doux">Fait dans Colosseo par ${echapper(etat.personnes.get(fait.fait_par) || '—')} à ${heure(fait.fait_le)}</div>` : ''}
       </div>
       <div class="changement-actions">
         ${a?.storage_path && i.action !== 'enlever' ? `<button type="button" class="btn btn-discret" data-telecharger="${echapper(a.storage_path)}">Télécharger</button>` : ''}
         ${i.l ? `<button type="button" class="btn btn-discret" data-ouvrir="${i.ligne_id}|${i.action}"
           title="Fichiers, matchs, remarques…">Détails</button>` : ''}
-        ${estRegie && !fait?.auto ? `<label class="case-fait"><input type="checkbox" data-fait="${i.ligne_id}|${i.action}" ${fait ? 'checked' : ''}
+        ${estRegie ? `<label class="case-fait"><input type="checkbox" data-fait="${i.ligne_id}|${i.action}" ${fait ? 'checked' : ''}
           ${etat.tableFait ? '' : 'disabled'}> Fait</label>` : ''}
       </div>
     </div>`;
@@ -465,8 +470,7 @@ function ouvrirChangement(cleItem) {
           <div class="details-produits">
             <div class="detail-produit">
               <div class="suivi-produit ${fait ? 'fait' : ''}">
-                ${fait?.auto ? `✓ Ajouté depuis la demande par ${echapper(etat.personnes.get(fait.fait_par) || '—')} le ${dateCourte(fait.fait_le)}`
-                  : fait ? `✓ Fait dans Colosseo par ${echapper(etat.personnes.get(fait.fait_par) || '—')} à ${heure(fait.fait_le)}`
+                ${fait ? `✓ Fait dans Colosseo par ${echapper(etat.personnes.get(fait.fait_par) || '—')} à ${heure(fait.fait_le)}`
                   : (i.anneau ? consigneAnneau(i.action) : consigne(i.action, i.famille, i.categorie, i.produit))}
                 <a href="produit.html?id=${l.produit?.id}&ligne=${l.id}&retour=${encodeURIComponent(`match-du-jour.html?match=${etat.match.id}`)}">Ouvrir la fiche →</a>
               </div>
@@ -519,8 +523,7 @@ function ouvrirChangement(cleItem) {
               : 'Import Airtable'}</dd>
             ${i.traitee ? `<dt>Demande traitée par</dt><dd>${echapper(etat.personnes.get(i.traitee.traite_par) || '—')}
               <div class="doux petit">${dateCourte(i.traitee.traite_le)}</div></dd>` : ''}
-            <dt>Dans Colosseo</dt><dd>${fait?.auto ? 'Compte comme fait (ajouté depuis la demande)'
-              : fait ? `✓ Fait par ${echapper(etat.personnes.get(fait.fait_par) || '—')}
+            <dt>Dans Colosseo</dt><dd>${fait ? `✓ Fait par ${echapper(etat.personnes.get(fait.fait_par) || '—')}
               <div class="doux petit">à ${heure(fait.fait_le)}</div>` : '<span class="doux">Pas encore fait</span>'}</dd>
           </dl>
         </div>
@@ -529,7 +532,7 @@ function ouvrirChangement(cleItem) {
 
   $('d-pied').innerHTML = `
     <span class="indication">Match du ${dateCourte(etat.match.date_heure)} · contre ${echapper(etat.match.adversaire)}</span>
-    ${estRegie && etat.tableFait && !fait?.auto ? `<button type="button" class="btn btn-principal" data-basculer-fait="${i.ligne_id}|${i.action}">
+    ${estRegie && etat.tableFait ? `<button type="button" class="btn btn-principal" data-basculer-fait="${i.ligne_id}|${i.action}">
       ${fait ? 'Marquer « pas encore fait »' : '✓ Fait dans Colosseo'}</button>` : ''}`;
   $('d-pied').hidden = false;
   $('fenetre').hidden = $('voile').hidden = false;
