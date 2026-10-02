@@ -2,7 +2,7 @@
 // La même carte partout (décidé par Léa le 01.10.2026) : fiche produit (« À ajouter »), détail d'une demande
 // (et donc depuis Match du jour, qui ouvre la demande). Fichiers, contrôle des dimensions, plan LED, remarques.
 import { sb, LIBELLES, echapper, dateCourte, notifier, taille, libelleFichier, depuis, dimensionsAttendues,
-         nomFichierSur } from './app.js';
+         nomFichierSur, alertesFichier, specsProduit } from './app.js';
 
 // Colonnes d'un produit de demande à traiter (demandes_produits + sa demande)
 export const CHAMPS_A_TRAITER = `demande_id, produit_id, type_vente, dates_matchs, duree_s, avec_son, avec_anneau,
@@ -209,7 +209,9 @@ function blocFichiers(c) {
     return `
       <div class="fichier-attendu">
         <div class="petit"><strong>${libelleFichier(ctx.p, role)}</strong>
-          ${liste.length ? '' : ' <span class="badge badge-a-venir">à venir</span>'}</div>
+          ${liste.length ? '' : ' <span class="badge badge-a-venir">à venir</span>'}
+          ${specsProduit(cible) ? `<span class="doux"> · attendu ${echapper(specsProduit(cible))}</span>` : ''}
+          ${cible?.remarque_format ? `<span class="doux"> · ${echapper(cible.remarque_format)}</span>` : ''}</div>
         ${liste.map(f => `
           <div class="visuel-infos">
             <span class="petit">${echapper(f.nomCourt)}</span>
@@ -305,12 +307,11 @@ export async function confirmerSuppressionProduit({ demandeId, produitId, produi
   } catch (err) { notifier(err.message, 'erreur'); return false; }
 }
 
+// Contrôle du fichier par rapport au format du produit : alerte orange, jamais bloquant
 function controle(f, cible) {
-  const att = dimensionsAttendues(cible);
-  if (!att || !f.largeur_px) return '';
-  return f.largeur_px === att.l && f.hauteur_px === att.h
-    ? '<span class="badge statut-traitee">dimensions OK</span>'
-    : `<span class="badge statut-question">attendu ${att.l} × ${att.h} px</span>`;
+  const alertes = alertesFichier(cible, { nom: f.nomCourt, largeur: f.largeur_px, hauteur: f.hauteur_px, duree: f.duree_s });
+  if (alertes.length) return alertes.map(a => `<span class="badge badge-a-venir">⚠ ${echapper(a)}</span>`).join(' ');
+  return f.largeur_px && dimensionsAttendues(cible) ? '<span class="badge statut-traitee">format OK</span>' : '';
 }
 
 // Lit les dimensions / la durée du fichier dans le navigateur

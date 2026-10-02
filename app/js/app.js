@@ -71,19 +71,62 @@ export function descriptionProduit(p) {
 }
 
 // Format attendu des fichiers : « 1920 × 1080 px · mp4, mov »
+// Formats de fichier lisibles : {png,jpg,jpeg,mp4} -> « PNG, JPEG, MP4 »
+const NOMS_FORMATS = { jpg: 'JPEG', jpeg: 'JPEG', png: 'PNG', mp4: 'MP4', mov: 'MOV' };
+export const formatsLisibles = (formats) =>
+  [...new Set((formats || []).map(f => NOMS_FORMATS[String(f).toLowerCase()] || String(f).toUpperCase()))].join(', ');
+
+// Format attendu d'un produit (media kit, migration 32) : « 1920 × 1080 px · PNG, JPEG, MP4, MOV »
 export function specsProduit(p) {
   if (!p) return '';
-  const dims = p.famille === 'emplacement' ? `${300 * (p.emplacements_requis || 1)} × 80 px`
-    : p.largeur_px && p.hauteur_px ? `${p.largeur_px} × ${p.hauteur_px} px`
-    : p.hauteur_px ? `${p.hauteur_px} px de haut` : '';
-  return [dims, p.formats?.join(', ')].filter(Boolean).join(' · ');
+  const att = dimensionsAttendues(p);
+  const dims = att ? `${att.l} × ${att.h} px` : p.hauteur_px ? `${p.hauteur_px} px de haut` : '';
+  return [dims, formatsLisibles(p.formats), p.duree_max_s ? `max ${p.duree_max_s} s` : ''].filter(Boolean).join(' · ');
+}
+
+// Alertes sur un fichier par rapport au format du produit (jamais bloquant) : [] = conforme (ou rien à vérifier)
+// f = { nom, largeur, hauteur, duree }
+export function alertesFichier(p, f) {
+  const alertes = [];
+  if (!p || !f) return alertes;
+  const ext = (f.nom || '').includes('.') ? f.nom.split('.').pop().toLowerCase() : '';
+  const formats = (p.formats || []).map(x => String(x).toLowerCase());
+  if (ext && formats.length && !formats.includes(ext)) alertes.push(`fichier .${ext} : attendu ${formatsLisibles(p.formats)}`);
+  const att = dimensionsAttendues(p);
+  if (att && f.largeur && (f.largeur !== att.l || f.hauteur !== att.h)) alertes.push(`${f.largeur} × ${f.hauteur} px : attendu ${att.l} × ${att.h} px`);
+  if (p.duree_max_s && f.duree && f.duree > p.duree_max_s + 0.5) alertes.push(`${Math.round(f.duree)} s : maximum ${p.duree_max_s} s`);
+  return alertes;
+}
+
+// Dimensions (et durée d'une vidéo) d'un fichier choisi sur l'ordinateur, lues dans le navigateur
+export function lireDimensions(fichier) {
+  return new Promise((ok) => {
+    const video = /^video\//.test(fichier.type) || /\.(mp4|mov|m4v|webm)$/i.test(fichier.name);
+    const image = /^image\//.test(fichier.type) || /\.(png|jpe?g|gif|webp)$/i.test(fichier.name);
+    if (!video && !image) return ok(null);
+    const url = URL.createObjectURL(fichier);
+    const fini = (v) => { clearTimeout(delai); URL.revokeObjectURL(url); ok(v); };
+    const delai = setTimeout(() => fini(null), 12000);
+    if (image) {
+      const img = new Image();
+      img.onload = () => fini({ largeur: img.naturalWidth, hauteur: img.naturalHeight });
+      img.onerror = () => fini(null);
+      img.src = url;
+    } else {
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      v.onloadedmetadata = () => fini({ largeur: v.videoWidth, hauteur: v.videoHeight, duree: isFinite(v.duration) ? v.duration : null });
+      v.onerror = () => fini(null);
+      v.src = url;
+    }
+  });
 }
 
 // Dimensions attendues (null si pas de contrainte)
 export function dimensionsAttendues(p) {
   if (!p) return null;
-  if (p.famille === 'emplacement') return { l: 300 * (p.emplacements_requis || 1), h: 80 };
-  return p.largeur_px && p.hauteur_px ? { l: p.largeur_px, h: p.hauteur_px } : null;
+  if (p.largeur_px && p.hauteur_px) return { l: p.largeur_px, h: p.hauteur_px };
+  return p.famille === 'emplacement' ? { l: 300 * (p.emplacements_requis || 1), h: 80 } : null;
 }
 
 // Nom du fichier attendu pour un produit (role = 'visuel' ou 'anneau')

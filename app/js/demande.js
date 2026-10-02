@@ -1,5 +1,5 @@
 import { sb, exigerConnexion, LIBELLES, echapper, dateCourte, notifier, debounce, nomFichierSur, taille, libelleFichier,
-         descriptionProduit, specsProduit } from './app.js';
+         descriptionProduit, specsProduit, dimensionsAttendues, alertesFichier, lireDimensions } from './app.js';
 
 await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
 
@@ -7,6 +7,7 @@ const $ = (id) => document.getElementById(id);
 const etat = {
   sponsor: null,          // { id, nom } ou { nouveau: true, nom }
   produits: new Map(),    // id -> produit
+  anneaux: new Map(),     // id -> produit anneau couplé (inactif, pas dans la liste) : pour son format
   details: new Map(),     // id produit -> { quand, dates: Set, duree, remarque }
   matchs: [],             // matchs à venir
   saison: '',
@@ -23,11 +24,16 @@ $('types').innerHTML = Object.entries(LIBELLES.type_demande).map(([val, txt]) =>
 // ---------------------------------------------------------------------
 async function chargerProduits() {
   const { data, error } = await sb.from('produits')
-    .select(`id, nom, categorie, famille, support, moment_defaut, mode_vente, emplacements_requis, lie_a_produit_id,
-             largeur_px, hauteur_px, formats`)
+    .select('*')
     .eq('actif', true).order('ordre').order('categorie').order('nom');
   if (error) { $('produits').innerHTML = `<p class="message message-erreur">${echapper(error.message)}</p>`; return; }
   etat.produits = new Map(data.map(p => [p.id, p]));
+  const idsAnneaux = [...new Set(data.map(p => p.lie_a_produit_id).filter(Boolean))];
+  if (idsAnneaux.length) {
+    const { data: anneaux } = await sb.from('produits')
+      .select('*').in('id', idsAnneaux);
+    etat.anneaux = new Map((anneaux || []).map(a => [a.id, a]));
+  }
 
   const groupes = new Map();
   for (const p of data) {
@@ -136,24 +142,36 @@ function detailDe(id) {
 // Stockés dans demandes/<demande>/<produit>/<role>__<nom> ; role = visuel | anneau
 // ---------------------------------------------------------------------
 function rolesFichiers(p) {
-  const roles = [{ role: 'visuel', libelle: libelleFichier(p, 'visuel'), spec: specsProduit(p) }];
+  const roles = [{ role: 'visuel', libelle: libelleFichier(p, 'visuel'), cible: p }];
   if (demandeAnneau(p)) {
-    roles.push({ role: 'anneau', libelle: libelleFichier(p, 'anneau'), spec: specsProduit(etat.produits.get(p.lie_a_produit_id)) });
+    // l'anneau de la Pub pause tiers est un produit technique inactif : on prend son format directement
+    roles.push({ role: 'anneau', libelle: libelleFichier(p, 'anneau'), cible: etat.anneaux.get(p.lie_a_produit_id) });
   }
   return roles;
 }
 
-function zoneFichiers(d, { role, libelle, spec }) {
+// Contrôle de chaque fichier déposé (taille, type, durée) : alerte, jamais bloquant
+const controles = new WeakMap();      // File -> { alertes: [], lu: bool }
+function etatFichier(f, cible) {
+  const c = controles.get(f);
+  if (!c) return '<span class="doux petit">· vérification…</span>';
+  if (c.alertes.length) return c.alertes.map(a => `<span class="badge badge-a-venir">⚠ ${echapper(a)}</span>`).join(' ');
+  return c.lu && dimensionsAttendues(cible) ? '<span class="badge statut-traitee">format OK</span>' : '';
+}
+
+function zoneFichiers(d, { role, libelle, cible }) {
   const cache = role === 'anneau' && d.anneau !== 'oui';
+  const spec = specsProduit(cible);
   return `
     <div class="fichiers-produit" data-role-bloc="${role}" ${cache ? 'hidden' : ''}>
-      <div class="petit"><strong>${libelle}</strong>${spec ? ` <span class="doux">· ${echapper(spec)}</span>` : ''}</div>
+      <div class="petit"><strong>${libelle}</strong>${spec ? ` <span class="doux">· format attendu : ${echapper(spec)}</span>` : ''}
+        ${cible?.remarque_format ? `<div class="doux">${echapper(cible.remarque_format)}</div>` : ''}</div>
       <div class="zone-depot zone-compacte" data-zone="${role}">
         Glissez le fichier ici ou <u>cliquez pour choisir</u> <span class="petit">(facultatif, peut suivre plus tard)</span>
         <input type="file" multiple hidden data-fichier-role="${role}">
       </div>
       ${d.fichiers[role].length ? `<ul class="liste-fichiers">${d.fichiers[role].map((f, i) => `
-        <li><span>${echapper(f.name)} <span class="doux petit">${taille(f.size)}</span></span>
+        <li><span>${echapper(f.name)} <span class="doux petit">${taille(f.size)}</span> ${etatFichier(f, cible)}</span>
             <button type="button" class="btn btn-discret" data-retirer-fichier="${role}" data-i="${i}">Retirer</button></li>`).join('')}
       </ul>` : ''}
     </div>`;
@@ -161,8 +179,15 @@ function zoneFichiers(d, { role, libelle, spec }) {
 
 function ajouterFichiersProduit(id, role, liste) {
   const d = detailDe(id);
+  const p = etat.produits.get(id);
+  const cible = role === 'anneau' ? etat.anneaux.get(p?.lie_a_produit_id) : p;
   for (const f of liste) {
-    if (!d.fichiers[role].some(x => x.name === f.name && x.size === f.size)) d.fichiers[role].push(f);
+    if (d.fichiers[role].some(x => x.name === f.name && x.size === f.size)) continue;
+    d.fichiers[role].push(f);
+    lireDimensions(f).then(dim => {
+      controles.set(f, { lu: !!dim, alertes: alertesFichier(cible, { nom: f.name, ...(dim || {}) }) });
+      afficherDetails();
+    });
   }
   afficherDetails();
 }

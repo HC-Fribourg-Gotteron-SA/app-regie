@@ -130,11 +130,62 @@ async function charger() {
     if (retour) { retour.href = lienCategorie(p.categorie); retour.textContent = `← ${p.categorie}`; retour.hidden = false; }
   }
   $('p-nom').textContent = p.nom;
-  $('p-description').textContent = [descriptionProduit(p), specsProduit(p),
+  $('p-description').textContent = [descriptionProduit(p),
     p.capacite_s ? `max ${Math.round(p.capacite_s / 60)} min par match` : ''].filter(Boolean).join(' · ');
+  afficherFormat();
 
   afficherAttente();
   afficherLignes();
+}
+
+// ---------------------------------------------------------------------
+// Format attendu des fichiers (media kit, migration 32) : affiché à tous, modifiable par la Régie
+// ---------------------------------------------------------------------
+function afficherFormat(edition = false) {
+  const p = etat.p;
+  const zone = $('p-format');
+  const spec = specsProduit(p);
+  const specAnneau = etat.anneau ? specsProduit(etat.anneau) : '';
+  if (!edition) {
+    zone.hidden = !spec && !estRegie;
+    zone.innerHTML = `
+      <span><strong>Format attendu :</strong> ${spec ? echapper(spec) : '<span class="doux">pas encore renseigné</span>'}</span>
+      ${p.remarque_format ? `<span class="doux">· ${echapper(p.remarque_format)}</span>` : ''}
+      ${specAnneau ? `<span class="doux">· anneau LED : ${echapper(specAnneau)}</span>` : ''}
+      ${estRegie ? '<button type="button" class="btn btn-discret petit" id="modifier-format">✏️ Format</button>' : ''}`;
+    $('modifier-format')?.addEventListener('click', () => afficherFormat(true));
+    return;
+  }
+  zone.hidden = false;
+  zone.innerHTML = `
+    <form class="form-format" id="form-format">
+      <label>Largeur (px)<input type="number" min="1" name="largeur_px" value="${p.largeur_px ?? ''}"></label>
+      <label>Hauteur (px)<input type="number" min="1" name="hauteur_px" value="${p.hauteur_px ?? ''}"></label>
+      <label>Formats<input type="text" name="formats" value="${echapper((p.formats || []).join(', '))}" placeholder="png, jpg, mp4"></label>
+      <label>Durée max (s)<input type="number" min="1" name="duree_max_s" value="${p.duree_max_s ?? ''}"></label>
+      <label class="format-remarque">Remarque<input type="text" name="remarque_format" value="${echapper(p.remarque_format || '')}"></label>
+      <div class="format-actions">
+        <button type="submit" class="btn">Enregistrer</button>
+        <button type="button" class="btn btn-discret" id="annuler-format">Annuler</button>
+      </div>
+    </form>`;
+  $('annuler-format').addEventListener('click', () => afficherFormat());
+  $('form-format').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const nombre = (n) => { const v = parseInt(f.get(n), 10); return Number.isFinite(v) && v > 0 ? v : null; };
+    const formats = String(f.get('formats') || '').toLowerCase().split(/[\s,;]+/).map(x => x.replace(/^\./, '')).filter(Boolean);
+    const maj = { largeur_px: nombre('largeur_px'), hauteur_px: nombre('hauteur_px'), duree_max_s: nombre('duree_max_s'),
+      formats: formats.length ? [...new Set(formats)] : null, remarque_format: String(f.get('remarque_format') || '').trim() || null };
+    const { error } = await sb.from('produits').update(maj).eq('id', p.id);
+    if (error) {
+      notifier(/remarque_format/.test(error.message) ? 'Exécutez d’abord la migration 32 dans Supabase.' : error.message, 'erreur');
+      return;
+    }
+    Object.assign(etat.p, maj);
+    notifier('Format enregistré.');
+    afficherFormat();
+  });
 }
 
 // ---------------------------------------------------------------------

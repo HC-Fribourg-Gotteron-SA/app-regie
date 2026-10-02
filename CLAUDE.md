@@ -70,7 +70,11 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    la capture du rundown du 02.10.2026 ; script générateur dans le scratchpad de la session). Abandonné : repères
    pauses / « Pause 1 commence » / comptes à rebours saisis (V1 du 01.10, jugée mal adaptée par Léa).
    **Rôle `animation` = « Chrono & animation »** : ne voit QUE le run of show (menu filtré, accueil run-of-show.html,
-   `est_membre()` l'exclut, lecture des matchs autorisée). Sponsoring : consulte. Import Excel : pas fait.0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
+   `est_membre()` l'exclut, lecture des matchs autorisée). Sponsoring : consulte. Import Excel : pas fait.0-quinquies. **Formats des produits (02.10.2026, media kit https://hcfg.brandboard.app/media-kit-hcfg ; migration 32 à
+   exécuter sur les deux bases, pas encore testé)** : format attendu affiché dans la demande (par fichier, + « format OK »
+   ou ⚠), dans la carte de traitement et en haut de la fiche produit (« ✏️ Format » pour la Régie : dimensions, formats,
+   durée max, remarque). Toujours une **alerte, jamais un blocage** (LED 3M / 6M : souvent un logo seul, accepté).
+0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
    Recette des tests (page claude.ai, commentaires + export) : https://claude.ai/artifact/AKvYKr63XcgFcWQF76MMbQ
@@ -161,7 +165,8 @@ outil-regie/
 │   ├── 28_fichier_ajoute_apres.sql ← RPC fichier_ajoute_demande : fichier ajouté après la demande
 │   ├── 29_ordre_produits_soiree.sql ← ordre des produits = déroulé de la soirée
 │   ├── 30_run_of_show.sql ← run of show (ros_modeles, ros_matchs, ros_lignes) + rôle « animation »
-│   └── 31_run_of_show_rundown.sql ← colonnes du rundown Régie (quand, light, important, sections) + modèle NL
+│   ├── 31_run_of_show_rundown.sql ← colonnes du rundown Régie (quand, light, important, sections) + modèle NL
+│   └── 32_formats_produits.sql ← formats du media kit (dimensions, PNG/JPEG/MP4/MOV) + produits.remarque_format
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
