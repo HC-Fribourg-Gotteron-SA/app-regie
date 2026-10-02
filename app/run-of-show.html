@@ -21,11 +21,11 @@
       </div>
     </div>
 
-    <!-- Heure, face-off, pauses (le soir du match) -->
+    <!-- Heure, face-off -->
     <div class="carte ros-barre" id="ros-barre" hidden>
+      <div class="ros-reperes" id="reperes"></div>
       <div class="ros-horloge"><span class="doux petit">Il est</span> <strong id="horloge">--:--:--</strong>
         <span class="doux petit" id="avant-fo"></span></div>
-      <div class="ros-reperes" id="reperes"></div>
       <div class="ros-outils">
         <button type="button" class="btn" id="btn-edition" hidden>✏️ Modifier</button>
         <button type="button" class="btn btn-discret" id="btn-imprimer">🖨 Imprimer</button>
@@ -45,8 +45,10 @@
       <p class="doux" id="vide-lecture" hidden>La Régie ne l'a pas encore préparé.</p>
     </section>
 
-    <!-- Le déroulé -->
+    <!-- Le rundown -->
     <section id="bloc-lignes" hidden>
+      <p class="aide" id="aide-en-cours" hidden>Pendant le match, cliquez sur une ligne pour la marquer « en cours » :
+        chrono et animation la voient en direct. Re-cliquez pour enlever.</p>
       <div class="ros-tableau-cadre">
         <table class="tableau ros-tableau" id="tableau">
           <thead id="entete"></thead>
@@ -55,13 +57,16 @@
       </div>
       <div class="ros-pied" id="ros-pied" hidden>
         <button type="button" class="btn" id="btn-ajouter">+ Ajouter une ligne</button>
+        <button type="button" class="btn" id="btn-ajouter-section">+ Ajouter une section</button>
         <span class="espace"></span>
         <button type="button" class="btn btn-discret" id="btn-vers-modele">Enregistrer comme modèle…</button>
-        <button type="button" class="btn btn-discret btn-danger" id="btn-supprimer" hidden>Supprimer…</button>
+        <button type="button" class="btn btn-discret" id="btn-renommer" hidden>Renommer le modèle…</button>
+        <button type="button" class="btn btn-discret btn-danger" id="btn-supprimer">Supprimer…</button>
       </div>
       <p class="aide" id="aide-edition" hidden>Les modifications s'enregistrent dès que vous quittez un champ.
-        « Quand » : avant / après le face-off, après le début d'une pause ou de la fin du match, ou à la suite de la ligne
-        précédente (« following »). Temps en minutes:secondes (22:30) ou heures:minutes:secondes (1:00:00).</p>
+        <strong>Heure</strong> : l'heure réelle (18:00) ; le compte à rebours se calcule et suit le face-off s'il change.
+        Sans heure, écrivez le moment dans <strong>Compte à rebours / quand</strong> (à la suite, arrêt de jeu, 00:01:00…).
+        <strong>!</strong> = ligne importante (en rouge). ＋ insère une ligne en dessous.</p>
     </section>
   </main>
 

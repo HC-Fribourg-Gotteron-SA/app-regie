@@ -1,7 +1,9 @@
-// Run of show : déroulé minuté d'un match (face-off, pauses, fin), à partir de modèles.
-// Régie / admin : créent et modifient ; Sponsoring et « Chrono & animation » : consultent (en direct le soir du match).
+// Run of show : le rundown d'un match, comme l'Excel de la Régie (revu avec Léa le 02.10.2026).
+// Avant le match : une HEURE par élément (le compte à rebours se calcule depuis le face-off) ;
+// pendant le match : un « quand » en texte libre (arrêt de jeu, 00:01:00, 0:18:00…). Sections, lignes importantes.
+// Régie / admin : créent et modifient ; Sponsoring et « Chrono & animation » : consultent, en direct le soir du match.
 import { sb, exigerConnexion, echapper, dateCourte, notifier, debounce } from './app.js';
-import { REPERES, TYPES, lireDuree, formatDuree, libelleQuand, calculerHeures, ligneEnCours } from './ros-calcul.js';
+import { lireHeure, lireDuree, formatHMS, secondesDuJour, colonnesTemps, ligneEnCours } from './ros-calcul.js';
 
 const { profil } = await exigerConnexion({ roles: ['regie', 'admin', 'sponsoring', 'animation'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
@@ -12,19 +14,17 @@ const heureCourte = (d) => d ? d.toLocaleTimeString('fr-CH', { hour: '2-digit', 
 const heureMin = (d) => d ? d.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' }) : '';
 const memeJour = (a, b) => a.toDateString() === b.toDateString();
 
-// Colonnes de texte d'une ligne (dans l'ordre du tableau)
+// Colonnes de texte (comme l'Excel) : Action, Cube, Light, Audio, Speaker, Instructions (+ Lien si rempli)
 const CHAMPS = [
-  ['action', 'Action', 'textarea'], ['video', 'Vidéotron', 'input'], ['audio', 'Audio', 'input'],
-  ['speaker', 'Speaker', 'textarea'], ['led', 'LED', 'input'], ['instructions', 'Instructions', 'textarea'],
+  ['action', 'Action', 'textarea'], ['video', 'Cube', 'input'], ['light', 'Light', 'input'],
+  ['audio', 'Audio', 'input'], ['speaker', 'Speaker', 'input'], ['instructions', 'Instructions', 'textarea'],
   ['lien', 'Lien', 'input'],
 ];
-const REPERES_PAUSE = ['pause1', 'pause2', 'fin_match'];
-const BOUTON_REPERE = { pause1: 'Pause 1 commence', pause2: 'Pause 2 commence', fin_match: 'Fin du match' };
 
 const etat = {
   matchs: [], modeles: [],
   match: null, modele: null,       // ce qu'on affiche : le run of show d'un match, ou un modèle
-  ros: null, lignes: [], heures: [],
+  ros: null, lignes: [],
   edition: false, tablesOk: true,
 };
 
@@ -39,7 +39,7 @@ async function chargerListes() {
   if (error) { $('r-titre').textContent = 'Chargement impossible'; notifier(error.message, 'erreur'); return false; }
   etat.matchs = matchs || [];
   etat.modeles = modeles || [];
-  const { error: eTable } = await sb.from('ros_matchs').select('id').limit(1);
+  const { error: eTable } = await sb.from('ros_lignes').select('id, quand, est_section').limit(1);
   etat.tablesOk = !eTable;
   return true;
 }
@@ -55,7 +55,7 @@ async function chargerVue() {
   remplirChoix();
   if (!etat.tablesOk) {
     $('r-titre').textContent = 'Run of show';
-    $('r-sous-titre').innerHTML = '<span class="message message-erreur petit">Le run of show n’est pas encore installé : exécutez la migration 30 dans Supabase.</span>';
+    $('r-sous-titre').innerHTML = '<span class="message message-erreur petit">Le run of show n’est pas encore installé : exécutez les migrations 30 et 31 dans Supabase.</span>';
     return;
   }
   etat.ros = null;
@@ -81,33 +81,26 @@ function remplirChoix() {
     + '<option value="__nouveau">+ Nouveau modèle…</option>';
 }
 
-// ---------------------------------------------------------------------
-// Repères : face-off (calendrier ou modifié), pauses et fin (cliquées le soir du match)
-// ---------------------------------------------------------------------
-function reperes() {
-  if (etat.modele) {        // modèle : heures d'exemple pour un face-off à 19:45
-    const fo = new Date(); fo.setHours(19, 45, 0, 0);
-    return { face_off: fo };
-  }
-  const r = { face_off: etat.ros?.face_off ? new Date(etat.ros.face_off) : etat.match ? new Date(etat.match.date_heure) : null };
-  for (const k of REPERES_PAUSE) r[k] = etat.ros?.reperes?.[k] ? new Date(etat.ros.reperes[k]) : null;
-  return r;
+// Heure du face-off : calendrier (ou modifiée pour ce match) ; modèle : 19:45 d'exemple
+function faceOff() {
+  if (etat.modele) { const d = new Date(); d.setHours(19, 45, 0, 0); return d; }
+  if (etat.ros?.face_off) return new Date(etat.ros.face_off);
+  return etat.match ? new Date(etat.match.date_heure) : null;
 }
 
 // ---------------------------------------------------------------------
 // Affichage
 // ---------------------------------------------------------------------
 function afficher() {
-  const r = reperes();
+  const fo = faceOff();
   if (etat.modele) {
     $('r-surtitre').textContent = 'Run of show · modèle';
     $('r-titre').textContent = etat.modele.nom;
-    $('r-sous-titre').textContent = 'Heures d’exemple pour un face-off à 19:45. Copiez ce modèle pour un match depuis la page du match.';
+    $('r-sous-titre').textContent = 'Heures pour un face-off à 19:45 : dans un match, elles suivent l’heure du face-off.';
   } else if (etat.match) {
     $('r-surtitre').textContent = 'Run of show';
     $('r-titre').textContent = `${dateCourte(etat.match.date_heure)} · contre ${etat.match.adversaire}`;
-    $('r-sous-titre').textContent = `Match n° ${etat.match.numero ?? ''} · face-off ${heureMin(r.face_off)}`
-      + (etat.ros?.face_off ? ' (heure modifiée)' : '');
+    $('r-sous-titre').textContent = `Match n° ${etat.match.numero ?? ''}${etat.ros?.face_off ? ' · heure du face-off modifiée pour ce match' : ''}`;
   } else {
     $('r-titre').textContent = 'Aucun match au calendrier';
     return;
@@ -130,120 +123,100 @@ function afficher() {
   $('btn-edition').textContent = etat.edition ? '✓ Terminer' : '✏️ Modifier';
   $('ros-pied').hidden = !(estRegie && etat.edition);
   $('aide-edition').hidden = !(estRegie && etat.edition);
+  $('aide-en-cours').hidden = !(estRegie && !etat.edition && !etat.modele);
   $('btn-vers-modele').hidden = !!etat.modele;
-  $('btn-supprimer').hidden = false;
+  $('btn-renommer').hidden = !etat.modele;
   $('btn-supprimer').textContent = etat.modele ? 'Supprimer ce modèle…' : 'Supprimer ce run of show…';
-  afficherReperes(r);
+
+  // Face-off (en haut, comme dans l'Excel) : modifiable par la Régie pour un match
+  $('reperes').innerHTML = estRegie && etat.edition && !etat.modele
+    ? `<label class="ros-face-off">Face-off <input type="time" step="1" id="face-off" value="${heureCourte(fo)}"></label>`
+    : `<span class="ros-face-off">Face-off <strong>${heureCourte(fo)}</strong></span>`;
   afficherLignes();
   tic();
 }
 
-function afficherReperes(r) {
-  const morceaux = [];
-  if (etat.edition && estRegie && !etat.modele) {
-    morceaux.push(`<label class="ros-repere">Face-off <input type="time" id="face-off" value="${heureMin(r.face_off)}" style="width:auto"></label>`);
-  } else {
-    morceaux.push(`<span class="ros-repere">Face-off <strong>${heureMin(r.face_off)}</strong></span>`);
-  }
-  if (!etat.modele) {
-    for (const k of REPERES_PAUSE) {
-      if (r[k]) {
-        morceaux.push(`<span class="ros-repere">${REPERES[k]} <strong>${heureMin(r[k])}</strong>${estRegie
-          ? ` <button type="button" class="btn btn-discret petit" data-annuler-repere="${k}" title="Effacer cette heure">✕</button>` : ''}</span>`);
-      } else if (estRegie) {
-        morceaux.push(`<button type="button" class="btn" data-repere="${k}">▶ ${BOUTON_REPERE[k]}</button>`);
-      } else {
-        morceaux.push(`<span class="ros-repere doux">${REPERES[k]} : pas encore</span>`);
-      }
-    }
-  }
-  $('reperes').innerHTML = morceaux.join('');
-}
+// Numéro d'item : les sections ne comptent pas
+const numeros = () => { let n = 0; return etat.lignes.map(l => l.est_section ? null : ++n); };
 
 function afficherLignes() {
-  etat.heures = calculerHeures(etat.lignes, reperes());
   if (etat.edition && estRegie) return afficherEdition();
-  // lecture : on cache les colonnes vides
-  const cols = CHAMPS.filter(([c]) => etat.lignes.some(l => (l[c] || '').trim()));
-  $('entete').innerHTML = `<tr><th>N°</th><th>Heure</th><th>Quand</th><th>Durée</th>${cols.map(([, t]) => `<th>${t}</th>`).join('')}</tr>`;
-  $('lignes').innerHTML = etat.lignes.length ? etat.lignes.map((l, i) => `
-    <tr class="ros-ligne ros-type-${echapper(l.type || 'autre')}" data-rang="${i}">
-      <td class="doux">${i + 1}</td>
-      <td class="ros-heure" data-heure="${i}">${celluleHeure(l, i)}</td>
-      <td class="petit">${echapper(libelleQuand(l))}</td>
-      <td class="petit">${l.duree_s ? formatDuree(l.duree_s) : ''}</td>
-      ${cols.map(([c]) => `<td class="${c === 'action' ? '' : 'petit'}">${c === 'lien' ? lienCliquable(l.lien) : texte(l[c], c === 'action')}</td>`).join('')}
-    </tr>`).join('')
-    : `<tr><td colspan="${4 + cols.length}" class="doux">Aucune ligne pour l’instant.</td></tr>`;
+  const fo = faceOff();
+  const cols = CHAMPS.filter(([c]) => c !== 'lien' || etat.lignes.some(l => (l.lien || '').trim()));
+  const nb = 4 + cols.length;
+  const num = numeros();
+  $('entete').innerHTML = `<tr><th>N°</th><th>Heure</th><th>Compte à rebours</th><th>Durée</th>${cols.map(([, t]) => `<th>${t}</th>`).join('')}</tr>`;
+  $('lignes').innerHTML = etat.lignes.length ? etat.lignes.map((l, i) => {
+    if (l.est_section) return `<tr class="ros-section" data-rang="${i}"><td colspan="${nb}">${echapper(l.action || '')}</td></tr>`;
+    const t = colonnesTemps(l, fo);
+    return `
+    <tr class="ros-ligne${l.important ? ' ros-important' : ''}" data-rang="${i}" data-id="${l.id}">
+      <td class="ros-num">${num[i]}</td>
+      <td class="ros-heure">${echapper(t.heure)}</td>
+      <td class="ros-heure">${echapper(t.compte)}</td>
+      <td class="ros-heure">${l.duree_s ? formatHMS(l.duree_s) : '-'}</td>
+      ${cols.map(([c]) => `<td class="${c === 'action' ? 'ros-action' : 'petit'}">${c === 'lien' ? lienCliquable(l.lien) : texte(l[c])}</td>`).join('')}
+    </tr>`;
+  }).join('') : `<tr><td colspan="${nb}" class="doux">Aucune ligne pour l’instant.</td></tr>`;
 }
 
-const texte = (v, fort) => v ? (fort ? `<strong>${echapper(v)}</strong>` : echapper(v)).replace(/\n/g, '<br>') : '';
+const texte = (v) => v ? echapper(v).replace(/\n/g, '<br>') : '-';
 const lienCliquable = (v) => !v ? '' : /^https?:\/\//i.test(v.trim())
   ? `<a href="${echapper(v.trim())}" target="_blank" rel="noopener">Ouvrir ↗</a>` : echapper(v);
 
-function celluleHeure(l, i) {
-  const h = etat.heures[i];
-  if (h?.debut) return `<strong>${heureCourte(h.debut)}</strong>`;
-  if (l.repere === 'suite') return '<span class="doux">à la suite</span>';
-  return `<span class="doux">après ${REPERES[l.repere] || ''}</span>`;
-}
-
 // Mode modification (Régie) : chaque cellule est un champ, enregistré dès qu'on le quitte
-function modeQuand(l) {
-  if (l.repere === 'face_off') return (l.decalage_s || 0) < 0 ? 'avant' : 'apres';
-  return l.repere;
-}
 function afficherEdition() {
-  $('entete').innerHTML = `<tr><th></th><th>Quand</th><th>Durée</th><th>Type</th>${CHAMPS.map(([, t]) => `<th>${t}</th>`).join('')}<th></th></tr>`;
-  $('lignes').innerHTML = etat.lignes.map((l, i) => {
-    const mode = modeQuand(l);
-    return `
-    <tr class="ros-ligne ros-type-${echapper(l.type || 'autre')}" data-id="${l.id}">
+  const fo = faceOff();
+  const num = numeros();
+  const nb = 6 + CHAMPS.length;
+  $('entete').innerHTML = `<tr><th></th><th>Heure</th><th>Compte à rebours / quand</th><th>Durée</th>${CHAMPS.map(([, t]) => `<th>${t}</th>`).join('')}<th title="Ligne importante (en rouge)">!</th><th></th></tr>`;
+  const deplacer = (i) => `
       <td class="ros-deplacer">
-        <span class="doux">${i + 1}</span>
+        <span class="doux">${num[i] ?? ''}</span>
         <button type="button" class="btn btn-discret petit" data-monter ${i ? '' : 'disabled'} aria-label="Monter">↑</button>
         <button type="button" class="btn btn-discret petit" data-descendre ${i < etat.lignes.length - 1 ? '' : 'disabled'} aria-label="Descendre">↓</button>
-      </td>
-      <td class="ros-quand">
-        <select data-champ="mode">
-          <option value="avant" ${mode === 'avant' ? 'selected' : ''}>Avant le face-off</option>
-          <option value="apres" ${mode === 'apres' ? 'selected' : ''}>Après le face-off</option>
-          <option value="pause1" ${mode === 'pause1' ? 'selected' : ''}>Pause 1 +</option>
-          <option value="pause2" ${mode === 'pause2' ? 'selected' : ''}>Pause 2 +</option>
-          <option value="fin_match" ${mode === 'fin_match' ? 'selected' : ''}>Fin du match +</option>
-          <option value="suite" ${mode === 'suite' ? 'selected' : ''}>À la suite</option>
-        </select>
-        <input type="text" data-champ="decalage" value="${l.repere === 'suite' ? '' : formatDuree(l.decalage_s || 0)}"
-               placeholder="22:30" ${l.repere === 'suite' ? 'hidden' : ''} aria-label="Temps">
-        <div class="petit" data-heure="${i}">${celluleHeure(l, i)}</div>
-      </td>
-      <td><input type="text" data-champ="duree" value="${l.duree_s ? formatDuree(l.duree_s) : ''}" placeholder="1:30" aria-label="Durée"></td>
-      <td><select data-champ="type">${Object.entries(TYPES).map(([v, t]) =>
-        `<option value="${v}" ${(l.type || 'autre') === v ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
-      ${CHAMPS.map(([c, t, genre]) => `<td>${genre === 'textarea'
-        ? `<textarea data-champ="${c}" rows="2" aria-label="${t}">${echapper(l[c] || '')}</textarea>`
-        : `<input type="text" data-champ="${c}" value="${echapper(l[c] || '')}" aria-label="${t}">`}</td>`).join('')}
-      <td><button type="button" class="btn btn-discret btn-danger petit" data-supprimer-ligne aria-label="Supprimer la ligne">✕</button></td>
+      </td>`;
+  const fin = `<td class="ros-fin">
+        <button type="button" class="btn btn-discret petit" data-inserer title="Insérer une ligne en dessous" aria-label="Insérer une ligne en dessous">＋</button>
+        <button type="button" class="btn btn-discret btn-danger petit" data-supprimer-ligne aria-label="Supprimer">✕</button></td>`;
+  $('lignes').innerHTML = etat.lignes.map((l, i) => {
+    if (l.est_section) {
+      return `<tr class="ros-section" data-id="${l.id}">${deplacer(i)}
+        <td colspan="${nb - 3}"><input type="text" data-champ="action" value="${echapper(l.action || '')}" placeholder="Titre de la section (ex. 1er TIERS)" aria-label="Titre de la section"></td>
+        ${fin}</tr>`;
+    }
+    const t = colonnesTemps(l, fo);
+    const avecHeure = l.decalage_s !== null && l.decalage_s !== undefined;
+    return `
+    <tr class="ros-ligne${l.important ? ' ros-important' : ''}" data-id="${l.id}">
+      ${deplacer(i)}
+      <td><input type="text" data-champ="heure" value="${avecHeure ? echapper(t.heure) : ''}" placeholder="18:00" aria-label="Heure" class="ros-court"></td>
+      <td>${avecHeure
+        ? `<span class="ros-calcule" data-compte>${echapper(t.compte)}</span>`
+        : `<input type="text" data-champ="quand" value="${echapper(l.quand || '')}" placeholder="à la suite, arrêt de jeu…" aria-label="Quand">`}</td>
+      <td><input type="text" data-champ="duree" value="${l.duree_s ? formatHMS(l.duree_s) : ''}" placeholder="00:01:30" aria-label="Durée" class="ros-court"></td>
+      ${CHAMPS.map(([c, titre, genre]) => `<td>${genre === 'textarea'
+        ? `<textarea data-champ="${c}" rows="2" aria-label="${titre}">${echapper(l[c] || '')}</textarea>`
+        : `<input type="text" data-champ="${c}" value="${echapper(l[c] || '')}" aria-label="${titre}">`}</td>`).join('')}
+      <td><input type="checkbox" data-champ="important" ${l.important ? 'checked' : ''} title="Ligne importante (en rouge)" aria-label="Importante"></td>
+      ${fin}
     </tr>`;
-  }).join('') || `<tr><td colspan="${5 + CHAMPS.length}" class="doux">Aucune ligne : « + Ajouter une ligne ».</td></tr>`;
-}
-
-// Heures recalculées sans redessiner le tableau (on ne perd pas le champ en cours de saisie)
-function majHeures() {
-  etat.heures = calculerHeures(etat.lignes, reperes());
-  etat.lignes.forEach((l, i) => { const c = document.querySelector(`[data-heure="${i}"]`); if (c) c.innerHTML = celluleHeure(l, i); });
+  }).join('') || `<tr><td colspan="${nb}" class="doux">Aucune ligne : « + Ajouter une ligne ».</td></tr>`;
 }
 
 // Horloge, temps avant le face-off, ligne en cours (le jour du match)
 function tic() {
   const maintenant = new Date();
   $('horloge').textContent = heureCourte(maintenant);
-  const r = reperes();
-  const leJour = !etat.modele && r.face_off && memeJour(r.face_off, maintenant);
-  const reste = r.face_off ? (r.face_off - maintenant) / 1000 : null;
-  $('avant-fo').textContent = !leJour ? '' : reste > 0 ? `· face-off dans ${formatDuree(reste)}` : '· match commencé';
+  const fo = faceOff();
+  const leJour = !etat.modele && fo && memeJour(fo, maintenant);
+  const reste = fo ? (fo - maintenant) / 1000 : null;
+  $('avant-fo').textContent = !leJour ? '' : reste > 0 ? `· face-off dans ${formatHMS(reste)}` : '· match commencé';
   if (etat.edition) return;
-  const enCours = leJour ? ligneEnCours(etat.heures, maintenant) : -1;
+  // ligne en cours : celle choisie par la Régie (pendant le match), sinon d'après l'heure (avant le match)
+  const choisie = etat.ros?.reperes?.en_cours;
+  const iChoisie = choisie ? etat.lignes.findIndex(l => l.id === choisie) : -1;
+  const enCours = iChoisie >= 0 ? iChoisie : leJour ? ligneEnCours(etat.lignes, fo, maintenant) : -1;
   document.querySelectorAll('#lignes tr[data-rang]').forEach(tr => tr.classList.toggle('en-cours', Number(tr.dataset.rang) === enCours));
 }
 setInterval(tic, 1000);
@@ -260,37 +233,75 @@ async function majLigne(id, champs) {
 
 $('lignes').addEventListener('change', async (e) => {
   const t = e.target, tr = t.closest('tr[data-id]');
-  if (!tr || !t.dataset.champ) return;
+  if (!tr || !t.dataset.champ || !etat.edition) return;
   const id = tr.dataset.id, c = t.dataset.champ;
   let champs;
-  if (c === 'mode' || c === 'decalage') {
-    const mode = tr.querySelector('[data-champ="mode"]').value;
-    const saisie = tr.querySelector('[data-champ="decalage"]');
-    saisie.hidden = mode === 'suite';
-    const s = lireDuree(saisie.value);
-    if (saisie.value.trim() && s === null) return notifier('Temps illisible : écrivez par exemple 22:30 ou 1:00:00', 'erreur');
-    const abs = Math.abs(s || 0);
-    champs = { repere: ['avant', 'apres'].includes(mode) ? 'face_off' : mode,
-               decalage_s: mode === 'avant' ? -abs : mode === 'suite' ? 0 : abs };
+  if (c === 'heure') {
+    // l'heure tapée (18:00) est gardée par rapport au face-off : si le face-off change, elle suit
+    if (!t.value.trim()) champs = { decalage_s: null };
+    else {
+      const s = lireHeure(t.value);
+      if (s === null) return notifier('Heure illisible : écrivez par exemple 18:00 ou 19:23:07', 'erreur');
+      champs = { decalage_s: s - secondesDuJour(faceOff()) };
+    }
   } else if (c === 'duree') {
     const s = lireDuree(t.value);
-    if (t.value.trim() && s === null) return notifier('Durée illisible : écrivez par exemple 1:30', 'erreur');
-    champs = { duree_s: s ? Math.abs(s) : null };
+    if (t.value.trim() && s === null) return notifier('Durée illisible : écrivez par exemple 00:01:30', 'erreur');
+    champs = { duree_s: s || null };
+  } else if (c === 'important') {
+    champs = { important: t.checked };
   } else {
     champs = { [c]: t.value.trim() || null };
   }
   if (!(await majLigne(id, champs))) return;
-  if (c === 'type') tr.className = `ros-ligne ros-type-${t.value}`;
-  majHeures();
+  if (c === 'important') tr.classList.toggle('ros-important', t.checked);
+  if (c === 'heure') afficherLignes();      // la colonne « compte à rebours » change de forme
 });
 
+// Renumérote toute la liste (10, 20, 30…) dans l'ordre donné
+async function renumeroter(ordre) {
+  const maj = ordre.map((l, k) => ({ l, rang: (k + 1) * 10 })).filter(x => x.l.rang !== x.rang);
+  const resultats = await Promise.all(maj.map(x => sb.from('ros_lignes').update({ rang: x.rang }).eq('id', x.l.id)));
+  const erreur = resultats.find(r => r.error);
+  if (erreur) { notifier(`Enregistrement de l’ordre impossible : ${erreur.error.message}`, 'erreur'); return false; }
+  maj.forEach(x => { x.l.rang = x.rang; });
+  etat.lignes = ordre;
+  return true;
+}
+
+async function nouvelleLigne(apres, champs) {
+  // place la ligne juste après l'index `apres` (-1 = à la fin)
+  const parent = etat.modele ? { modele_id: etat.modele.id } : { ros_id: etat.ros.id };
+  const { data, error } = await sb.from('ros_lignes')
+    .insert({ ...parent, rang: 0, decalage_s: null, ...champs }).select('*').single();
+  if (error) { notifier(`Ajout impossible : ${error.message}`, 'erreur'); return; }
+  const ordre = etat.lignes.slice();
+  ordre.splice(apres < 0 ? ordre.length : apres + 1, 0, data);
+  if (await renumeroter(ordre)) {
+    afficherLignes();
+    document.querySelector(`tr[data-id="${data.id}"] [data-champ="action"]`)?.focus();
+  }
+}
+
 $('lignes').addEventListener('click', async (e) => {
-  const tr = e.target.closest('tr[data-id]');
+  const tr = e.target.closest('tr[data-id], tr[data-rang]');
   if (!tr) return;
+  // lecture : la Régie clique sur une ligne pour la marquer « en cours » (vue par tout le monde, en direct)
+  if (!etat.edition) {
+    if (!estRegie || etat.modele || !etat.ros || !tr.dataset.id || e.target.closest('a')) return;
+    const reperes = { ...(etat.ros.reperes || {}) };
+    if (reperes.en_cours === tr.dataset.id) delete reperes.en_cours; else reperes.en_cours = tr.dataset.id;
+    const { error } = await sb.from('ros_matchs').update({ reperes, maj_le: new Date().toISOString() }).eq('id', etat.ros.id);
+    if (error) return notifier(`Enregistrement impossible : ${error.message}`, 'erreur');
+    etat.ros.reperes = reperes;
+    return tic();
+  }
   const i = etat.lignes.findIndex(l => l.id === tr.dataset.id);
+  if (i < 0) return;
+  if (e.target.closest('[data-inserer]')) return nouvelleLigne(i, {});
   if (e.target.closest('[data-supprimer-ligne]')) {
     const l = etat.lignes[i];
-    if (!confirm(`Supprimer la ligne ${i + 1}${l.action ? ` « ${l.action} »` : ''} ?`)) return;
+    if (!confirm(`Supprimer ${l.est_section ? 'la section' : 'la ligne'}${l.action ? ` « ${l.action} »` : ''} ?`)) return;
     const { error } = await sb.from('ros_lignes').delete().eq('id', l.id);
     if (error) return notifier(`Suppression impossible : ${error.message}`, 'erreur');
     etat.lignes.splice(i, 1);
@@ -298,58 +309,33 @@ $('lignes').addEventListener('click', async (e) => {
   }
   const sens = e.target.closest('[data-monter]') ? -1 : e.target.closest('[data-descendre]') ? 1 : 0;
   if (!sens || !etat.lignes[i + sens]) return;
-  // on renumérote toute la liste (10, 20, 30…) pour éviter les égalités
   const ordre = etat.lignes.slice();
   [ordre[i], ordre[i + sens]] = [ordre[i + sens], ordre[i]];
-  const maj = ordre.map((l, k) => ({ l, rang: (k + 1) * 10 })).filter(x => x.l.rang !== x.rang);
-  const resultats = await Promise.all(maj.map(x => sb.from('ros_lignes').update({ rang: x.rang }).eq('id', x.l.id)));
-  const erreur = resultats.find(r => r.error);
-  if (erreur) return notifier(`Déplacement impossible : ${erreur.error.message}`, 'erreur');
-  maj.forEach(x => { x.l.rang = x.rang; });
-  etat.lignes = ordre;
-  afficherLignes();
+  if (await renumeroter(ordre)) afficherLignes();
 });
 
-$('btn-ajouter').addEventListener('click', async () => {
-  const rang = (etat.lignes.at(-1)?.rang || 0) + 10;
-  const parent = etat.modele ? { modele_id: etat.modele.id } : { ros_id: etat.ros.id };
-  const { data, error } = await sb.from('ros_lignes').insert({ ...parent, rang, repere: 'suite', type: 'autre' }).select('*').single();
-  if (error) return notifier(`Ajout impossible : ${error.message}`, 'erreur');
-  etat.lignes.push(data);
-  afficherLignes();
-  document.querySelector(`tr[data-id="${data.id}"] [data-champ="action"]`)?.focus();
+$('btn-ajouter').addEventListener('click', () => nouvelleLigne(-1, { quand: 'à la suite' }));
+$('btn-ajouter-section').addEventListener('click', () => nouvelleLigne(-1, { est_section: true, action: 'NOUVELLE SECTION' }));
+
+$('btn-edition').addEventListener('click', async () => {
+  etat.edition = !etat.edition;
+  if (!etat.edition) await chargerVue(); else afficher();
 });
 
-$('btn-edition').addEventListener('click', () => { etat.edition = !etat.edition; afficher(); if (!etat.edition) chargerVue(); });
-
-// Face-off modifié (match retardé…) : vide = heure du calendrier
+// Face-off modifié (match retardé…) : toutes les heures suivent ; vide = heure du calendrier
 $('reperes').addEventListener('change', async (e) => {
   if (e.target.id !== 'face-off') return;
   let face_off = null;
-  if (e.target.value) {
-    const [h, m] = e.target.value.split(':').map(Number);
-    const d = new Date(etat.match.date_heure); d.setHours(h, m, 0, 0);
+  const s = lireHeure(e.target.value);
+  if (s !== null) {
+    const d = new Date(etat.match.date_heure);
+    d.setHours(Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60, 0);
     face_off = d.getTime() === new Date(etat.match.date_heure).getTime() ? null : d.toISOString();
   }
   const { error } = await sb.from('ros_matchs').update({ face_off, maj_le: new Date().toISOString() }).eq('id', etat.ros.id);
   if (error) return notifier(`Enregistrement impossible : ${error.message}`, 'erreur');
   etat.ros.face_off = face_off;
-  notifier(face_off ? `Face-off à ${e.target.value}` : 'Face-off : heure du calendrier');
-  afficher();
-});
-
-// « Pause 1 commence » etc. : l'heure réelle, toutes les lignes de la pause se calculent
-$('reperes').addEventListener('click', async (e) => {
-  const b = e.target.closest('[data-repere], [data-annuler-repere]');
-  if (!b) return;
-  const k = b.dataset.repere || b.dataset.annulerRepere;
-  if (b.dataset.annulerRepere && !confirm(`Effacer l’heure de « ${REPERES[k]} » ?`)) return;
-  const nouveaux = { ...(etat.ros.reperes || {}) };
-  if (b.dataset.repere) nouveaux[k] = new Date().toISOString(); else delete nouveaux[k];
-  const { error } = await sb.from('ros_matchs').update({ reperes: nouveaux, maj_le: new Date().toISOString() }).eq('id', etat.ros.id);
-  if (error) return notifier(`Enregistrement impossible : ${error.message}`, 'erreur');
-  etat.ros.reperes = nouveaux;
-  if (b.dataset.repere) notifier(`${REPERES[k]} : ${heureMin(new Date(nouveaux[k]))}`);
+  notifier(face_off ? `Face-off à ${e.target.value} : les heures ont suivi` : 'Face-off : heure du calendrier');
   afficher();
 });
 
@@ -380,7 +366,7 @@ async function copierLignes(source, cible) {
 }
 
 $('btn-vers-modele').addEventListener('click', async () => {
-  const nom = prompt('Nom du modèle (ex. « National League standard ») :', '');
+  const nom = prompt('Nom du modèle (ex. « NL Regular Season 26/27 ») :', '');
   if (!nom?.trim()) return;
   const { data: m, error } = await sb.from('ros_modeles').insert({ nom: nom.trim() }).select('id, nom').single();
   if (error) return notifier(`Création impossible : ${error.message}`, 'erreur');
@@ -389,6 +375,16 @@ $('btn-vers-modele').addEventListener('click', async () => {
   etat.modeles.push(m);
   remplirChoix();
   notifier(`Modèle « ${m.nom} » enregistré`);
+});
+
+$('btn-renommer').addEventListener('click', async () => {
+  const nom = prompt('Nouveau nom du modèle :', etat.modele.nom);
+  if (!nom?.trim() || nom.trim() === etat.modele.nom) return;
+  const { error } = await sb.from('ros_modeles').update({ nom: nom.trim() }).eq('id', etat.modele.id);
+  if (error) return notifier(`Renommage impossible : ${error.message}`, 'erreur');
+  etat.modele.nom = nom.trim();
+  remplirChoix();
+  afficher();
 });
 
 $('btn-supprimer').addEventListener('click', async () => {
@@ -414,7 +410,7 @@ $('choix-modele').addEventListener('change', async (e) => {
   const v = e.target.value;
   if (!v) return;
   if (v === '__nouveau') {
-    const nom = prompt('Nom du nouveau modèle (ex. « CHL standard ») :', '');
+    const nom = prompt('Nom du nouveau modèle (ex. « CHL Regular Season ») :', '');
     if (!nom?.trim()) { remplirChoix(); return; }
     const { data, error } = await sb.from('ros_modeles').insert({ nom: nom.trim() }).select('id').single();
     if (error) { remplirChoix(); return notifier(`Création impossible : ${error.message}`, 'erreur'); }
@@ -425,7 +421,7 @@ $('choix-modele').addEventListener('change', async (e) => {
 });
 
 // ---------------------------------------------------------------------
-// En direct : chrono / animation voient les changements et les pauses sans recharger
+// En direct : chrono / animation voient les changements et la ligne en cours sans recharger
 // ---------------------------------------------------------------------
 const rafraichir = debounce(() => { if (!etat.edition) chargerVue(); }, 400);
 sb.channel('run-of-show')

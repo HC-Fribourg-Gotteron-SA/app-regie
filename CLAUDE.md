@@ -52,24 +52,20 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
      « Dans l'outil : enlevé automatiquement · Dans Colosseo : à enlever à la main ».
    - Slides « Aucun logo » dans la Pub pause tiers : normal si aucun logo des fiches Slides n'est « À l'écran ».
    - Téléphone : pas important (outil fait pour l'ordinateur), dit par Léa.
-0-quater. **Run of show (V1 du 01.10.2026, migration 30 à exécuter, pas encore testé)** : demandé par Léa sur le modèle
-   du « Jumbotron Operator Rundown » CHL (heure du face-off en haut, compte à rebours, « following », durée, action,
-   Cube, audio, speaker, instructions, lien, couleurs). Menu Jour de match → « Run of show » (`run-of-show.html?match=`
-   ou `?modele=`). Lignes placées par rapport à un **repère** : avant / après le face-off (heure du calendrier,
-   modifiable si retard), Pause 1 / Pause 2 / Fin du match (+ temps ; heure réelle cliquée par la Régie le soir même :
-   « ▶ Pause 1 commence » → `ros_matchs.reperes`), ou « à la suite » (= fin de la ligne précédente si sa durée est
-   connue). Colonnes V1 : Quand, Durée, Type (couleur), Action, Vidéotron, Audio, Speaker, LED, Instructions, Lien.
-   **Modèles** (`ros_modeles`) copiés pour un match puis ajustés ; « Enregistrer comme modèle ». Lecture : colonnes vides
-   cachées, horloge, « face-off dans … », **ligne en cours en bleu nuit** le jour du match, mise à jour en direct
-   (realtime), impression A4 paysage. **Rôle `animation` = « Chrono & animation »** : ne voit QUE le run of show (menu
-   filtré, accueil run-of-show.html, `est_membre()` l'exclut, lecture des matchs autorisée). Sponsoring : consulte.
-   À demander à Léa : colonnes OK ? import du fichier Excel CHL ? renommer un modèle (pas encore de bouton) ?
-   **⚠ À REVOIR (01.10.2026)** : Léa trouve le principe des repères / comptes à rebours mal adapté (« 17:30 avant le
-   face-off » a donné 19:27). Elle veut **noter l'heure de chaque élément elle-même** et **mettre certains éléments en
-   avant**. Elle donne un **nouvel exemple** à la prochaine session : ne rien recoder avant. Questions en suspens :
-   heures pendant les pauses (heure approx. ou texte libre ?), « mettre en avant » = case Important / plusieurs
-   niveaux ?, bouton « décaler toutes les heures » si le face-off change ?
-0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
+0-quater. **Run of show (refait le 02.10.2026 sur le vrai rundown NL de Léa ; migrations 30 + 31 à exécuter, pas encore
+   testé)**. Menu Jour de match → « Run of show » (`run-of-show.html?match=` ou `?modele=`). **Comme l'Excel de la Régie** :
+   face-off en haut (calendrier, modifiable pour un match) ; colonnes N° · Heure · Compte à rebours · Durée · Action ·
+   Cube · Light · Audio · Speaker · Instructions (+ Lien si rempli). **Avant le match** : on tape l'**heure réelle**
+   (18:00) → gardée en `decalage_s` par rapport au face-off (suit le face-off s'il change, ou d'un match à l'autre) ;
+   compte à rebours calculé. **Sans heure** (pendant le match) : `quand` = texte libre (à la suite, arrêt de jeu,
+   00:01:00, 0:18:00…). **Sections** (`est_section`, bandeau : 1er TIERS, 1ère PAUSE…), **lignes importantes**
+   (`important`, en rouge, ex. face-off). Ligne en cours : automatique d'après l'heure avant le face-off ; pendant le
+   match la Régie **clique une ligne** → `ros_matchs.reperes.en_cours`, vu en direct (realtime) par tous.
+   Modèles copiés pour un match ; migration 31 crée le modèle **« NL Regular Season 26/27 »** (92 lignes transcrites de
+   la capture du rundown du 02.10.2026 ; script générateur dans le scratchpad de la session). Abandonné : repères
+   pauses / « Pause 1 commence » / comptes à rebours saisis (V1 du 01.10, jugée mal adaptée par Léa).
+   **Rôle `animation` = « Chrono & animation »** : ne voit QUE le run of show (menu filtré, accueil run-of-show.html,
+   `est_membre()` l'exclut, lecture des matchs autorisée). Sponsoring : consulte. Import Excel : pas fait.0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
    Recette des tests (page claude.ai, commentaires + export) : https://claude.ai/artifact/AKvYKr63XcgFcWQF76MMbQ
@@ -159,7 +155,8 @@ outil-regie/
 │   ├── 27_comptes_externes.sql ← toutes les adresses e-mail acceptées (comptes créés par un admin)
 │   ├── 28_fichier_ajoute_apres.sql ← RPC fichier_ajoute_demande : fichier ajouté après la demande
 │   ├── 29_ordre_produits_soiree.sql ← ordre des produits = déroulé de la soirée
-│   └── 30_run_of_show.sql ← run of show (ros_modeles, ros_matchs, ros_lignes) + rôle « animation »
+│   ├── 30_run_of_show.sql ← run of show (ros_modeles, ros_matchs, ros_lignes) + rôle « animation »
+│   └── 31_run_of_show_rundown.sql ← colonnes du rundown Régie (quand, light, important, sections) + modèle NL
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
@@ -191,7 +188,7 @@ outil-regie/
 Les fichiers SQL 01 → 12 ont été exécutés **dans l'ordre** sur le projet Supabase (septembre 2026 ; 10–12
 vérifiés le 25.09.2026 avec une requête qui teste leurs traces : colonnes / fonctions / valeurs).
 13 → 22 exécutés et testés : « tout bon » confirmé par Léa (session suivant le 28.09.2026).
-Pour modifier la base, **écrire un nouveau fichier** `supabase/31_….sql` (migration) plutôt que
+Pour modifier la base, **écrire un nouveau fichier** `supabase/32_….sql` (migration) plutôt que
 réécrire 01–04, et donner à Léa les instructions pour l'exécuter dans le SQL Editor.
 
 ## Modèle métier (à respecter)

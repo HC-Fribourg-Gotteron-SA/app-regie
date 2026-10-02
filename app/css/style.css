@@ -704,8 +704,6 @@ body.fenetre-ouverte { overflow: hidden; }
 .ros-barre { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; align-items: center; margin-bottom: 1rem; }
 .ros-horloge strong { font-size: 1.6rem; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .ros-reperes { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; flex: 1; }
-.ros-repere { display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .6rem; border-radius: 8px;
-  background: var(--fond, #eef1f6); font-size: .9rem; font-variant-numeric: tabular-nums; }
 .ros-outils { display: flex; gap: .5rem; }
 .ros-creer { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
 .ros-tableau-cadre { overflow-x: auto; border-radius: 10px; }
@@ -714,30 +712,38 @@ body.fenetre-ouverte { overflow: hidden; }
 .ros-tableau .ros-heure { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ros-tableau input, .ros-tableau select, .ros-tableau textarea { font-size: .85rem; padding: .3rem .4rem; min-height: 0; }
 .ros-tableau textarea { min-width: 11rem; resize: vertical; }
-.ros-tableau .ros-quand { min-width: 10rem; }
-.ros-tableau .ros-quand input { width: 6rem; margin-top: .25rem; }
-.ros-tableau td:nth-child(3) input { width: 5rem; }
+
+
+
 .ros-deplacer { white-space: nowrap; }
 .ros-pied { display: flex; gap: .5rem; align-items: center; margin-top: .75rem; flex-wrap: wrap; }
-/* couleur par type de ligne (proche du rundown CHL) */
-.ros-ligne.ros-type-compte  td { background: #fde4ef; }
-.ros-ligne.ros-type-video   td { background: #dcf3f8; }
-.ros-ligne.ros-type-speaker td { background: #e3f4e6; }
-.ros-ligne.ros-type-intro   td { background: #ece3f8; }
-.ros-ligne.ros-type-sponsor td { background: #e1e9fb; }
-.ros-ligne.ros-type-lumiere td { background: #fdf5d3; }
-.ros-ligne.ros-type-jeu     td { background: #fde9d9; }
+/* comme le rundown Excel de la Régie : sections en bandeau, lignes importantes (face-off) en rouge */
+.ros-tableau th { background: #1f6fbf; color: #fff; text-align: center; white-space: nowrap; }
+.ros-tableau .ros-num { background: #1f6fbf; color: #fff; text-align: center; font-weight: 700; }
+.ros-tableau .ros-heure { text-align: center; }
+.ros-tableau .ros-action { font-weight: 600; }
+.ros-section td { background: #fbe9dc; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+  border-top: 3px solid var(--noir, #0f2240); }
+.ros-ligne.ros-important td { background: #e8175d; color: #fff; font-weight: 700; }
+.ros-tableau .ros-court { width: 6.5rem; }
+.ros-calcule { font-variant-numeric: tabular-nums; color: var(--texte-doux, #5b6780); }
+.ros-fin { white-space: nowrap; }
+.ros-face-off { display: inline-flex; align-items: center; gap: .5rem; padding: .35rem .8rem; border-radius: 8px;
+  background: #fff35c; color: #0f2240; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.ros-face-off strong { font-size: 1.4rem; }
+.ros-face-off input { width: auto; font-size: 1.1rem; }
 /* ligne en cours (le soir du match) */
 .ros-ligne.en-cours td { background: var(--noir, #0f2240) !important; color: #fff; }
 .ros-ligne.en-cours td a { color: #fff; }
-.ros-ligne.en-cours td:first-child { box-shadow: inset 5px 0 0 #ffcc00; }
-
+.ros-ligne.en-cours td:first-child { box-shadow: inset 6px 0 0 #ffcc00; }
+.page-ros .ros-ligne { cursor: default; }
 @media print {
   .menu-lateral, .barre-mobile, .voile-menu, .bandeau-base, .ros-choix, .ros-outils, .ros-pied, #aide-edition,
-  .ros-reperes button { display: none !important; }
+  #aide-en-cours, .ros-horloge { display: none !important; }
+  .ros-ligne.en-cours td { background: inherit !important; color: inherit; box-shadow: none; }
   body.avec-menu main { margin: 0 !important; max-width: none !important; }
   .ros-tableau { min-width: 0; font-size: 9pt; }
   .ros-tableau-cadre { overflow: visible; }
-  .ros-ligne td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .ros-tableau td, .ros-tableau th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   @page { size: landscape; margin: 10mm; }
 }
