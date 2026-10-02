@@ -322,7 +322,7 @@ function grouper(items) {
 }
 
 // Demande à traiter : dans l'outil (même fenêtre que dans Demandes) et dans Colosseo en même temps
-const VERBE_DEMANDE = { suppression: 'Retrait demandé', changement_visuel: 'Nouveau visuel demandé' };
+const VERBE_DEMANDE = { suppression: 'Retrait demandé', changement_visuel: 'Nouveau visuel reçu' };
 const BOUTON_DEMANDE = { suppression: 'Retirer', changement_visuel: 'Changer le visuel' };
 const SUITE_FAITE = { ajoute: 'Ajouté', visuel: 'Nouveau visuel mis', retire: 'Retiré', ignore: 'Ignoré' };
 function carteDemande(i) {
