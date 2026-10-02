@@ -184,7 +184,7 @@ const MENU = [
 ];
 
 function construireMenu(profil) {
-  const page = location.pathname.split('/').pop() || 'index.html';
+  const page = pageCourante();
   const accueil = pageAccueil(profil.role);
   // Chrono & animation : seulement les liens qui le nomment (run of show)
   const visible = (l) => profil.role === 'animation' ? l.roles?.includes('animation') : !l.roles || l.roles.includes(profil.role);
@@ -247,6 +247,12 @@ function construireMenu(profil) {
   menuProduits(profil);
 }
 
+// Nom de la page ouverte, toujours avec « .html » (Cloudflare Pages sert /run-of-show au lieu de /run-of-show.html)
+export function pageCourante() {
+  const nom = decodeURIComponent(location.pathname.split('/').pop() || 'index');
+  return nom.endsWith('.html') ? nom : `${nom}.html`;
+}
+
 // Page d'arrivée selon le rôle
 export const pageAccueil = (role) => ['regie', 'admin'].includes(role) ? 'match-du-jour.html'
   : role === 'animation' ? 'run-of-show.html' : 'demandes.html';
@@ -306,7 +312,7 @@ async function menuProduits(profil) {
 
   const aAjouter = new Map();
   for (const a of attente.data || []) aAjouter.set(a.produit_id, (aAjouter.get(a.produit_id) || 0) + 1);
-  const courant = location.pathname.endsWith('produit.html') ? new URLSearchParams(location.search).get('id') : null;
+  const courant = pageCourante() === 'produit.html' ? new URLSearchParams(location.search).get('id') : null;
   const compteur = (n) => n ? `<span class="menu-compteur">${n}</span>` : '';
   const court = (nom) => nom.replace(/^Action scene – /, '');
 
@@ -317,7 +323,7 @@ async function menuProduits(profil) {
     groupes.get(cat).push(p);
   }
   // Liste repliable « Tous les produits » : ouverte sur les pages produit, sinon selon le dernier choix
-  const surPageProduit = /(produits?|categorie)\.html$/.test(location.pathname);
+  const surPageProduit = ['produit.html', 'produits.html', 'categorie.html'].includes(pageCourante());
   let ouverte = surPageProduit;
   try { if (!surPageProduit) ouverte = localStorage.getItem('menu-produits-ouvert') === '1'; } catch { /* stockage indisponible */ }
   const totalAttente = [...aAjouter.values()].reduce((t, n) => t + n, 0);
@@ -332,7 +338,7 @@ async function menuProduits(profil) {
     try { localStorage.setItem('menu-produits-ouvert', tous.open ? '1' : '0'); } catch { /* stockage indisponible */ }
   });
 
-  const categorieCourante = location.pathname.endsWith('categorie.html') ? new URLSearchParams(location.search).get('c') : null;
+  const categorieCourante = pageCourante() === 'categorie.html' ? new URLSearchParams(location.search).get('c') : null;
   zone.querySelector('.menu-liste-produits').innerHTML = [...groupes].map(([cat, liste]) => {
     const total = liste.reduce((t, p) => t + (aAjouter.get(p.id) || 0), 0);
     if (CATEGORIES_UNE_PAGE.has(cat)) {

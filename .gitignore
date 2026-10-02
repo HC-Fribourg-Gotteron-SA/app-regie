@@ -9,3 +9,6 @@ desktop.ini
 ~$*
 .vscode/
 node_modules/
+
+# Fiches d'accès personnelles (mots de passe) : jamais sur GitHub
+acces/
