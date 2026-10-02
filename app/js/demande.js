@@ -219,9 +219,8 @@ function zoneFichiers(d, { role, libelle, cible }) {
 }
 
 // ---------------------------------------------------------------------
-// Plusieurs fichiers pour un produit (une minorité, expliqué par Léa le 02.10.2026) :
-// FR / DE un match sur deux. Vidéo spéciale pour un match (ex. le chef présent ce soir-là) :
-// demande « Changement de visuel » pour ce match (le visuel habituel revient ensuite).
+// Plusieurs fichiers pour un produit (une minorité, expliqué par Léa le 02.10.2026) : FR / DE un match sur deux.
+// Le Sponsoring donne tous les fichiers ; la Régie les a tous dans Colosseo et active la langue du match.
 // ---------------------------------------------------------------------
 const alterne = (d) => d.fichiers.visuel.length >= 2 && d.rotation === 'alterner';
 const versionsDe = (d) => [...new Set(d.fichiers.visuel.map(f => (d.versions.get(f) || '').trim()).filter(Boolean))];
@@ -251,8 +250,6 @@ function blocRotation(d) {
             `<option ${v === premiereDe(d) ? 'selected' : ''}>${echapper(v)}</option>`).join('')}</select>
           <span class="doux">puis chaque version à tour de rôle</span>
         </div>` : ''}
-      <p class="aide" style="margin:.3rem 0 0">Vidéo spéciale pour un seul match (ex. le chef présent ce soir-là) :
-        faites plutôt une demande « Changement de visuel » pour ce match.</p>
     </div>`;
 }
 
@@ -311,8 +308,7 @@ function afficherDetails() {
             Seulement certains matchs</label>
         </div>
         <div class="matchs-produit" ${d.quand === 'match' ? '' : 'hidden'}>
-          <p class="aide">Cochez le ou les matchs :${document.querySelector('input[name=type]:checked')?.value === 'changement_visuel'
-            ? ' <strong>le nouveau visuel passe seulement à ces matchs</strong>, le visuel habituel revient ensuite (ex. vidéo du chef présent ce soir-là).' : ''}</p>
+          <p class="aide">Cochez le ou les matchs :</p>
           <div class="choix choix-compact">${matchs}</div>
         </div>
         ${demandeSon(p) ? `
@@ -488,7 +484,7 @@ async function filtrerProduitsDuSponsor() {
       : `${etat.sponsor.nom} n'a actuellement aucun produit dans l'outil : rien à changer ou à supprimer.`;
   }
 }
-$('types').addEventListener('change', () => { filtrerProduitsDuSponsor(); afficherDetails(); });
+$('types').addEventListener('change', filtrerProduitsDuSponsor);
 
 // ---------------------------------------------------------------------
 // Envoi

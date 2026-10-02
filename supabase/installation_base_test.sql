@@ -2722,14 +2722,12 @@ select 'Migration 33 OK : supprimer_fichier()' as "Résultat";
 -- À exécuter une fois dans Supabase > SQL Editor, sur la base de TEST puis sur la vraie base.
 -- Peut être exécuté plusieurs fois.
 -- =====================================================================
--- Deux cas (expliqués par Léa le 02.10.2026, une minorité de sponsors) :
---   1. FR / DE un match sur deux : la demande contient plusieurs fichiers, chacun avec sa version,
---      et la version du premier match. La diffusion passe en règle « alterner » : ordre des versions
---      (ordre_variantes) + match de départ (alternance_depart) ; ensuite, une version par match à tour de rôle.
---   2. Vidéo spéciale pour certains matchs (ex. vidéo du chef présent ce soir-là) : demande
---      « Changement de visuel » pour certains matchs sur une diffusion à la saison. Le visuel est
---      rattaché à ces matchs seulement (assets.match_id) ; les autres matchs gardent le visuel habituel.
---      (Avant : il remplaçait le visuel pour toute la saison.)
+-- FR / DE un match sur deux (expliqué par Léa le 02.10.2026, une minorité de sponsors) : le Sponsoring donne
+-- tous les fichiers (VF et DE), la Régie les a tous dans Colosseo et active / désactive selon la langue du match.
+-- La demande contient plusieurs fichiers, chacun avec sa version, et la version du premier match. La diffusion
+-- passe en règle « alterner » : ordre des versions (ordre_variantes) + match de départ (alternance_depart) ;
+-- ensuite, une version par match à tour de rôle. Match du jour dit quelle langue activer ce soir.
+-- (La vidéo spéciale de certains matchs — ex. vidéo du chef — sera traitée plus tard.)
 
 -- 1. Colonnes ------------------------------------------------------------------
 alter table demandes_produits
@@ -2757,11 +2755,12 @@ declare
 begin
   select * into l from lignes_vendues where id = p_ligne;
 
-  -- visuel réservé à ce match (vidéo spéciale) : quelle que soit la règle
-  select id into v_id from assets
-  where ligne_id = p_ligne and statut = 'valide' and match_id = p_match
-  order by version desc, depose_le desc limit 1;
-  if v_id is not null then return v_id; end if;
+  if l.regle_rotation = 'par_match' then
+    select id into v_id from assets
+    where ligne_id = p_ligne and statut = 'valide' and match_id = p_match
+    order by version desc limit 1;
+    if v_id is not null then return v_id; end if;
+  end if;
 
   if l.regle_rotation in ('alterner', 'equilibrer') then
     v_nb := coalesce(array_length(l.ordre_variantes, 1), 0);
@@ -2809,7 +2808,7 @@ create trigger lignes_passages after insert or update of
   validee, suspendue, ordre_variantes, alternance_depart
   on lignes_vendues for each row execute function tg_ligne_passages();
 
--- 3. Traiter UN produit d'une demande (reprend 13 ; nouveau : versions et visuels réservés à des matchs)
+-- 3. Traiter UN produit d'une demande (reprend 13 ; nouveau : version de chaque visuel, un match sur deux)
 -- p_options.fichiers[] reçoit en plus "variante" (FR, DE…)
 create or replace function traiter_produit(p_demande uuid, p_produit uuid, p_suite text, p_options jsonb default '{}'::jsonb)
 returns jsonb
@@ -2827,8 +2826,6 @@ declare
   v_ligne    uuid;
   v_anneau   uuid;
   v_asset    uuid;
-  v_matchs   uuid[];
-  v_m        uuid;
   n_assets   int := 0;
   v_traitee  boolean := false;
 begin
@@ -2903,36 +2900,20 @@ begin
       where id = v_ligne;
     end if;
 
-    -- Changement de visuel pour certains matchs sur une diffusion à la saison : visuel réservé à ces matchs
-    -- (ex. vidéo du chef présent ce soir-là) ; sinon un seul visuel pour tous les matchs (match_id null)
-    if p_suite = 'visuel' and dp.type_vente = 'match'
-       and (select type_vente from lignes_vendues where id = v_ligne) = 'saison' then
-      v_matchs := array(select m.id from matchs m
-                        where (m.date_heure at time zone 'Europe/Zurich')::date = any (dp.dates_matchs));
-      if coalesce(array_length(v_matchs, 1), 0) = 0 then
-        raise exception 'Aucun match du calendrier aux dates de la demande';
-      end if;
-    else
-      v_matchs := array[null::uuid];
-    end if;
-
     -- Visuels : ajouter = valider (la Régie a vu le fichier et le contrôle). Valider archive l'ancien visuel
-    -- de la même version et du même match (trigger assets_apres).
+    -- de la même version seulement (trigger assets_apres) : FR et DE restent tous les deux.
     for f in select * from jsonb_array_elements(coalesce(p_options->'fichiers', '[]'::jsonb)) loop
-      foreach v_m in array v_matchs loop
-        insert into assets (ligne_id, demande_id, nom_visuel, storage_path, mime, taille_octets,
-                            largeur_px, hauteur_px, duree_s, avec_son, variante, match_id)
-        values (case when f->>'role' = 'anneau' then coalesce(v_anneau, v_ligne) else v_ligne end,
-                p_demande,
-                coalesce(nullif(trim(f->>'nom_visuel'), ''), f->>'storage_path'),
-                f->>'storage_path', f->>'mime', (f->>'taille_octets')::bigint,
-                (f->>'largeur_px')::int, (f->>'hauteur_px')::int, (f->>'duree_s')::numeric,
-                case when f->>'role' = 'anneau' then false else dp.avec_son end,
-                case when f->>'role' = 'anneau' then null else nullif(trim(f->>'variante'), '') end,
-                v_m)
-        returning id into v_asset;
-        update assets set statut = 'valide' where id = v_asset;
-      end loop;
+      insert into assets (ligne_id, demande_id, nom_visuel, storage_path, mime, taille_octets,
+                          largeur_px, hauteur_px, duree_s, avec_son, variante)
+      values (case when f->>'role' = 'anneau' then coalesce(v_anneau, v_ligne) else v_ligne end,
+              p_demande,
+              coalesce(nullif(trim(f->>'nom_visuel'), ''), f->>'storage_path'),
+              f->>'storage_path', f->>'mime', (f->>'taille_octets')::bigint,
+              (f->>'largeur_px')::int, (f->>'hauteur_px')::int, (f->>'duree_s')::numeric,
+              case when f->>'role' = 'anneau' then false else dp.avec_son end,
+              case when f->>'role' = 'anneau' then null else nullif(trim(f->>'variante'), '') end)
+      returning id into v_asset;
+      update assets set statut = 'valide' where id = v_asset;
       n_assets := n_assets + 1;
     end loop;
   end if;
@@ -2951,7 +2932,7 @@ begin
   return jsonb_build_object('ligne_id', v_ligne, 'visuels', n_assets, 'demande_traitee', v_traitee);
 end $$;
 
-select 'Migration 34 OK : versions des visuels (un match sur deux) et visuels réservés à des matchs' as "Résultat";
+select 'Migration 34 OK : versions des visuels (FR / DE un match sur deux)' as "Résultat";
 
 
 -- Après avoir créé ton compte dans Authentication > Users, lance ceci séparément :

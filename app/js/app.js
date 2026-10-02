@@ -133,7 +133,7 @@ export function dimensionsAttendues(p) {
 export function devinerVersion(nom) {
   const base = (nom || '').replace(/\.[^.]+$/, '');
   const mots = base.split(/[^A-Za-zÀ-ÿ]+/).map(m => m.toLowerCase());
-  const LANGUES = { fr: 'FR', f: 'FR', francais: 'FR', français: 'FR', french: 'FR',
+  const LANGUES = { fr: 'FR', f: 'FR', vf: 'FR', vd: 'DE', francais: 'FR', français: 'FR', french: 'FR',
                     de: 'DE', d: 'DE', dt: 'DE', deutsch: 'DE', allemand: 'DE', german: 'DE',
                     it: 'IT', en: 'EN', eng: 'EN', english: 'EN' };
   for (let i = mots.length - 1; i >= 0; i--) if (LANGUES[mots[i]]) return LANGUES[mots[i]];

@@ -120,8 +120,6 @@ function dessiner(k) {
     ${versionsAlternees(c) && d.type !== 'suppression' ? `<p class="message message-info petit">Un match sur deux :
       <strong>${versionsAlternees(c).map(echapper).join(' / ')}</strong>${a.rotation === 'alterner' ? ' (la 1re au prochain match)' : ''}.
       Vérifiez la version de chaque fichier.</p>` : ''}
-    ${visuelReserve(c) ? `<p class="message message-info petit">Ce visuel passera <strong>seulement à ces matchs</strong> ;
-      le visuel habituel reste pour les autres matchs.</p>` : ''}
     ${d.type === 'suppression' ? '' : `
       <div class="titre-bloc">Fichiers</div>
       <div style="margin-bottom:.7rem">${blocFichiers(c)}</div>`}
@@ -236,7 +234,7 @@ function blocFichiers(c) {
 }
 
 // ---------------------------------------------------------------------
-// Visuels qui changent selon le match (migration 34)
+// FR / DE un match sur deux (migration 34)
 // ---------------------------------------------------------------------
 // Diffusion visée par « Mettre le nouveau visuel » (null pour un ajout)
 function ligneVisee(c) {
@@ -250,8 +248,6 @@ function versionsAlternees(c) {
   const l = ligneVisee(c);
   return l?.regle_rotation === 'alterner' && l.ordre_variantes?.length >= 2 ? l.ordre_variantes : null;
 }
-// Changement de visuel pour certains matchs sur une diffusion à la saison : visuel réservé à ces matchs
-const visuelReserve = (c) => c.a.type_vente === 'match' && ligneVisee(c)?.type_vente === 'saison';
 
 // « Ajouter un fichier » (fichier reçu plus tard) : même bouton dans la demande et sur la fiche
 export const boutonAjoutFichier = (role) => `
@@ -585,8 +581,7 @@ async function traiter(k, suite, bouton) {
   if (error) return notifier(`Impossible (rien n'a été modifié) : ${error.message}`, 'erreur');
   // nouveau visuel sur une diffusion existante : durée et son suivent la nouvelle vidéo
   const suit = { ...(duree ? { duree_s: duree } : {}), ...(avecSon !== null ? { avec_son: avecSon } : {}) };
-  // (pas pour une vidéo réservée à certains matchs : la diffusion garde son visuel habituel)
-  if (suite === 'visuel' && data?.ligne_id && Object.keys(suit).length && !visuelReserve(cartes.get(k))) {
+  if (suite === 'visuel' && data?.ligne_id && Object.keys(suit).length) {
     await sb.from('lignes_vendues').update(suit).eq('id', data.ligne_id);
   }
 

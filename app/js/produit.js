@@ -51,8 +51,7 @@ const CHAMPS_LIGNE = `id, produit_id, type_vente, statut, avec_son, duree_s, occ
   produit:produits(nom), contrat:contrats(sponsor:sponsors(id, nom)),
   matchs:lignes_matchs(match:matchs(date_heure, adversaire)),
   emplacements:lignes_emplacements(emplacement:emplacements(anneau, zone, position)),
-  assets(id, nom_visuel, statut, version, variante, depose_le, valide_le, motif_refus, storage_path, mime,
-         match:matchs(date_heure, adversaire))`;
+  assets(id, nom_visuel, statut, version, variante, depose_le, valide_le, motif_refus, storage_path, mime)`;
 
 // Diffusion de ce produit, ou d'un autre produit affichée ici (LED 3M sur la bande 6M)
 const trouverLigne = (id) => etat.lignes.find(x => x.id === id) || etat.autres.find(x => x.id === id)
@@ -424,21 +423,16 @@ function celluleEtat(l) {
     ${l.visuel_attendu ? '<span class="etat etat-attente" title="Nouveau visuel attendu (l’ancien passe en attendant)">⏳ visuel attendu</span>' : ''}`;
 }
 
-const visuelActuel = (assets) => (assets || []).filter(a => a.statut !== 'archive' && !a.match)
+const visuelActuel = (assets) => (assets || []).filter(a => a.statut !== 'archive')
   .sort((a, b) => new Date(b.depose_le) - new Date(a.depose_le))[0];
-// Nom du visuel qui passe ; « à valider » seulement s'il faut agir
-// (FR / DE un match sur deux : les versions ; vidéos spéciales de certains matchs : leur nombre)
+// Nom du visuel qui passe ; « à valider » seulement s'il faut agir (FR / DE un match sur deux : badge des versions)
 function celluleVisuel(assets, ligne) {
   const a = visuelActuel(assets);
   if (!a) return '<span class="doux">—</span>';
-  const valides = (assets || []).filter(x => x.statut === 'valide');
-  const versions = [...new Set(valides.filter(x => !x.match && x.variante).map(x => x.variante))];
-  const speciaux = valides.filter(x => x.match && new Date(x.match.date_heure) >= new Date(Date.now() - 864e5)).length;
-  const extra = [
-    ligne?.regle_rotation === 'alterner' && versions.length >= 2 ? `${versions.map(echapper).join(' / ')} · 1 match sur 2` : '',
-    speciaux ? `+ ${speciaux} visuel${speciaux > 1 ? 's' : ''} spécia${speciaux > 1 ? 'ux' : 'l'} à venir` : '',
-  ].filter(Boolean).join(' · ');
-  return `<span class="petit">${echapper(a.nom_visuel)}</span>${extra ? ` <span class="badge">${extra}</span>` : ''}${a.statut === 'a_valider'
+  const versions = [...new Set((assets || []).filter(x => x.statut === 'valide' && x.variante).map(x => x.variante))];
+  const alterne = ligne?.regle_rotation === 'alterner' && versions.length >= 2;
+  return `<span class="petit">${echapper(a.nom_visuel)}</span>${alterne
+    ? ` <span class="badge">${versions.map(echapper).join(' / ')} · 1 match sur 2</span>` : ''}${a.statut === 'a_valider'
     ? ` <span class="etat etat-attente">à valider</span>${estRegie ? ` <button type="button" class="btn btn-discret petit" data-valider="${a.id}">Valider</button>` : ''}` : ''}`;
 }
 
@@ -446,9 +440,7 @@ function celluleVisuel(assets, ligne) {
 function listeVisuels(assets) {
   const visuels = (assets || []).slice().sort((a, b) => new Date(b.depose_le) - new Date(a.depose_le));
   return visuels.length ? `<ul class="liste-fichiers" style="margin:0">${visuels.map(a => `
-    <li><span>${echapper(a.nom_visuel)}${a.variante ? ` <span class="doux petit">(${echapper(a.variante)})</span>` : ''}
-        ${a.match ? ` <span class="badge badge-match">seulement le ${dateCourte(a.match.date_heure)} · ${echapper(a.match.adversaire)}</span>` : ''}
-        <span class="doux petit"> · déposé le ${dateCourte(a.depose_le)}</span></span>
+    <li><span>${echapper(a.nom_visuel)}${a.variante ? ` <span class="doux petit">(${echapper(a.variante)})</span>` : ''}        <span class="doux petit"> · déposé le ${dateCourte(a.depose_le)}</span></span>
       ${a.statut === 'archive' ? '<span class="badge">ancien</span>'
         : STATUT_ASSET[a.statut] ? `<span class="badge ${STATUT_ASSET[a.statut][1]}">${STATUT_ASSET[a.statut][0]}</span>` : ''}
       ${a.storage_path ? `<button type="button" class="btn btn-discret" data-telecharger-visuel="${echapper(a.storage_path)}">Télécharger</button>` : ''}

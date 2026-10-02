@@ -89,20 +89,20 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    vérifiera »). Affiché à côté de chaque fichier (« 15 s · 🔊 avec son »), aussi dans la carte de traitement ;
    « Ajouter » / « Mettre le nouveau visuel » reprennent la durée et le son de la vidéo (demande + diffusion). WebM : son non lu. Test : `pisteAudioIsoBmff` dans Node (OK) ; à tester par Léa avec
    un vrai spot avec son, un sans son.
-0-octies. **Visuels qui changent selon le match (02.10.2026, migration 34 à exécuter sur les deux bases, pas encore
-   testé)** — une minorité, expliqué par Léa : (1) **FR / DE un match sur deux** ; (2) **vidéo spéciale certains
-   matchs** (ex. vidéo du chef présent ce soir-là, sinon la vidéo normale).
-   (1) Demande : dès 2 fichiers sur un produit → « Un match sur deux » / « Autrement (remarque) » obligatoire ; version
-   par fichier (devinée du nom : `devinerVersion` dans app.js) ; « Au premier match (date) : [FR] ». Stocké dans
-   `demandes_produits.rotation / versions / ordre_versions`. Traitement → diffusion `regle_rotation = alterner`,
-   `ordre_variantes`, `alternance_depart` (prochain match) ; assets avec `variante`. `choisir_asset` : rang du match
+0-octies. **FR / DE un match sur deux (02.10.2026, migration 34 à exécuter sur les deux bases, pas encore testé)**.
+   Travail réel (Léa) : le Sponsoring donne tous les fichiers (VF et DE), la Régie les a **tous dans Colosseo** et
+   **active / désactive** la langue du match. Demande : dès 2 fichiers sur un produit → « Un match sur deux » /
+   « Autrement (remarque) » obligatoire ; version par fichier (devinée du nom : `devinerVersion` dans app.js, VF / FR /
+   DE / _f / _d…) ; « Au premier match (date) : [FR] ». Stocké dans `demandes_produits.rotation / versions /
+   ordre_versions`. Traitement → diffusion `regle_rotation = alterner`, `ordre_variantes`, `alternance_depart`
+   (prochain match) ; assets avec `variante` (FR et DE restent validés tous les deux). `choisir_asset` : rang du match
    parmi les matchs de la diffusion, à partir du match de départ. Carte de traitement : version modifiable par fichier.
-   (2) Pas de nouveau champ : demande « Changement de visuel » + « Seulement certains matchs » sur une diffusion à la
-   saison → assets avec `match_id` (un par match), la diffusion garde son visuel habituel (avant : remplacé pour toute
-   la saison). `choisir_asset` prend d'abord le visuel réservé au match.
-   Match du jour : ces changements de visuel sont listés même pour une diffusion à la saison (`raisonVersion` dans
-   changements.js : « version DE ce soir », « visuel spécial pour ce match », « retour au visuel habituel »).
-   Fiche produit : badge « FR / DE · 1 match sur 2 », « seulement le JJ.MM » sur un visuel spécial.
+   Match du jour (bloc 2) : « 🔁 Activer DE · désactiver FR » (`changementDeVersion` dans changements.js), même pour
+   une diffusion à la saison. Fiche produit : badge « FR / DE · 1 match sur 2 ».
+   **Vidéo du chef (Leguriviera) : PAS encore faite**, idée proposée à Léa et en attente de son accord : une demande
+   « Changement de visuel » avec les matchs du chef cochés, vidéo « à venir » ajoutée la veille / le jour même
+   (« + Ajouter un fichier » → pour quel match ?), Match du jour « vidéo du chef ce soir » / ⏳ pas reçue, puis
+   « remettre la vidéo normale ». Ils ont la liste des matchs du chef à l'avance, le chef et la vidéo arrivent tard.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
@@ -197,7 +197,7 @@ outil-regie/
 │   ├── 31_run_of_show_rundown.sql ← colonnes du rundown Régie (quand, light, important, sections) + modèle NL
 │   ├── 32_formats_produits.sql ← formats du media kit (dimensions, PNG/JPEG/MP4/MOV) + produits.remarque_format
 │   ├── 33_supprimer_fichier.sql ← RPC supprimer_fichier(chemin) : mauvais fichier (visuel refusé, ancien revient, visuel attendu)
-│   └── 34_versions_visuels.sql ← FR / DE un match sur deux + visuel réservé à certains matchs (choisir_asset, traiter_produit)
+│   └── 34_versions_visuels.sql ← FR / DE un match sur deux (choisir_asset, traiter_produit, demandes_produits.rotation)
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)

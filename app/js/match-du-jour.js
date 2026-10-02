@@ -1,7 +1,7 @@
 // Match du jour : ce que la Régie doit changer dans Colosseo (depuis le match précédent),
 // puis toute la playlist pour vérifier. Les playlists Colosseo restent d'un match à l'autre.
 import { sb, exigerConnexion, echapper, dateCourte, notifier, toutesLesLignes, libelleFichier, taille } from './app.js';
-import { calculerChangements, consigne, PASSE, raisonVersion } from './changements.js';
+import { calculerChangements, consigne, PASSE, changementDeVersion } from './changements.js';
 import { confirmerSuppressionProduit, boutonSupprimerFichier, confirmerSuppressionFichier } from './traitement.js';
 
 const { profil } = await exigerConnexion({ roles: ['regie', 'admin'] });
@@ -213,6 +213,9 @@ function infos(ligneId) {
 const assetAnneau = (l) => l?.ligne_couplee_id && etat.passagesCe.find(p => p.ligne_id === l.ligne_couplee_id)?.asset_id;
 const consigneAnneau = (action) => ({ ajouter: 'Ajouter l’anneau LED', enlever: 'Enlever l’anneau LED',
   visuel: 'Remplacer le visuel de l’anneau LED' })[action];
+// Ce que la Régie fait dans Colosseo (langue du soir : « Activer DE · désactiver FR »)
+const texteConsigne = (i) => i.version
+  || (i.anneau ? consigneAnneau(i.action) : consigne(i.action, i.famille, i.categorie, i.produit));
 const nomVisuel = (id) => { const a = etat.assets.get(id); return a ? a.nom_visuel + (a.variante ? ` (${a.variante})` : '') : ''; };
 const trier = (a, b) => a.ordre - b.ordre || a.produit.localeCompare(b.produit)
   || (a.groupe ?? 0) - (b.groupe ?? 0) || a.priorite - b.priorite;
@@ -235,11 +238,11 @@ function afficher() {
     changements = etat.passagesCe.filter(p => PASSE.has(p.statut))
       .map(p => ({ action: 'ajouter', ligne_id: p.ligne_id, asset_id: p.asset_id, raison: 'vendu pour ce match' }));
   }
-  // + visuels qui changent selon le match (FR / DE un match sur deux, vidéo spéciale), même à la saison
+  // + langue du soir (FR / DE un match sur deux), même pour une diffusion à la saison
   const version = (c) => c.action === 'visuel'
-    ? raisonVersion(etat.assets.get(c.asset_id), etat.assets.get(c.ancien_asset_id)) : null;
+    ? changementDeVersion(etat.assets.get(c.asset_id), etat.assets.get(c.ancien_asset_id)) : null;
   const tous = changements.map(c => ({ ...c, ...infos(c.ligne_id), fait: etat.fait.get(`${c.ligne_id}|${c.action}`),
-                                       ...(version(c) ? { raison: version(c), version: true } : {}) }))
+                                       ...(version(c) ? { raison: version(c).raison, version: version(c).consigne } : {}) }))
     .filter(i => auMatch(i) || i.version);
   // anneau ajouté / enlevé en même temps que sa Pub pause tiers : une seule ligne (« avec anneau LED »)
   const pubs = new Set(tous.filter(i => !i.anneau).map(i => `${i.ligne_id}|${i.action}`));
@@ -416,9 +419,9 @@ function carteChangement(i) {
   const fait = i.fait;
   return `
     <div class="changement changement-${i.action}${fait ? ' est-fait' : ''}">
-      <div class="changement-icone" aria-hidden="true">${ICONES[i.action]}</div>
+      <div class="changement-icone" aria-hidden="true">${i.version ? '🔁' : ICONES[i.action]}</div>
       <div class="changement-texte">
-        <div><span class="changement-verbe">${i.anneau ? consigneAnneau(i.action) : consigne(i.action, i.famille, i.categorie, i.produit)}</span> · <strong>${echapper(i.sponsor)}</strong>
+        <div><span class="changement-verbe">${texteConsigne(i)}</span> · <strong>${echapper(i.sponsor)}</strong>
           <span class="doux petit">(${echapper(i.raison)})</span></div>
         ${details.length ? `<div class="petit">${details.join(' · ')}</div>` : ''}
         ${visuel ? `<div class="petit">${visuel}${sansFichier}</div>` : ''}
@@ -488,7 +491,7 @@ function ouvrirChangement(cleItem) {
     .sort((x, y) => (y.produit_id === l.produit_id) - (x.produit_id === l.produit_id));
   const fait = i.fait;
 
-  $('d-surtitre').textContent = i.anneau ? consigneAnneau(i.action) : TITRE_ACTION[i.action];
+  $('d-surtitre').textContent = i.version || (i.anneau ? consigneAnneau(i.action) : TITRE_ACTION[i.action]);
   $('d-titre').textContent = i.sponsor;
   // état POUR CE MATCH (et pas la case « À l'écran » de la fiche, qui prêtait à confusion pour un retrait)
   const passeCeMatch = etat.passagesCe.some(p => p.ligne_id === (i.anneau ? l.ligne_couplee_id : l.id) && PASSE.has(p.statut));
@@ -506,7 +509,7 @@ function ouvrirChangement(cleItem) {
             <div class="detail-produit">
               <div class="suivi-produit ${fait ? 'fait' : ''}">
                 ${fait ? `✓ Fait dans Colosseo par ${echapper(etat.personnes.get(fait.fait_par) || '—')} à ${heure(fait.fait_le)}`
-                  : (i.anneau ? consigneAnneau(i.action) : consigne(i.action, i.famille, i.categorie, i.produit))}
+                  : texteConsigne(i)}
                 <a href="produit.html?id=${l.produit?.id}&ligne=${l.id}&retour=${encodeURIComponent(`match-du-jour.html?match=${etat.match.id}`)}">Ouvrir la fiche →</a>
               </div>
               <div class="detail-entete">
