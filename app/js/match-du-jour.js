@@ -203,7 +203,7 @@ function infos(ligneId) {
     sponsor: l?.contrat?.sponsor?.nom || '—',
     priorite: l?.priorite ?? 1e9,
     // Pub pause tiers : avec son + anneau, avec son, sans son + anneau, sans son sans anneau (décidé par Léa)
-    groupe: l?.produit?.lie_a_produit_id
+    groupe: l?.produit?.lie_a_produit_id && /pause tiers/i.test(l.produit.nom)
       ? (l.avec_son ? 0 : 2) + (etat.lignes.get(l.ligne_couplee_id)?.produit?.actif === false ? 0 : 1) : 0,
     empl: (l?.emplacements || []).map(e => e.emplacement).filter(Boolean).map(e => `${e.anneau}-${e.zone}-${e.position}`),
     video: l?.produit?.support === 'Vidéotron' && !anneauDe,

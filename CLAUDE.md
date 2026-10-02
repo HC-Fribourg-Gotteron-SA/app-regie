@@ -103,6 +103,12 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    « Changement de visuel » avec les matchs du chef cochés, vidéo « à venir » ajoutée la veille / le jour même
    (« + Ajouter un fichier » → pour quel match ?), Match du jour « vidéo du chef ce soir » / ⏳ pas reçue, puis
    « remettre la vidéo normale ». Ils ont la liste des matchs du chef à l'avance, le chef et la vidéo arrivent tard.
+0-nonies. **Anneau LED pour tout le vidéotron (02.10.2026, demandé par Léa, migration 35 à exécuter sur les deux bases,
+   pas encore testé)** : comme la Pub pause tiers, chaque produit du vidéotron (Pub warm-up, après warm-up, arrêt de
+   jeu…) et chaque action scene propose « Avec / sans anneau LED » dans la demande (choix obligatoire) + visuel de
+   l'anneau. Ce n'est pas le produit « Anneau LED ». Mécanisme de la migration 17 : `lie_a_produit_id` → produit
+   technique INACTIF « Anneau LED couplé » (partagé ; la Pub pause tiers garde « Anneau LED pause tiers »), jamais
+   affiché. Slides exclues. L'ordre en 4 groupes (son / anneau) reste réservé à la Pub pause tiers.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
@@ -197,7 +203,8 @@ outil-regie/
 │   ├── 31_run_of_show_rundown.sql ← colonnes du rundown Régie (quand, light, important, sections) + modèle NL
 │   ├── 32_formats_produits.sql ← formats du media kit (dimensions, PNG/JPEG/MP4/MOV) + produits.remarque_format
 │   ├── 33_supprimer_fichier.sql ← RPC supprimer_fichier(chemin) : mauvais fichier (visuel refusé, ancien revient, visuel attendu)
-│   └── 34_versions_visuels.sql ← FR / DE un match sur deux (choisir_asset, traiter_produit, demandes_produits.rotation)
+│   ├── 34_versions_visuels.sql ← FR / DE un match sur deux (choisir_asset, traiter_produit, demandes_produits.rotation)
+│   └── 35_anneau_tous_videotron.sql ← avec / sans anneau LED pour tout le vidéotron + action scenes (« Anneau LED couplé »)
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)

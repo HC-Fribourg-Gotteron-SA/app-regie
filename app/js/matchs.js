@@ -99,7 +99,7 @@ function afficher() {
                   <span class="sponsor-match">${echapper(l.contrat?.sponsor?.nom || '—')}</span>
                   <span class="details-match">
                     ${l.avec_son ? '<span class="badge badge-son">avec son</span>' : ''}
-                    ${l.ligne_couplee_id && /pause/i.test(l.produit?.nom || '') ? '<span class="badge badge-son">+ anneau</span>' : ''}
+                    ${l.ligne_couplee_id && l.produit?.actif !== false ? '<span class="badge badge-son">+ anneau</span>' : ''}
                     <span class="badge ${cl}">${txt}</span>
                   </span>
                 </li>`;

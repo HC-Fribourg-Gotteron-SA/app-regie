@@ -85,8 +85,9 @@ async function charger() {
   etat.p = p;
   etat.attente = (attente || []).sort((a, b) => new Date(a.demande.created_at) - new Date(b.demande.created_at));
   // ordre de diffusion (priorite) ; sans rang : à la fin, dans l'ordre de création
-  // Pub pause tiers (produit avec anneau couplé) : d'abord par groupe (décidé par Léa le 01.10.2026)
-  const groupe = p?.lie_a_produit_id ? groupePauseTiers : () => 0;
+  // Pub pause tiers : d'abord par groupe (décidé par Léa le 01.10.2026). Les autres produits avec anneau
+  // (migration 35 : tout le vidéotron) gardent simplement l'ordre de diffusion.
+  const groupe = p?.lie_a_produit_id && /pause tiers/i.test(p.nom) ? groupePauseTiers : () => 0;
   const triees = (lignes || []).sort((a, b) => groupe(a) - groupe(b)
     || (a.priorite ?? 1e9) - (b.priorite ?? 1e9) || new Date(a.created_at) - new Date(b.created_at));
   // sponsors « au match » dont tous les matchs sont passés : rangés dans « Matchs passés » (historique)
