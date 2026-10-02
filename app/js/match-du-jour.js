@@ -1,6 +1,6 @@
 // Match du jour : ce que la Régie doit changer dans Colosseo (depuis le match précédent),
 // puis toute la playlist pour vérifier. Les playlists Colosseo restent d'un match à l'autre.
-import { sb, exigerConnexion, echapper, dateCourte, notifier, toutesLesLignes, libelleFichier, taille } from './app.js';
+import { sb, exigerConnexion, echapper, dateCourte, notifier, toutesLesLignes, libelleFichier, taille, devinerVersion } from './app.js';
 import { calculerChangements, consigne, PASSE, changementDeVersion } from './changements.js';
 import { confirmerSuppressionProduit, boutonSupprimerFichier, confirmerSuppressionFichier } from './traitement.js';
 
@@ -126,9 +126,9 @@ async function chargerMatch() {
     sb.from('colosseo_fait').select('ligne_id, action, fait_par, fait_le').eq('match_id', m.id),
     sb.from('notes_match').select('id, type, texte, fait, fait_par, fait_le, cree_par, cree_le')
       .eq('match_id', m.id).order('cree_le'),
-    // produits de demandes pas encore ajoutés sur leur fiche
+    // produits de demandes pas encore ajoutés sur leur fiche (« * » : aussi les versions FR / DE des migrations 34 / 36)
     sb.from('demandes_produits')
-      .select(`demande_id, produit_id, type_vente, dates_matchs, avec_son, avec_anneau, duree_s, remarque_sponsoring,
+      .select(`*,
                produit:produits(id, nom, ordre, famille, support),
                demande:demandes!inner(id, type, statut, created_at, sponsor_nom_saisi, sponsor:sponsors(nom))`)
       .is('traite_le', null).neq('demande.statut', 'traitee'),
@@ -333,6 +333,23 @@ function grouper(items) {
 const VERBE_DEMANDE = { suppression: 'Retrait demandé', changement_visuel: 'Nouveau visuel reçu' };
 const BOUTON_DEMANDE = { suppression: 'Retirer', changement_visuel: 'Changer le visuel' };
 const SUITE_FAITE = { ajoute: 'Ajouté', visuel: 'Nouveau visuel mis', retire: 'Retiré', ignore: 'Ignoré' };
+// FR / DE un match sur deux (migrations 34 / 36) : version de chaque fichier de la demande, et langue à activer.
+// La demande se traite le jour du match : l'alternance commence au prochain match (ce soir si c'est ce match).
+// (fichier ajouté après la demande : pas de version enregistrée, on la devine d'après son nom)
+const versionFichier = (a, f) => a.versions?.[`${f.role}__${f.nom}`] || (f.role === 'visuel' ? a.versions?.[f.nom] : '')
+  || ((f.role === 'anneau' ? a.rotation_anneau : a.rotation) === 'alterner' ? devinerVersion(f.nom) : '');
+function texteAlternance(a) {
+  const prochain = etat.matchs.find(m => new Date(m.date_heure).toDateString() === new Date().toDateString()
+    || new Date(m.date_heure) >= new Date());
+  const ceSoir = prochain?.id === etat.match.id;
+  return [['Vidéo', a.rotation, a.ordre_versions], ['Anneau LED', a.rotation_anneau, a.ordre_versions_anneau]]
+    .filter(([, rotation, ordre]) => rotation === 'alterner' && ordre?.length >= 2)
+    .map(([quoi, , ordre]) => `<div class="petit" style="margin-top:.2rem">🔁 <strong>${quoi} : ${ceSoir
+      ? `activer ${echapper(ordre[0])} ce soir` : `${echapper(ordre[0])} au premier match`}</strong>
+      <span class="doux">· puis ${ordre.slice(1).map(echapper).join(' / ')} au match suivant, un match sur deux (mettre les ${ordre.length} versions dans Colosseo)</span></div>`)
+    .join('');
+}
+
 function carteDemande(i) {
   const a = i.dp, d = a.demande || {};
   if (i.faite) {                 // déjà traitée : grisée, reste visible
@@ -363,9 +380,11 @@ function carteDemande(i) {
           <span class="doux petit">(demande reçue le ${dateCourte(d.created_at)})</span></div>
         <div class="petit">${details.join(' · ')}</div>
         ${a.remarque_sponsoring ? `<div class="petit doux">Sponsoring : ${echapper(a.remarque_sponsoring)}</div>` : ''}
+        ${d.type === 'suppression' ? '' : texteAlternance(a)}
         ${d.type === 'suppression' ? '' : (a.fichiers || []).length ? `
           <ul class="liste-fichiers liste-documents">${a.fichiers.map(f => `
             <li><span><strong>${echapper(libelleFichier(a.produit, f.role))}</strong> : ${echapper(f.nom)}
+                ${versionFichier(a, f) ? ` <span class="badge">${echapper(versionFichier(a, f))}</span>` : ''}
                 ${f.taille ? `<span class="doux petit">${taille(f.taille)}</span>` : ''}</span>
               <span><button type="button" class="btn" data-telecharger="${echapper(f.storage_path)}">Télécharger</button>
                 ${estRegie ? boutonSupprimerFichier(f.storage_path) : ''}</span></li>`).join('')}
