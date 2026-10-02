@@ -748,6 +748,10 @@ body.fenetre-ouverte { overflow: hidden; }
   @page { size: landscape; margin: 10mm; }
 }
 
+/* Recherche d'un sponsor sur une fiche produit : ses autres produits */
+.aussi-sur { display: grid; gap: .35rem; margin: -.4rem 0 1rem; font-size: .92rem; }
+.aussi-sur .badge { text-decoration: none; }
+
 /* Format attendu d'un produit (fiche produit) */
 .format-produit { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .35rem; font-size: .92rem; }
 .form-format { display: flex; flex-wrap: wrap; gap: .6rem .9rem; align-items: flex-end; background: var(--blanc, #fff);

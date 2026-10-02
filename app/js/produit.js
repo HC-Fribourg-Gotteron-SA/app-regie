@@ -1,4 +1,4 @@
-import { sb, exigerConnexion, echapper, dateCourte, notifier, taille,
+import { sb, exigerConnexion, echapper, dateCourte, notifier, taille, debounce,
          descriptionProduit, specsProduit, CATEGORIES_UNE_PAGE, lienCategorie, ongletsProduits, etatAuMatch } from './app.js';
 import { carteTraitement, CHAMPS_A_TRAITER } from './traitement.js';
 
@@ -229,7 +229,60 @@ function afficherLignes() {
     return;
   }
   $('lignes').innerHTML = etat.lignes.map((l, rang) => rangeeLigne(l, rang, cols)).join('') + rangeesSlides(cols, etat.lignes.length);
+  filtrer();
 }
+
+// ---------------------------------------------------------------------
+// Recherche d'un sponsor : filtre la liste de ce produit (Banner HCFG libres compris : « banner »)
+// et montre les autres produits où il se trouve
+// ---------------------------------------------------------------------
+function normaliser(t) { return (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+
+function filtrer() {
+  const q = normaliser($('recherche').value.trim());
+  let trouves = 0;
+  for (const tr of document.querySelectorAll('#lignes tr, #lignes-passes tr')) {
+    const ok = !q || (tr.dataset.sponsor ?? normaliser(tr.textContent)).includes(q);
+    tr.hidden = q && (!ok || tr.classList.contains('rangee-titre'));
+    if (q && ok && tr.dataset.sponsor) trouves++;
+  }
+  // un sponsor trouvé dans « Matchs passés » : on déplie
+  if (q && document.querySelector('#lignes-passes tr[data-ligne]:not([hidden])')) $('bloc-passes').open = true;
+  $('nb-trouves').textContent = q ? (trouves ? `${trouves} trouvé${trouves > 1 ? 's' : ''} sur ce produit` : 'pas sur ce produit') : '';
+}
+
+async function chercherAilleurs() {
+  const q = $('recherche').value.trim();
+  const zone = $('aussi-sur');
+  if (q.length < 2) { zone.hidden = true; return; }
+  const { data: sponsors } = await sb.rpc('rechercher_sponsors', { q, nb: 5 });
+  const ids = (sponsors || []).map(s => s.id);
+  if (!ids.length) { if (q === $('recherche').value.trim()) zone.hidden = true; return; }
+  const { data: lignes } = await sb.from('lignes_vendues')
+    .select('produit_id, produit:produits(nom, categorie, actif, ordre), contrat:contrats!inner(sponsor_id)')
+    .in('contrat.sponsor_id', ids).not('statut', 'in', '(annule,termine)');
+  if (q !== $('recherche').value.trim()) return;           // on a tapé autre chose entre-temps
+  // par sponsor : ses autres produits (actifs ; l'anneau de la pause tiers fait partie de la Pub pause tiers)
+  const parSponsor = sponsors.map(s => {
+    const produits = new Map();
+    for (const l of lignes || []) {
+      if (l.contrat.sponsor_id !== s.id || !l.produit?.actif || l.produit_id === idProduit) continue;
+      produits.set(l.produit_id, l.produit);
+    }
+    return { s, produits: [...produits].sort(([, a], [, b]) => (a.ordre ?? 100) - (b.ordre ?? 100) || a.nom.localeCompare(b.nom)) };
+  }).filter(x => x.produits.length);
+  zone.hidden = !parSponsor.length;
+  zone.innerHTML = parSponsor.map(({ s, produits }) => `
+    <div><strong>${echapper(s.nom)}</strong> <span class="doux">est aussi sur :</span>
+      ${produits.map(([id, p]) => `<a class="badge" href="produit.html?id=${id}&q=${encodeURIComponent(s.nom)}">${echapper(p.nom)}</a>`).join(' ')}
+      <a class="petit" href="sponsor.html?id=${s.id}">dossier →</a></div>`).join('');
+}
+
+const chercherAilleursPlusTard = debounce(chercherAilleurs, 300);
+$('recherche').addEventListener('input', () => { filtrer(); chercherAilleursPlusTard(); });
+// arrivé depuis « est aussi sur » : recherche déjà remplie
+const qDepart = new URLSearchParams(location.search).get('q');
+if (qDepart) { $('recherche').value = qDepart; chercherAilleursPlusTard(); }
 
 // Une diffusion (rang = position dans la liste ; empl = un seul emplacement à afficher, pour les LED 6M)
 function rangeeLigne(l, rang, cols, emplUnique = null) {
@@ -255,7 +308,7 @@ function rangeeLigne(l, rang, cols, emplUnique = null) {
            placeholder="Ajouter une remarque…">${echapper(l.consignes || '')}</textarea>`
       : `<span class="petit doux">${echapper((l.consignes || '').slice(0, 120))}${(l.consignes || '').length > 120 ? '…' : ''}</span>`,
   };
-  return `<tr data-ligne="${l.id}" class="${classeEtat(l)}">
+  return `<tr data-ligne="${l.id}" class="${classeEtat(l)}" data-sponsor="${echapper(normaliser(l.contrat?.sponsor?.nom))}">
     ${cols.map(t => `<td${t === 'Remarques' ? ' class="col-optionnelle"' : ''}>${cellules[t]}</td>`).join('')}</tr>`;
 }
 
@@ -284,7 +337,7 @@ function rangeesEmplacements(cols) {
       return rangeeLigne(l, rang++, cols, codeEmpl(e));
     }
     if (e.ligne_id) {                          // occupé par un autre produit (ex. LED 3M sur la bande 6M)
-      return `<tr class="rangee-libre">${vide({ 'N°': `<span class="doux">${++rang}</span>`,
+      return `<tr class="rangee-libre" data-sponsor="${echapper(normaliser(e.sponsor))}">${vide({ 'N°': `<span class="doux">${++rang}</span>`,
         'Sponsor': `<strong>${echapper(e.sponsor || '—')}</strong> <span class="badge">${echapper(e.produit || '')}</span>`,
         'Emplacement': codeEmpl(e) })}</tr>`;
     }
@@ -346,7 +399,7 @@ function rangeesSlides(cols, depart) {
       'Emplacement': '',
       'Remarques': '<span class="petit doux">Calculé depuis la fiche des slides</span>',
     };
-    return `<tr class="rangee-slides" data-slide="${s.id}" title="Ouvrir la fiche ${echapper(s.nom)}">
+    return `<tr class="rangee-slides" data-slide="${s.id}" data-sponsor="${echapper(normaliser(`slides ${s.nom}`))}" title="Ouvrir la fiche ${echapper(s.nom)}">
       ${cols.map(t => `<td${t === 'Remarques' ? ' class="col-optionnelle"' : ''}>${cellules[t] ?? ''}</td>`).join('')}</tr>`;
   }).join('');
 }
