@@ -255,14 +255,14 @@ function afficher() {
   // bilan en une ligne
   const morceaux = [
     demandes.length ? `${demandes.length} demande${demandes.length > 1 ? 's' : ''} à traiter` : '',
-    reste ? `${reste} spécial${reste > 1 ? 'aux' : ''} à faire dans Colosseo` : '',
+    reste ? `${reste} changement${reste > 1 ? 's' : ''} du spécial match à faire dans Colosseo` : '',
     taches ? `${taches} tâche${taches > 1 ? 's' : ''} pour ce soir` : '',
   ].filter(Boolean);
   const bilan = $('bilan');
   bilan.hidden = false;
   bilan.className = `carte bilan-match ${morceaux.length ? 'bilan-a-faire' : 'bilan-pret'}`;
   bilan.innerHTML = morceaux.length
-    ? `<strong>${morceaux.join(' · ')}</strong>${items.length - reste ? ` <span class="doux">· ${items.length - reste} spécial${items.length - reste > 1 ? 'aux' : ''} déjà fait${items.length - reste > 1 ? 's' : ''}</span>` : ''}`
+    ? `<strong>${morceaux.join(' · ')}</strong>${items.length - reste ? ` <span class="doux">· ${items.length - reste} déjà fait${items.length - reste > 1 ? 's' : ''}</span>` : ''}`
     : '<strong>✓ Tout est prêt</strong> <span class="doux">— pas de demande à traiter ni de spécial à changer pour ce match.</span>';
   afficherNotes();
   if (!etat.tableFait && estRegie && items.length) {
