@@ -208,7 +208,8 @@ function zoneFichiers(d, { role, libelle, cible }) {
         <input type="file" multiple hidden data-fichier-role="${role}">
       </div>
       ${d.fichiers[role].length ? `<ul class="liste-fichiers">${d.fichiers[role].map((f, i) => `
-        <li><span>${echapper(f.name)} <span class="doux petit">${taille(f.size)}</span> ${etatFichier(f, cible)}</span>
+        <li class="fichier-depose"><span class="fichier-nom" title="${echapper(f.name)}">${echapper(f.name)}</span>
+            <span class="fichier-etat"><span class="doux petit">${taille(f.size)}</span> ${etatFichier(f, cible)}</span>
             ${role === 'visuel' && alterne(d) ? `<label class="petit" style="margin:0">Version
               <input type="text" data-version="${i}" value="${echapper(d.versions.get(f) || '')}" placeholder="FR"
                      style="width:4.5rem;min-height:0;padding:.2rem .4rem"></label>` : ''}
