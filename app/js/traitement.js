@@ -160,7 +160,8 @@ function actions(c, existantes) {
   }
   return `
     <div class="actions-attente">
-      ${d.type !== 'suppression' || existantes.length ? '<button type="button" class="btn btn-discret" data-suite="ignore" data-confirmer>Ignorer</button>' : ''}
+      <button type="button" class="btn btn-discret btn-danger" data-supprimer-produit
+              title="Erreur ou demande qui ne se fera pas : la supprimer">Supprimer</button>
       <span class="espace"></span>
       ${principal}
     </div>`;
@@ -242,6 +243,66 @@ export async function ajouterFichierDemande({ demandeId, produitId, sponsorId, r
     ? 'Fichier envoyé, mais la migration 28 n’est pas encore exécutée : prévenez la Régie.'
     : `Fichier envoyé, mais la demande n’a pas été mise à jour : ${e2.message}`);
   return chemin;
+}
+
+// ---------------------------------------------------------------------
+// Supprimer une demande faite par erreur (demandé par Léa le 02.10.2026 : « ça joue pas, on le fera pas » ≠ « fait »).
+// Régie / admin (droit de suppression). Les fichiers de la demande et leurs lignes du dossier sponsor partent aussi.
+// Une demande déjà ajoutée à un produit (diffusion créée) ne se supprime pas : on retire le sponsor sur la fiche.
+// ---------------------------------------------------------------------
+async function fichiersDe(dossier) {
+  const { data } = await sb.storage.from('assets').list(dossier, { limit: 1000 });
+  const chemins = [];
+  for (const f of data || []) {
+    if (f.id) chemins.push(`${dossier}/${f.name}`);
+    else chemins.push(...await fichiersDe(`${dossier}/${f.name}`));     // sous-dossier d'un produit
+  }
+  return chemins;
+}
+
+async function effacerFichiers(chemins) {
+  if (!chemins.length) return;
+  const { error } = await sb.from('documents_sponsors').delete().in('storage_path', chemins);
+  if (error) console.warn('Dossier sponsor non nettoyé :', error.message);
+  const { error: e2 } = await sb.storage.from('assets').remove(chemins);
+  if (e2) console.warn('Fichiers non supprimés :', e2.message);
+}
+
+export async function supprimerDemande(demandeId) {
+  const { count } = await sb.from('lignes_vendues').select('id', { count: 'exact', head: true }).eq('demande_id', demandeId);
+  if (count) throw new Error('Cette demande a déjà été ajoutée à un produit : retirez plutôt le sponsor sur la fiche produit.');
+  await effacerFichiers(await fichiersDe(`demandes/${demandeId}`));
+  const { error } = await sb.from('demandes').delete().eq('id', demandeId);
+  if (error) throw new Error(`Suppression impossible : ${error.message}`);
+  return { demandeSupprimee: true };
+}
+
+// Un seul produit d'une demande ; si c'était le dernier, toute la demande part
+export async function supprimerProduitDemande(demandeId, produitId) {
+  const { data: produits } = await sb.from('demandes_produits').select('produit_id, traite_le').eq('demande_id', demandeId);
+  if ((produits || []).length <= 1) return supprimerDemande(demandeId);
+  await effacerFichiers(await fichiersDe(`demandes/${demandeId}/${produitId}`));
+  const { error } = await sb.from('demandes_produits').delete().eq('demande_id', demandeId).eq('produit_id', produitId);
+  if (error) throw new Error(`Suppression impossible : ${error.message}`);
+  // les autres produits sont tous traités : la demande est traitée
+  if (produits.filter(p => p.produit_id !== produitId).every(p => p.traite_le)) {
+    await sb.from('demandes').update({ statut: 'traitee' }).eq('id', demandeId);
+  }
+  return { demandeSupprimee: false };
+}
+
+// Confirmation commune (texte clair) puis suppression ; renvoie true si c'est fait
+export async function confirmerSuppressionProduit({ demandeId, produitId, produitNom, sponsorNom }) {
+  const { count } = await sb.from('demandes_produits').select('produit_id', { count: 'exact', head: true }).eq('demande_id', demandeId);
+  const seul = (count ?? 1) <= 1;
+  if (!confirm(`Supprimer ${seul ? 'la demande' : `« ${produitNom} » de la demande`} de ${sponsorNom} ?\n\n`
+    + 'À utiliser pour une erreur ou une demande qui ne se fera pas : '
+    + (seul ? 'la demande et ses fichiers disparaissent de l’outil.' : 'ce produit et ses fichiers disparaissent de la demande.'))) return false;
+  try {
+    const r = await supprimerProduitDemande(demandeId, produitId);
+    notifier(r.demandeSupprimee ? 'Demande supprimée' : `${produitNom} supprimé de la demande`);
+    return true;
+  } catch (err) { notifier(err.message, 'erreur'); return false; }
 }
 
 function controle(f, cible) {
@@ -392,6 +453,12 @@ function brancher(el) {
       }
       // un emplacement choisi ici n'est plus libre sur les autres cartes du même produit
       for (const [x, autre] of cartes) if (autre.a.produit_id === c.a.produit_id) dessiner(x);
+      return;
+    }
+    if (e.target.closest('[data-supprimer-produit]')) {
+      const fait = await confirmerSuppressionProduit({ demandeId: c.a.demande_id, produitId: c.a.produit_id,
+        produitNom: c.ctx.p?.nom || 'ce produit', sponsorNom: nomSponsor(c.a.demande) });
+      if (fait) { cartes.delete(k); oublierContextes(); await c.options.apres?.({ supprime: true }); }
       return;
     }
     const bouton = e.target.closest('[data-suite]');

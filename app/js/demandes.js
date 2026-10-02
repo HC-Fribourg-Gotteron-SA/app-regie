@@ -1,6 +1,6 @@
 import { sb, exigerConnexion, LIBELLES, echapper, dateCourte, dateHeure, notifier, debounce, taille, libelleFichier,
          depuis, initiales } from './app.js';
-import { carteTraitement, CHAMPS_A_TRAITER, ajouterFichierDemande, boutonAjoutFichier } from './traitement.js';
+import { carteTraitement, CHAMPS_A_TRAITER, ajouterFichierDemande, boutonAjoutFichier, supprimerDemande } from './traitement.js';
 
 const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
@@ -281,6 +281,12 @@ async function ouvrir(id, { silencieux = false } = {}) {
   afficherTraitements(d);
 }
 
+// Après un traitement ou une suppression : on rouvre la demande, ou on ferme si elle n'existe plus
+const rouvrirOuFermer = (id) => async () => {
+  await charger();
+  if (etat.demandes.some(x => x.id === id)) ouvrir(id); else fermer();
+};
+
 // Produits pas encore traités (Régie) : la carte de traitement, identique à celle de la fiche produit
 async function afficherTraitements(d) {
   const zones = [...document.querySelectorAll('#d-corps [data-carte-traitement]')];
@@ -291,7 +297,7 @@ async function afficherTraitements(d) {
   if (etat.ouverte !== d.id) return;
   for (const zone of zones) {
     const a = (data || []).find(x => x.produit_id === zone.dataset.carteTraitement);
-    if (a) carteTraitement(zone, a, { estRegie, mode: 'demande', apres: async () => { await charger(); ouvrir(d.id); } });
+    if (a) carteTraitement(zone, a, { estRegie, mode: 'demande', apres: rouvrirOuFermer(d.id) });
   }
 }
 
@@ -368,6 +374,7 @@ function piedRegie(d) {
             <button class="btn" data-statut="en_cours">Rouvrir</button>`;
   }
   return `<span class="indication">Ajoutez chaque produit ci-dessus (ou sur sa fiche, c’est la même chose) ; la demande passe en « Traitée » quand tout est fait.</span>
+    <button class="btn btn-discret btn-danger" id="btn-supprimer-demande" title="Erreur ou demande qui ne se fera pas">Supprimer la demande…</button>
     <button class="btn" data-statut="question">Poser une question</button>
     <button class="btn" data-statut="traitee" title="Normalement automatique quand tous les produits sont ajoutés">Marquer comme traitée</button>`;
 }
@@ -413,6 +420,16 @@ function brancherActions(d) {
     await enregistrer(d.id, { statut, reponse_regie: reponse || null },
       { en_cours: 'Demande prise en charge', question: 'Question envoyée au Sponsoring', traitee: 'Demande traitée' }[statut]);
   }));
+
+  $('btn-supprimer-demande')?.addEventListener('click', async () => {
+    if (!confirm(`Supprimer la demande de ${nomSponsor(d)} ?\n\nÀ utiliser pour une erreur ou une demande qui ne se fera pas : `
+      + 'elle disparaît de l’outil avec ses fichiers.')) return;
+    try {
+      await supprimerDemande(d.id);
+      notifier('Demande supprimée');
+      await rouvrirOuFermer(d.id)();
+    } catch (err) { notifier(err.message, 'erreur'); }
+  });
 
   $('btn-repondre')?.addEventListener('click', async () => {
     const texte = $('d-complement').value.trim();

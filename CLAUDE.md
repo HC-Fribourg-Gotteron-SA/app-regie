@@ -38,6 +38,11 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
      **au match** (➕ ce soir, ➖ celles du match précédent, 🔄) avec case « Fait » + « Détails ». Les changements à la
      saison faits sur une fiche (retrait, case À l'écran) **ne sont pas listés** (Colosseo fait au même moment).
      Ne PAS remettre une liste de « tous les changements depuis le match précédent » (confusion Ajouter / Fait).
+   - **Supprimer (erreur, ne se fera pas)** (02.10.2026, demandé par Léa : ni « traité » ni « fait ») : carte de traitement
+     (« Ignorer » remplacé par « Supprimer »), détail d'une demande (« Supprimer la demande… », Régie / admin) et Match du
+     jour (demande à traiter → `confirmerSuppressionProduit` de traitement.js : un produit, ou toute la demande si c'est le
+     dernier, avec ses fichiers et lignes documents_sponsors ; refusé si une diffusion a déjà été créée) ; ligne du
+     spécial match pas encore faite → diffusion `statut = annule` (+ anneau couplé).
    - **Fichier arrivé après la demande = option A** : « + Ajouter un fichier » sur chaque produit de la demande
      (Sponsoring et Régie) → RPC `fichier_ajoute_demande` (28) : produit déjà ajouté → revient à traiter avec
      « Mettre le nouveau visuel » sur la même diffusion (`ligne_id` gardé), demande traitée → « Nouvelle ».

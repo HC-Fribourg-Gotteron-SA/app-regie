@@ -2,6 +2,7 @@
 // puis toute la playlist pour vérifier. Les playlists Colosseo restent d'un match à l'autre.
 import { sb, exigerConnexion, echapper, dateCourte, notifier, toutesLesLignes, libelleFichier, taille } from './app.js';
 import { calculerChangements, consigne, PASSE } from './changements.js';
+import { confirmerSuppressionProduit } from './traitement.js';
 
 const { profil } = await exigerConnexion({ roles: ['regie', 'admin'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
@@ -364,7 +365,9 @@ function carteDemande(i) {
       </div>
       <div class="changement-actions">
         ${estRegie ? `<a class="btn btn-principal" title="Ouvrir la demande pour la traiter (comme dans Demandes)"
-            href="demandes.html?id=${a.demande_id}&retour=${encodeURIComponent(`match-du-jour.html?match=${etat.match.id}`)}">${BOUTON_DEMANDE[d.type] || 'Ajouter'}</a>`
+            href="demandes.html?id=${a.demande_id}&retour=${encodeURIComponent(`match-du-jour.html?match=${etat.match.id}`)}">${BOUTON_DEMANDE[d.type] || 'Ajouter'}</a>
+            <button type="button" class="btn btn-discret btn-danger" data-supprimer-demande="${a.demande_id}|${a.produit_id}"
+              title="Erreur ou demande qui ne se fera pas">Supprimer</button>`
                    : '<span class="doux petit">en attente de la Régie</span>'}
       </div>
     </div>`;
@@ -424,6 +427,8 @@ function carteChangement(i) {
         ${a?.storage_path && i.action !== 'enlever' ? `<button type="button" class="btn btn-discret" data-telecharger="${echapper(a.storage_path)}">Télécharger</button>` : ''}
         ${i.l ? `<button type="button" class="btn btn-discret" data-ouvrir="${i.ligne_id}|${i.action}"
           title="Fichiers, matchs, remarques…">Détails</button>` : ''}
+        ${estRegie && i.l && i.action !== 'enlever' && !fait ? `<button type="button" class="btn btn-discret btn-danger"
+          data-supprimer-ligne="${i.anneau ? i.pubId : i.ligne_id}" title="Erreur, ne se fera pas : supprimer cette diffusion">Supprimer</button>` : ''}
         ${estRegie ? `<label class="case-fait"><input type="checkbox" data-fait="${i.ligne_id}|${i.action}" ${fait ? 'checked' : ''}
           ${etat.tableFait ? '' : 'disabled'}> Fait</label>` : ''}
       </div>
@@ -610,6 +615,35 @@ document.addEventListener('click', async (e) => {
   const { data, error } = await sb.storage.from('assets').createSignedUrl(b.dataset.telecharger, 600, { download: true });
   if (error) return notifier(`Téléchargement impossible : ${error.message}`, 'erreur');
   location.href = data.signedUrl;
+});
+
+// Supprimer (erreur, ne se fera pas) — demandé par Léa le 02.10.2026 : ni « traité » ni « fait »
+document.addEventListener('click', async (e) => {
+  const bd = e.target.closest('[data-supprimer-demande]');
+  if (bd) {
+    const [demandeId, produitId] = bd.dataset.supprimerDemande.split('|');
+    const a = etat.demandesMatch.find(x => x.demande_id === demandeId && x.produit_id === produitId);
+    bd.disabled = true;
+    const fait = await confirmerSuppressionProduit({ demandeId, produitId, produitNom: a?.produit?.nom || 'ce produit',
+      sponsorNom: a?.demande?.sponsor?.nom || a?.demande?.sponsor_nom_saisi || 'ce sponsor' });
+    bd.disabled = false;
+    if (fait) await chargerMatch();
+    return;
+  }
+  // diffusion « au match » créée par erreur : annulée (disparaît des fiches et du match, reste dans l'historique)
+  const bl = e.target.closest('[data-supprimer-ligne]');
+  if (!bl) return;
+  const l = etat.lignes.get(bl.dataset.supprimerLigne);
+  if (!l) return;
+  if (!confirm(`Supprimer ${l.contrat?.sponsor?.nom || 'ce sponsor'} de « ${l.produit?.nom || 'ce produit'} » ?\n\n`
+    + 'À utiliser pour une erreur ou quelque chose qui ne se fera pas : la diffusion est annulée'
+    + `${l.ligne_couplee_id ? ' (anneau LED compris)' : ''} et disparaît de l’outil, pour ce match et les suivants.`)) return;
+  bl.disabled = true;
+  const { error } = await sb.from('lignes_vendues').update({ statut: 'annule' }).in('id', [l.id, l.ligne_couplee_id].filter(Boolean));
+  bl.disabled = false;
+  if (error) return notifier(`Suppression impossible : ${error.message}`, 'erreur');
+  notifier('Diffusion supprimée');
+  await charger();
 });
 
 // « Pour ce soir » : ajouter, cocher, supprimer
