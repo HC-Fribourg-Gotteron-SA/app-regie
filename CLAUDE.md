@@ -83,10 +83,10 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
 0-septies. **Durée et son lus dans la vidéo (02.10.2026, demandé par Léa, pas de migration, pas encore testé)** :
    dans la demande, plus de champ « Durée du spot » à remplir : la durée est lue dans la vidéo déposée (la plus
    longue s'il y a plusieurs versions) et enregistrée dans `duree_s`. Le son est détecté (`js/son-video.js` : piste
-   son dans le MP4 / MOV, puis décodage pour voir si elle est muette) → « Avec / Sans son » coché tout seul (le
-   Sponsoring peut changer ; ⚠ si son choix contredit la vidéo). Affiché à côté de chaque fichier (« 15 s · 🔊 avec
-   son »), aussi dans la carte de traitement ; « Ajouter » / « Mettre le nouveau visuel » reprennent la durée de la
-   vidéo (demande + diffusion). WebM : son non lu. Test : `pisteAudioIsoBmff` dans Node (OK) ; à tester par Léa avec
+   son dans le MP4 / MOV, puis décodage pour voir si elle est muette) et **seulement noté** : plus de boutons
+   Avec / Sans son (Léa : « juste que ça soit noté »), même si le son n'est pas lu (`avec_son` reste null, « la Régie
+   vérifiera »). Affiché à côté de chaque fichier (« 15 s · 🔊 avec son »), aussi dans la carte de traitement ;
+   « Ajouter » / « Mettre le nouveau visuel » reprennent la durée et le son de la vidéo (demande + diffusion). WebM : son non lu. Test : `pisteAudioIsoBmff` dans Node (OK) ; à tester par Léa avec
    un vrai spot avec son, un sans son.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis

@@ -517,11 +517,18 @@ async function traiter(k, suite, bouton) {
       && !confirm('Aucun nouveau fichier pour ce produit. Continuer quand même ?')) return;
 
   bouton.disabled = true;
-  // durée du spot lue dans la vidéo (plus de saisie à la main) : reprise par la diffusion
-  const durees = ['ajoute', 'visuel'].includes(suite) ? nouveaux.filter(f => f.role === 'visuel' && f.duree_s).map(f => f.duree_s) : [];
+  // durée du spot et son lus dans la vidéo (plus de saisie à la main) : repris par la diffusion
+  const videos = ['ajoute', 'visuel'].includes(suite) ? nouveaux.filter(f => f.role === 'visuel') : [];
+  const durees = videos.map(f => f.duree_s).filter(Boolean);
   const duree = durees.length ? Math.max(1, Math.round(Math.max(...durees))) : null;
-  if (duree && duree !== a.duree_s) {
-    await sb.from('demandes_produits').update({ duree_s: duree }).eq('demande_id', a.demande_id).eq('produit_id', a.produit_id);
+  const sons = p.famille === 'temps' && p.support === 'Vidéotron' ? videos.map(f => f.son).filter(Boolean) : [];
+  const avecSon = sons.length ? sons.includes('oui') : null;
+  const lu = {
+    ...(duree && duree !== a.duree_s ? { duree_s: duree } : {}),
+    ...(avecSon !== null && avecSon !== a.avec_son ? { avec_son: avecSon } : {}),
+  };
+  if (Object.keys(lu).length) {
+    await sb.from('demandes_produits').update(lu).eq('demande_id', a.demande_id).eq('produit_id', a.produit_id);
   }
   const { data, error } = await sb.rpc('traiter_produit', {
     p_demande: a.demande_id,
@@ -539,9 +546,10 @@ async function traiter(k, suite, bouton) {
   });
   bouton.disabled = false;
   if (error) return notifier(`Impossible (rien n'a été modifié) : ${error.message}`, 'erreur');
-  // nouveau visuel sur une diffusion existante : la durée suit la nouvelle vidéo
-  if (suite === 'visuel' && duree && data?.ligne_id) {
-    await sb.from('lignes_vendues').update({ duree_s: duree }).eq('id', data.ligne_id);
+  // nouveau visuel sur une diffusion existante : durée et son suivent la nouvelle vidéo
+  const suit = { ...(duree ? { duree_s: duree } : {}), ...(avecSon !== null ? { avec_son: avecSon } : {}) };
+  if (suite === 'visuel' && data?.ligne_id && Object.keys(suit).length) {
+    await sb.from('lignes_vendues').update(suit).eq('id', data.ligne_id);
   }
 
   notifier(`${{ ajoute: 'Ajouté au produit', visuel: 'Nouveau visuel mis', retire: 'Diffusion arrêtée', ignore: 'Demande ignorée pour ce produit' }[suite]} · ${p.nom}`

@@ -132,8 +132,8 @@ function detailDe(id) {
   if (!etat.details.has(id)) {
     const p = etat.produits.get(id);
     etat.details.set(id, { quand: p?.mode_vente === 'match' ? 'match' : 'saison', dates: new Set(), duree: null, remarque: '',
-                           son: null, anneau: null,       // 'oui' / 'non' / null = pas encore choisi
-                           sonManuel: false,              // true = choisi à la main (la vidéo ne le change plus)
+                           son: null,                     // lu dans la vidéo : 'oui' / 'non' / null = pas lu
+                           anneau: null,                  // 'oui' / 'non' / null = pas encore choisi
                            fichiers: { visuel: [], anneau: [] } });
   }
   return etat.details.get(id);
@@ -170,20 +170,20 @@ function majDepuisFichiers(d) {
   const lus = d.fichiers.visuel.map(f => controles.get(f)).filter(Boolean);
   const durees = lus.map(c => c.duree).filter(Boolean);
   d.duree = durees.length ? Math.max(...durees) : null;
-  if (d.sonManuel) return;
   const sons = lus.map(c => c.son).filter(Boolean);
   d.son = sons.includes('oui') ? 'oui' : sons.length ? 'non' : null;
 }
 
-// Son détecté dans la vidéo, sous le choix Avec / Sans son
-function noteSon(d) {
-  const sons = d.fichiers.visuel.map(f => controles.get(f)?.son).filter(Boolean);
-  if (!sons.length) return d.fichiers.visuel.length ? '' : '<span class="doux">Rempli tout seul quand la vidéo est déposée.</span>';
-  const detecte = sons.includes('oui') ? 'oui' : 'non';
-  const texte = sons.includes('oui') ? '🔊 La vidéo a du son.' : sons.includes('muet') ? '🔇 La piste son de la vidéo est muette.' : '🔇 La vidéo n’a pas de son.';
-  return d.son && d.son !== detecte
-    ? `<span class="badge badge-a-venir">⚠ ${texte} Vous avez choisi « ${d.son === 'oui' ? 'Avec son' : 'Sans son'} ».</span>`
-    : `<span class="doux">${texte}</span>`;
+// Son : seulement noté, lu dans la vidéo (pas de choix à faire, décidé par Léa le 02.10.2026)
+function texteSon(d) {
+  const lus = d.fichiers.visuel.map(f => controles.get(f));
+  if (!lus.length) return '<span class="doux">lu automatiquement quand la vidéo est déposée</span>';
+  if (lus.some(c => !c)) return '<span class="doux">lecture de la vidéo…</span>';
+  const sons = lus.map(c => c.son).filter(Boolean);
+  if (sons.includes('oui')) return '<strong>🔊 Avec son</strong> <span class="doux">(lu dans la vidéo)</span>';
+  if (sons.includes('muet')) return '<strong>🔇 Sans son</strong> <span class="doux">(la piste son de la vidéo est muette)</span>';
+  if (sons.length) return '<strong>🔇 Sans son</strong> <span class="doux">(lu dans la vidéo)</span>';
+  return '<span class="doux">son pas lu dans ce fichier : la Régie vérifiera</span>';
 }
 
 function texteDuree(d) {
@@ -270,8 +270,7 @@ function afficherDetails() {
           <div class="choix choix-compact">${matchs}</div>
         </div>
         ${demandeSon(p) ? `
-          <div class="champ-ligne"><span class="etiquette">Son</span>${choixOuiNon(id, 'son', d.son, 'Avec son', 'Sans son')}
-            <span class="petit" data-note-son>${noteSon(d)}</span></div>` : ''}
+          <div class="champ-ligne"><span class="etiquette">Son</span> <span class="petit">${texteSon(d)}</span></div>` : ''}
         ${demandeAnneau(p) ? `
           <div class="champ-ligne"><span class="etiquette">Anneau LED</span>${choixOuiNon(id, 'anneau', d.anneau, 'Avec anneau LED', 'Sans anneau LED')}</div>` : ''}
         ${p.famille === 'temps' || d.duree ? `
@@ -325,10 +324,6 @@ $('details-produits').addEventListener('input', (e) => {
   if (t.dataset.choix) {
     d[t.dataset.choix] = t.value;
     if (t.dataset.choix === 'anneau') bloc.querySelector('[data-role-bloc=anneau]').hidden = t.value !== 'oui';
-    if (t.dataset.choix === 'son') {
-      d.sonManuel = true;
-      bloc.querySelector('[data-note-son]').innerHTML = noteSon(d);
-    }
   } else if (t.type === 'radio') {
     d.quand = t.value;
     bloc.querySelector('.matchs-produit').hidden = d.quand !== 'match';
@@ -467,7 +462,6 @@ $('form-demande').addEventListener('submit', async (e) => {
     if (d.quand === 'match' && !d.dates.size) {
       return erreur(`${p.nom} : cochez au moins un match, ou choisissez « Toute la saison ».`);
     }
-    if (demandeSon(p) && !d.son) return erreur(`${p.nom} : indiquez si le spot est avec ou sans son.`);
     if (demandeAnneau(p) && !d.anneau) return erreur(`${p.nom} : indiquez si c'est avec ou sans anneau LED.`);
   }
 
@@ -488,7 +482,7 @@ $('form-demande').addEventListener('submit', async (e) => {
       const { error: e2 } = await sb.from('demandes_produits').insert(produits.map(produit_id => {
         const d = detailDe(produit_id), p = etat.produits.get(produit_id);
         return {
-          avec_son: demandeSon(p) ? d.son === 'oui' : null,
+          avec_son: demandeSon(p) && d.son ? d.son === 'oui' : null,      // lu dans la vidéo ; null = pas encore lu
           avec_anneau: demandeAnneau(p) ? d.anneau === 'oui' : null,
           demande_id: demande.id,
           produit_id,
