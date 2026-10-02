@@ -103,7 +103,7 @@ async function charger() {
   etat.couplees = new Map();
   if (couplees.length) {
     const { data } = await sb.from('lignes_vendues')
-      .select('id, assets(id, nom_visuel, statut, version, variante, depose_le, storage_path, mime)').in('id', couplees);
+      .select('id, regle_rotation, assets(id, nom_visuel, statut, version, variante, depose_le, storage_path, mime)').in('id', couplees);
     etat.couplees = new Map((data || []).map(c => [c.id, c]));
   }
   await chargerSlides(p);
@@ -303,7 +303,7 @@ function rangeeLigne(l, rang, cols, emplUnique = null) {
     'Emplacement': empl || '<span class="badge badge-a-venir">à placer</span>',
     'Visuel': visuelEcran,
     'Visuel écran': visuelEcran,
-    'Anneau LED': l.ligne_couplee_id ? 'oui' : '<span class="doux">non</span>',
+    'Anneau LED': l.ligne_couplee_id ? `oui${versionsAnneau(etat.couplees.get(l.ligne_couplee_id))}` : '<span class="doux">non</span>',
     'Remarques': estRegie
       ? `<textarea class="remarque-ligne petit" data-remarque-ligne="${l.id}" rows="1"
            placeholder="Ajouter une remarque…">${echapper(l.consignes || '')}</textarea>`
@@ -435,6 +435,13 @@ function celluleVisuel(assets, ligne) {
   return `<span class="petit">${echapper(a.nom_visuel)}</span>${alterne
     ? ` <span class="badge">${versions.map(echapper).join(' / ')} · 1 match sur 2</span>` : ''}${a.statut === 'a_valider'
     ? ` <span class="etat etat-attente">à valider</span>${estRegie ? ` <button type="button" class="btn btn-discret petit" data-valider="${a.id}">Valider</button>` : ''}` : ''}`;
+}
+
+// Anneau LED qui alterne FR / DE un match sur deux (ex. la Mobilière : seulement l'anneau change)
+function versionsAnneau(couplee) {
+  const versions = [...new Set((couplee?.assets || []).filter(x => x.statut === 'valide' && x.variante).map(x => x.variante))];
+  return couplee?.regle_rotation === 'alterner' && versions.length >= 2
+    ? ` <span class="badge">${versions.map(echapper).join(' / ')} · 1 match sur 2</span>` : '';
 }
 
 // Liste des visuels (dernier d'abord, anciennes versions grisées)

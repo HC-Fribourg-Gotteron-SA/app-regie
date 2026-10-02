@@ -99,6 +99,12 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    parmi les matchs de la diffusion, à partir du match de départ. Carte de traitement : version modifiable par fichier.
    Match du jour (bloc 2) : « 🔁 Activer DE · désactiver FR » (`changementDeVersion` dans changements.js), même pour
    une diffusion à la saison. Fiche produit : badge « FR / DE · 1 match sur 2 ».
+   **Anneau LED aussi (migration 36, à exécuter APRÈS la 34)** : ex. la Mobilière, seul l'anneau change VF / DE. Chaque
+   zone de fichiers de la demande (vidéo, anneau) a sa propre question « Plusieurs fichiers : comment passent-ils ? »
+   (`d.rotation[role]`, `d.premiere[role]`). Stocké : `rotation_anneau`, `ordre_versions_anneau` ; `versions` a des clés
+   « role__nom » (anciennes clés sans rôle = vidéo). `traiter_produit` fait alterner la ligne couplée de l'anneau et
+   garde la `variante` des visuels d'anneau. Match du jour : « Anneau LED : activer DE · désactiver FR ». Fiche : colonne
+   Anneau LED « oui + FR / DE · 1 match sur 2 ».
    **Vidéo du chef (Leguriviera) : PAS encore faite**, idée proposée à Léa et en attente de son accord : une demande
    « Changement de visuel » avec les matchs du chef cochés, vidéo « à venir » ajoutée la veille / le jour même
    (« + Ajouter un fichier » → pour quel match ?), Match du jour « vidéo du chef ce soir » / ⏳ pas reçue, puis
@@ -204,7 +210,8 @@ outil-regie/
 │   ├── 32_formats_produits.sql ← formats du media kit (dimensions, PNG/JPEG/MP4/MOV) + produits.remarque_format
 │   ├── 33_supprimer_fichier.sql ← RPC supprimer_fichier(chemin) : mauvais fichier (visuel refusé, ancien revient, visuel attendu)
 │   ├── 34_versions_visuels.sql ← FR / DE un match sur deux (choisir_asset, traiter_produit, demandes_produits.rotation)
-│   └── 35_anneau_tous_videotron.sql ← avec / sans anneau LED pour tout le vidéotron + action scenes (« Anneau LED couplé »)
+│   ├── 35_anneau_tous_videotron.sql ← avec / sans anneau LED pour tout le vidéotron + action scenes (« Anneau LED couplé »)
+│   └── 36_versions_anneau.sql ← FR / DE un match sur deux aussi pour l'anneau LED (traiter_produit, rotation_anneau)
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)

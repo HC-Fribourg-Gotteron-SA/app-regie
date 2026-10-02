@@ -45,7 +45,11 @@ function contexte(produitId) {
       const { data: matchs } = await sb.from('matchs').select('date_heure, adversaire');
       adversaires = new Map((matchs || []).map(m => [jourLocal(m.date_heure), m.adversaire]));
     }
-    return { p, anneau, lignes: lignes || [], emplacements };
+    // diffusions de l'anneau LED couplées (leur règle « un match sur deux » est à part)
+    const idsCouplees = (lignes || []).map(l => l.ligne_couplee_id).filter(Boolean);
+    const { data: couplees } = idsCouplees.length
+      ? await sb.from('lignes_vendues').select('*').in('id', idsCouplees) : { data: [] };
+    return { p, anneau, lignes: lignes || [], emplacements, couplees: new Map((couplees || []).map(l => [l.id, l])) };
   })());
   return contextes.get(produitId);
 }
@@ -117,9 +121,11 @@ function dessiner(k) {
       ${proches.map(s => `<strong>${echapper(s.nom)}</strong>`).join(', ')}. Si c'est le même, corrigez la demande avant d'ajouter.</p>` : ''}
     ${a.type_vente === 'match' ? `<div class="petit" style="margin-bottom:.7rem"><span class="titre-bloc">Matchs</span><br>${(a.dates_matchs || []).map(j =>
       `${dateCourte(j + 'T12:00')}${adversaires?.has(j) ? ` · ${echapper(adversaires.get(j))}` : ''}`).join('<br>')}</div>` : ''}
-    ${versionsAlternees(c) && d.type !== 'suppression' ? `<p class="message message-info petit">Un match sur deux :
-      <strong>${versionsAlternees(c).map(echapper).join(' / ')}</strong>${a.rotation === 'alterner' ? ' (la 1re au prochain match)' : ''}.
-      Vérifiez la version de chaque fichier.</p>` : ''}
+    ${d.type === 'suppression' ? '' : [['visuel', 'Vidéo', a.rotation], ['anneau', 'Anneau LED', a.rotation_anneau]]
+      .filter(([role]) => versionsAlternees(c, role) && (role === 'visuel' || a.avec_anneau || ligneVisee(c)?.ligne_couplee_id))
+      .map(([role, quoi, rotation]) => `<p class="message message-info petit">${quoi} un match sur deux :
+        <strong>${versionsAlternees(c, role).map(echapper).join(' / ')}</strong>${rotation === 'alterner' ? ' (la 1re au prochain match)' : ''}.
+        Vérifiez la version de chaque fichier.</p>`).join('')}
     ${d.type === 'suppression' ? '' : `
       <div class="titre-bloc">Fichiers</div>
       <div style="margin-bottom:.7rem">${blocFichiers(c)}</div>`}
@@ -196,7 +202,9 @@ async function chargerFichiers(k) {
     const role = i > 0 ? f.name.slice(0, i) : 'visuel';
     const nomCourt = i > 0 ? f.name.slice(i + 2) : f.name;
     return { role, nomCourt, storage_path: `${dossier}/${f.name}`, nom_visuel: nomCourt.replace(/\.[^.]+$/, ''),
-             variante: role === 'visuel' ? (a.versions?.[nomCourt] || devinerVersion(nomCourt)) : '',
+             // version donnée dans la demande (clé « role__nom » ; anciennes demandes : nom seul = vidéo)
+             variante: a.versions?.[`${role}__${nomCourt}`] || (role === 'visuel' && a.versions?.[nomCourt])
+                       || devinerVersion(nomCourt),
              mime: f.metadata?.mimetype || null, taille_octets: f.metadata?.size || null,
              largeur_px: null, hauteur_px: null, duree_s: null, sonde: 'analyse…' };
   });
@@ -222,7 +230,7 @@ function blocFichiers(c) {
             <span class="petit">${echapper(f.nomCourt)}</span>
             <span class="doux petit">${taille(f.taille_octets || 0)} · ${echapper(f.sonde)}</span>
             ${choix.dejaMis.has(f.storage_path) ? '<span class="badge">déjà mis</span>' : controle(f, cible)}
-            ${role === 'visuel' && versionsAlternees(c) && !choix.dejaMis.has(f.storage_path) ? `<label class="petit" style="margin:0">Version
+            ${versionsAlternees(c, role) && !choix.dejaMis.has(f.storage_path) ? `<label class="petit" style="margin:0">Version
               <input type="text" data-variante="${echapper(f.storage_path)}" value="${echapper(f.variante || '')}" placeholder="FR"
                      style="width:4.5rem;min-height:0;padding:.2rem .4rem"></label>` : ''}
             <button type="button" class="btn btn-discret petit" data-fichier="${echapper(f.storage_path)}">Télécharger</button>
@@ -242,10 +250,14 @@ function ligneVisee(c) {
   if (!a.ligne_id && a.demande.type !== 'changement_visuel') return null;
   return ctx.lignes.find(l => l.id === (a.ligne_id || choix.ligne_id)) || null;
 }
-// FR / DE un match sur deux : ordre des versions de la demande, sinon celui de la diffusion
-function versionsAlternees(c) {
-  if (c.a.rotation === 'alterner' && c.a.ordre_versions?.length >= 2) return c.a.ordre_versions;
-  const l = ligneVisee(c);
+// FR / DE un match sur deux, pour la vidéo (role 'visuel') ou l'anneau LED (role 'anneau', sa diffusion couplée) :
+// ordre des versions de la demande, sinon celui de la diffusion
+function versionsAlternees(c, role = 'visuel') {
+  const [rotation, ordre] = role === 'anneau'
+    ? [c.a.rotation_anneau, c.a.ordre_versions_anneau] : [c.a.rotation, c.a.ordre_versions];
+  if (rotation === 'alterner' && ordre?.length >= 2) return ordre;
+  let l = ligneVisee(c);
+  if (role === 'anneau') l = l?.ligne_couplee_id ? c.ctx.couplees?.get(l.ligne_couplee_id) : null;
   return l?.regle_rotation === 'alterner' && l.ordre_variantes?.length >= 2 ? l.ordre_variantes : null;
 }
 
@@ -542,10 +554,11 @@ async function traiter(k, suite, bouton) {
       && !confirm('Aucun emplacement choisi (ou pas assez) : le logo sera « à placer ».\nAjouter quand même ?')) return;
   if (suite === 'visuel' && !nouveaux.length
       && !confirm('Aucun nouveau fichier pour ce produit. Continuer quand même ?')) return;
-  const ordre = versionsAlternees(cartes.get(k));
-  const sansVersion = ordre ? nouveaux.filter(f => f.role === 'visuel' && !ordre.includes(f.variante)) : [];
+  // FR / DE un match sur deux : ordre des versions de la vidéo et de l'anneau LED (null = pas d'alternance)
+  const ordre = { visuel: versionsAlternees(cartes.get(k), 'visuel'), anneau: versionsAlternees(cartes.get(k), 'anneau') };
+  const sansVersion = nouveaux.filter(f => ordre[f.role] && !ordre[f.role].includes(f.variante));
   if (['ajoute', 'visuel'].includes(suite) && sansVersion.length
-      && !confirm(`Version à vérifier pour ${sansVersion.map(f => f.nomCourt).join(', ')} : attendu ${ordre.join(' ou ')}.\n`
+      && !confirm(`Version à vérifier pour ${sansVersion.map(f => `${f.nomCourt} (attendu ${ordre[f.role].join(' ou ')})`).join(', ')}.\n`
         + 'Un fichier sans la bonne version ne passera pas dans l’alternance. Continuer quand même ?')) return;
 
   bouton.disabled = true;
@@ -573,7 +586,7 @@ async function traiter(k, suite, bouton) {
       fichiers: ['ajoute', 'visuel'].includes(suite)
         ? nouveaux.map(({ role, storage_path, nom_visuel, mime, taille_octets, largeur_px, hauteur_px, duree_s, variante }) =>
             ({ role, storage_path, nom_visuel, mime, taille_octets, largeur_px, hauteur_px, duree_s,
-               variante: ordre && role === 'visuel' ? variante || null : null }))
+               variante: ordre[role] ? variante || null : null }))
         : [],
     },
   });

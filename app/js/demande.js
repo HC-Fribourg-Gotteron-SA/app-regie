@@ -135,7 +135,9 @@ function detailDe(id) {
                            son: null,                     // lu dans la vidéo : 'oui' / 'non' / null = pas lu
                            anneau: null,                  // 'oui' / 'non' / null = pas encore choisi
                            // plusieurs fichiers : 'alterner' (un match sur deux, ex. FR / DE) / 'non' / null = pas choisi
-                           rotation: null, versions: new Map(), premiere: '',   // versions : File -> 'FR'
+                           // par zone de fichiers (visuel = vidéo / logo, anneau = visuel de l'anneau LED)
+                           rotation: { visuel: null, anneau: null }, premiere: { visuel: '', anneau: '' },
+                           versions: new Map(),           // File -> 'FR'
                            fichiers: { visuel: [], anneau: [] } });
   }
   return etat.details.get(id);
@@ -210,45 +212,48 @@ function zoneFichiers(d, { role, libelle, cible }) {
       ${d.fichiers[role].length ? `<ul class="liste-fichiers">${d.fichiers[role].map((f, i) => `
         <li class="fichier-depose"><span class="fichier-nom" title="${echapper(f.name)}">${echapper(f.name)}</span>
             <span class="fichier-etat"><span class="doux petit">${taille(f.size)}</span> ${etatFichier(f, cible)}</span>
-            ${role === 'visuel' && alterne(d) ? `<label class="petit" style="margin:0">Version
-              <input type="text" data-version="${i}" value="${echapper(d.versions.get(f) || '')}" placeholder="FR"
+            ${alterne(d, role) ? `<label class="petit" style="margin:0">Version
+              <input type="text" data-version="${i}" data-role="${role}" value="${echapper(d.versions.get(f) || '')}" placeholder="FR"
                      style="width:4.5rem;min-height:0;padding:.2rem .4rem"></label>` : ''}
             <button type="button" class="btn btn-discret" data-retirer-fichier="${role}" data-i="${i}">Retirer</button></li>`).join('')}
       </ul>` : ''}
-      ${role === 'visuel' ? blocRotation(d) : ''}
+      ${blocRotation(d, role)}
     </div>`;
 }
 
 // ---------------------------------------------------------------------
 // Plusieurs fichiers pour un produit (une minorité, expliqué par Léa le 02.10.2026) : FR / DE un match sur deux.
 // Le Sponsoring donne tous les fichiers ; la Régie les a tous dans Colosseo et active la langue du match.
+// Chaque zone a sa propre question : la vidéo, l'anneau LED, ou les deux (ex. Mobilière : seulement l'anneau).
 // ---------------------------------------------------------------------
-const alterne = (d) => d.fichiers.visuel.length >= 2 && d.rotation === 'alterner';
-const versionsDe = (d) => [...new Set(d.fichiers.visuel.map(f => (d.versions.get(f) || '').trim()).filter(Boolean))];
-const premiereDe = (d) => { const v = versionsDe(d); return v.includes(d.premiere) ? d.premiere : v[0] || ''; };
-const ordreVersions = (d) => { const p = premiereDe(d); return [p, ...versionsDe(d).filter(v => v !== p)]; };
+const alterne = (d, role) => d.fichiers[role].length >= 2 && d.rotation[role] === 'alterner';
+const versionsDe = (d, role) => [...new Set(d.fichiers[role].map(f => (d.versions.get(f) || '').trim()).filter(Boolean))];
+const premiereDe = (d, role) => { const v = versionsDe(d, role); return v.includes(d.premiere[role]) ? d.premiere[role] : v[0] || ''; };
+const ordreVersions = (d, role) => { const p = premiereDe(d, role); return [p, ...versionsDe(d, role).filter(v => v !== p)]; };
+// zones dont les fichiers partent avec la demande (l'anneau seulement si « avec anneau LED »)
+const rolesAvecFichiers = (d) => d.anneau === 'oui' ? ['visuel', 'anneau'] : ['visuel'];
 function premierMatch(d) {
   if (d.quand === 'match') return etat.matchs.find(m => d.dates.has(jourLocal(m.date_heure)));
   return etat.matchs[0];
 }
 
-function blocRotation(d) {
-  if (d.fichiers.visuel.length < 2) return '';
+function blocRotation(d, role) {
+  if (d.fichiers[role].length < 2) return '';
   const m = premierMatch(d);
   return `
-    <div class="rotation-produit" style="margin-top:.5rem">
+    <div class="rotation-produit" data-rotation-role="${role}" style="margin-top:.5rem">
       <div class="petit"><strong>Plusieurs fichiers : comment passent-ils ?</strong></div>
       <div class="choix choix-compact">
-        <label><input type="radio" name="rotation-${d.id}" data-choix="rotation" value="alterner" ${d.rotation === 'alterner' ? 'checked' : ''}>
-          Un match sur deux (ex. FR / DE)</label>
-        <label><input type="radio" name="rotation-${d.id}" data-choix="rotation" value="non" ${d.rotation === 'non' ? 'checked' : ''}>
-          Autrement (à préciser dans la remarque)</label>
+        <label><input type="radio" name="rotation-${role}-${d.id}" data-choix="rotation" data-role="${role}" value="alterner"
+          ${d.rotation[role] === 'alterner' ? 'checked' : ''}> Un match sur deux (ex. FR / DE)</label>
+        <label><input type="radio" name="rotation-${role}-${d.id}" data-choix="rotation" data-role="${role}" value="non"
+          ${d.rotation[role] === 'non' ? 'checked' : ''}> Autrement (à préciser dans la remarque)</label>
       </div>
-      ${alterne(d) ? `
+      ${alterne(d, role) ? `
         <div class="champ-ligne petit">
           <span>Au premier match${m ? ` (${dateCourte(m.date_heure)} · ${echapper(m.adversaire)})` : ''} :</span>
-          <select data-premiere style="width:auto">${versionsDe(d).map(v =>
-            `<option ${v === premiereDe(d) ? 'selected' : ''}>${echapper(v)}</option>`).join('')}</select>
+          <select data-premiere="${role}" style="width:auto">${versionsDe(d, role).map(v =>
+            `<option ${v === premiereDe(d, role) ? 'selected' : ''}>${echapper(v)}</option>`).join('')}</select>
           <span class="doux">puis chaque version à tour de rôle</span>
         </div>` : ''}
     </div>`;
@@ -261,7 +266,7 @@ function ajouterFichiersProduit(id, role, liste) {
   for (const f of liste) {
     if (d.fichiers[role].some(x => x.name === f.name && x.size === f.size)) continue;
     d.fichiers[role].push(f);
-    if (role === 'visuel') d.versions.set(f, devinerVersion(f.name) || `V${d.fichiers.visuel.length}`);
+    d.versions.set(f, devinerVersion(f.name) || `V${d.fichiers[role].length}`);
     Promise.all([lireDimensions(f), role === 'visuel' ? analyserSon(f) : null]).then(([dim, son]) => {
       controles.set(f, { lu: !!dim, alertes: alertesFichier(cible, { nom: f.name, ...(dim || {}) }),
                          duree: dim?.duree || null, son });
@@ -367,13 +372,15 @@ $('details-produits').addEventListener('input', (e) => {
   if (!bloc) return;
   const d = detailDe(bloc.dataset.id), t = e.target;
   if (t.dataset.version !== undefined) {
-    d.versions.set(d.fichiers.visuel[Number(t.dataset.version)], t.value);
+    d.versions.set(d.fichiers[t.dataset.role][Number(t.dataset.version)], t.value);
   } else if (t.dataset.premiere !== undefined) {
-    d.premiere = t.value;
+    d.premiere[t.dataset.premiere] = t.value;
+  } else if (t.dataset.choix === 'rotation') {
+    d.rotation[t.dataset.role] = t.value;
+    afficherDetails();
   } else if (t.dataset.choix) {
     d[t.dataset.choix] = t.value;
     if (t.dataset.choix === 'anneau') bloc.querySelector('[data-role-bloc=anneau]').hidden = t.value !== 'oui';
-    if (t.dataset.choix === 'rotation') afficherDetails();
   } else if (t.type === 'radio') {
     d.quand = t.value;
     bloc.querySelector('.matchs-produit').hidden = d.quand !== 'match';
@@ -383,9 +390,11 @@ $('details-produits').addEventListener('input', (e) => {
     d[t.dataset.champ] = t.value;
   }
   // un match sur deux : le « premier match » affiché suit les matchs choisis
-  if (alterne(d) && (t.dataset.date || (t.type === 'radio' && !t.dataset.choix))) {
-    const s = bloc.querySelector('.rotation-produit');
-    if (s) s.outerHTML = blocRotation(d);
+  if (t.dataset.date || (t.type === 'radio' && !t.dataset.choix)) {
+    for (const role of ['visuel', 'anneau']) {
+      const s = bloc.querySelector(`[data-rotation-role="${role}"]`);
+      if (s && alterne(d, role)) s.outerHTML = blocRotation(d, role);
+    }
   }
   erreur('');
 });
@@ -518,13 +527,16 @@ $('form-demande').addEventListener('submit', async (e) => {
       return erreur(`${p.nom} : cochez au moins un match, ou choisissez « Toute la saison ».`);
     }
     if (demandeAnneau(p) && !d.anneau) return erreur(`${p.nom} : indiquez si c'est avec ou sans anneau LED.`);
-    if (d.fichiers.visuel.length >= 2 && !d.rotation) {
-      return erreur(`${p.nom} : plusieurs fichiers — indiquez s'ils passent un match sur deux.`);
-    }
-    if (alterne(d)) {
-      const v = d.fichiers.visuel.map(f => (d.versions.get(f) || '').trim());
-      if (v.some(x => !x)) return erreur(`${p.nom} : donnez une version à chaque fichier (FR, DE…).`);
-      if (new Set(v).size < 2) return erreur(`${p.nom} : un match sur deux demande au moins deux versions différentes (FR, DE…).`);
+    for (const role of rolesAvecFichiers(d)) {
+      const zone = role === 'anneau' ? ' (anneau LED)' : '';
+      if (d.fichiers[role].length >= 2 && !d.rotation[role]) {
+        return erreur(`${p.nom}${zone} : plusieurs fichiers — indiquez s'ils passent un match sur deux.`);
+      }
+      if (alterne(d, role)) {
+        const v = d.fichiers[role].map(f => (d.versions.get(f) || '').trim());
+        if (v.some(x => !x)) return erreur(`${p.nom}${zone} : donnez une version à chaque fichier (FR, DE…).`);
+        if (new Set(v).size < 2) return erreur(`${p.nom}${zone} : un match sur deux demande au moins deux versions différentes (FR, DE…).`);
+      }
     }
   }
 
@@ -553,16 +565,19 @@ $('form-demande').addEventListener('submit', async (e) => {
           dates_matchs: d.quand === 'match' ? [...d.dates].sort() : null,
           duree_s: d.duree ? Math.max(1, Math.round(d.duree)) : null,      // lue dans la vidéo
           remarque_sponsoring: d.remarque.trim() || null,
-          // un match sur deux (migration 34) : version de chaque fichier + ordre, en commençant par le premier match
-          ...(alterne(d) ? {
-            rotation: 'alterner',
-            versions: Object.fromEntries(d.fichiers.visuel.map(f => [nomFichierSur(f.name), d.versions.get(f).trim()])),
-            ordre_versions: ordreVersions(d),
+          // un match sur deux (migrations 34 et 36) : version de chaque fichier (clé « role__nom ») + ordre,
+          // en commençant par le premier match ; la vidéo et l'anneau LED chacun de leur côté
+          ...(rolesAvecFichiers(d).some(r => alterne(d, r)) ? {
+            versions: Object.fromEntries(rolesAvecFichiers(d).filter(r => alterne(d, r)).flatMap(r =>
+              d.fichiers[r].map(f => [`${r}__${nomFichierSur(f.name)}`, d.versions.get(f).trim()]))),
           } : {}),
+          ...(alterne(d, 'visuel') ? { rotation: 'alterner', ordre_versions: ordreVersions(d, 'visuel') } : {}),
+          ...(rolesAvecFichiers(d).includes('anneau') && alterne(d, 'anneau')
+            ? { rotation_anneau: 'alterner', ordre_versions_anneau: ordreVersions(d, 'anneau') } : {}),
         };
       }));
       if (e2 && /rotation|versions/.test(e2.message)) {
-        throw new Error('« Un match sur deux » demande la migration 34 dans Supabase : prévenez la Régie');
+        throw new Error('« Un match sur deux » demande les migrations 34 et 36 dans Supabase : prévenez la Régie');
       }
       if (e2) throw e2;
     }

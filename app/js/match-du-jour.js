@@ -213,9 +213,11 @@ function infos(ligneId) {
 const assetAnneau = (l) => l?.ligne_couplee_id && etat.passagesCe.find(p => p.ligne_id === l.ligne_couplee_id)?.asset_id;
 const consigneAnneau = (action) => ({ ajouter: 'Ajouter l’anneau LED', enlever: 'Enlever l’anneau LED',
   visuel: 'Remplacer le visuel de l’anneau LED' })[action];
-// Ce que la Régie fait dans Colosseo (langue du soir : « Activer DE · désactiver FR »)
+// Ce que la Régie fait dans Colosseo (langue du soir : « Activer DE · désactiver FR », ou pour l'anneau LED seul
+// — ex. la Mobilière — « Anneau LED : activer DE · désactiver FR »)
 const texteConsigne = (i) => i.version
-  || (i.anneau ? consigneAnneau(i.action) : consigne(i.action, i.famille, i.categorie, i.produit));
+  ? (i.anneau ? `Anneau LED : ${i.version.charAt(0).toLowerCase()}${i.version.slice(1)}` : i.version)
+  : (i.anneau ? consigneAnneau(i.action) : consigne(i.action, i.famille, i.categorie, i.produit));
 const nomVisuel = (id) => { const a = etat.assets.get(id); return a ? a.nom_visuel + (a.variante ? ` (${a.variante})` : '') : ''; };
 const trier = (a, b) => a.ordre - b.ordre || a.produit.localeCompare(b.produit)
   || (a.groupe ?? 0) - (b.groupe ?? 0) || a.priorite - b.priorite;
@@ -491,7 +493,7 @@ function ouvrirChangement(cleItem) {
     .sort((x, y) => (y.produit_id === l.produit_id) - (x.produit_id === l.produit_id));
   const fait = i.fait;
 
-  $('d-surtitre').textContent = i.version || (i.anneau ? consigneAnneau(i.action) : TITRE_ACTION[i.action]);
+  $('d-surtitre').textContent = i.version ? texteConsigne(i) : i.anneau ? consigneAnneau(i.action) : TITRE_ACTION[i.action];
   $('d-titre').textContent = i.sponsor;
   // état POUR CE MATCH (et pas la case « À l'écran » de la fiche, qui prêtait à confusion pour un retrait)
   const passeCeMatch = etat.passagesCe.some(p => p.ligne_id === (i.anneau ? l.ligne_couplee_id : l.id) && PASSE.has(p.statut));
