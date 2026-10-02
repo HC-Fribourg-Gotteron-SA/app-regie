@@ -223,7 +223,7 @@ const trier = (a, b) => a.ordre - b.ordre || a.produit.localeCompare(b.produit)
 // Comment la Régie travaille le jour du match (expliqué par Léa le 01.10.2026) :
 //   1. Demandes à traiter : on ajoute le sponsor dans l'outil ET dans Colosseo en même temps
 //      (nouveau sponsor à la saison, nouveau logo / vidéo, retrait…). Traitée = disparaît d'ici.
-//   2. Spécial de ce match : ce qui est vendu pour un match précis (Sponsor du match, action scene…) est déjà
+//   2. Ventes au match (anciennement « Spécial de ce match », nom refusé par Léa) : ce qui est vendu pour un match précis (Sponsor du match, action scene…) est déjà
 //      dans l'outil ; il reste à l'ajouter dans Colosseo ce soir, et à enlever le spécial du match précédent → « Fait ».
 //   Les changements à la saison faits sur une fiche (retrait, case À l'écran) ne sont pas listés : on fait
 //   Colosseo au moment où on les fait dans l'outil.
@@ -256,7 +256,7 @@ function afficher() {
   // bilan en une ligne
   const morceaux = [
     demandes.length ? `${demandes.length} demande${demandes.length > 1 ? 's' : ''} à traiter` : '',
-    reste ? `${reste} changement${reste > 1 ? 's' : ''} du spécial match à faire dans Colosseo` : '',
+    reste ? `${reste} vente${reste > 1 ? 's' : ''} au match à mettre ou enlever dans Colosseo` : '',
     taches ? `${taches} tâche${taches > 1 ? 's' : ''} pour ce soir` : '',
   ].filter(Boolean);
   const bilan = $('bilan');
@@ -264,7 +264,7 @@ function afficher() {
   bilan.className = `carte bilan-match ${morceaux.length ? 'bilan-a-faire' : 'bilan-pret'}`;
   bilan.innerHTML = morceaux.length
     ? `<strong>${morceaux.join(' · ')}</strong>${items.length - reste ? ` <span class="doux">· ${items.length - reste} déjà fait${items.length - reste > 1 ? 's' : ''}</span>` : ''}`
-    : '<strong>✓ Tout est prêt</strong> <span class="doux">— pas de demande à traiter ni de spécial à changer pour ce match.</span>';
+    : '<strong>✓ Tout est prêt</strong> <span class="doux">— pas de demande à traiter ni de vente au match à changer.</span>';
   afficherNotes();
   if (!etat.tableFait && estRegie && items.length) {
     bilan.innerHTML += '<p class="message message-erreur petit" style="margin:.6rem 0 0">Les cases « Fait » ne s’enregistrent pas encore : exécutez la migration 22 dans Supabase.</p>';
@@ -279,7 +279,7 @@ function afficher() {
       ${liste.map(carteDemande).join('')}
     </div>`).join('');
 
-  // 2. spécial de ce match, groupé par produit
+  // 2. ventes au match, groupées par produit
   $('bloc-a-faire').hidden = !items.length;
   $('nb-a-faire').textContent = items.length ? `· ${reste} / ${items.length} à faire` : '';
   $('a-faire').innerHTML = [...grouper(items)].map(([produit, liste]) => `
