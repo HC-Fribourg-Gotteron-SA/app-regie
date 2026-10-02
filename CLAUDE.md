@@ -69,7 +69,7 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    avant**. Elle donne un **nouvel exemple** à la prochaine session : ne rien recoder avant. Questions en suspens :
    heures pendant les pauses (heure approx. ou texte libre ?), « mettre en avant » = case Important / plusieurs
    niveaux ?, bouton « décaler toutes les heures » si le face-off change ?
-0-ter. **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
+0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
    Recette des tests (page claude.ai, commentaires + export) : https://claude.ai/artifact/AKvYKr63XcgFcWQF76MMbQ
@@ -106,7 +106,7 @@ d'infos entre le **département Sponsoring** (vend des produits de visibilité a
 ## Stack
 
 - **Supabase** : Postgres, Auth (e-mail + mot de passe), Storage (bucket privé `assets`), RLS, Realtime.
-  **Deux projets** (30.09.2026) : **vraie base** `https://qxclmmzmhenudhvaikmp.supabase.co` (en ligne, Netlify) et
+  **Deux projets** (30.09.2026) : **vraie base** `https://qxclmmzmhenudhvaikmp.supabase.co` (en ligne, **Cloudflare Pages** depuis le 02.10.2026) et
   **base de test** `https://euuglujtfyampnymwenz.supabase.co` (données fictives). `app/js/config.js` choisit tout seul :
   **en local (Live Server) = base de TEST** (bandeau orange en bas de l'écran), en ligne = vraie base ; lien en bas du
   menu (en local) « Passer sur la vraie base / Revenir sur la base de test » (localStorage `base-choisie`, bandeau
@@ -484,7 +484,7 @@ Autres règles décidées :
       « Emplacement au match » = lignes au match (dates -> matchs du calendrier), et leur ligne saison de la Pub pause
       tiers n'est pas importée (durée/son/anneau reportés). Feuille « Nouveaux Sponsors » (historique) non importée.
       Garde-fou : table `imports_donnees` (import une seule fois). Annulation : lignes `created_by is null` sans demande.
-- [ ] **Mise en ligne** (décidé : **dépôt GitHub privé + Netlify**, gratuit). Dépôt transféré le 29.09.2026 dans
+- [x] **Mise en ligne** : **Cloudflare Pages** (02.10.2026) relié au dépôt GitHub `HC-Fribourg-Gotteron-SA/app-regie`, branche `main`, dossier publié `app`, sans build ; 2 projets (vrai site + site de test dont l'adresse contient « test ») ; chaque push redéploie. Si « disconnected from your Git account » : reconnecter l'app GitHub Cloudflare sur l'organisation. Penser à changer `VERSION` dans app.js à chaque mise en ligne. Historique : (décidé au départ : **dépôt GitHub privé + Netlify**, gratuit, abandonné le 02.10.2026 car crédits épuisés). Dépôt transféré le 29.09.2026 dans
       l'organisation de l'entreprise : **`HC-Fribourg-Gotteron-SA/app-regie`** (remote `origin` mis à jour) ; Netlify à
       relier au dépôt de l'organisation (Project configuration → Build & deploy → Manage repository). Dépôt Git local créé (branche `main`,
       premier commit ; identité Git du projet = Léa Talon). `.gitignore` : **jamais les données réelles**
