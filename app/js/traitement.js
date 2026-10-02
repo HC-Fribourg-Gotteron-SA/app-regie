@@ -3,6 +3,7 @@
 // (et donc depuis Match du jour, qui ouvre la demande). Fichiers, contrôle des dimensions, plan LED, remarques.
 import { sb, LIBELLES, echapper, dateCourte, notifier, taille, libelleFichier, depuis, dimensionsAttendues,
          nomFichierSur, alertesFichier, specsProduit } from './app.js';
+import { analyserSon, LIBELLE_SON } from './son-video.js';
 
 // Colonnes d'un produit de demande à traiter (demandes_produits + sa demande)
 export const CHAMPS_A_TRAITER = `demande_id, produit_id, type_vente, dates_matchs, duree_s, avec_son, avec_anneau,
@@ -367,6 +368,10 @@ async function sonder(f) {
     f.largeur_px = r.l; f.hauteur_px = r.h;
     if (r.duree && isFinite(r.duree)) f.duree_s = Math.round(r.duree * 100) / 100;
     f.sonde = `${r.l} × ${r.h} px${f.duree_s ? ` · ${f.duree_s.toFixed(1)} s` : ''}`;
+    if (video && f.role === 'visuel') {
+      f.son = await analyserSon({ url, taille: f.taille_octets, nom: f.storage_path, mime: f.mime });
+      if (f.son) f.sonde += ` · ${LIBELLE_SON[f.son]}`;
+    }
   } else {
     f.sonde = video || image ? 'dimensions non lues' : 'format non lu';
   }
@@ -512,6 +517,12 @@ async function traiter(k, suite, bouton) {
       && !confirm('Aucun nouveau fichier pour ce produit. Continuer quand même ?')) return;
 
   bouton.disabled = true;
+  // durée du spot lue dans la vidéo (plus de saisie à la main) : reprise par la diffusion
+  const durees = ['ajoute', 'visuel'].includes(suite) ? nouveaux.filter(f => f.role === 'visuel' && f.duree_s).map(f => f.duree_s) : [];
+  const duree = durees.length ? Math.max(1, Math.round(Math.max(...durees))) : null;
+  if (duree && duree !== a.duree_s) {
+    await sb.from('demandes_produits').update({ duree_s: duree }).eq('demande_id', a.demande_id).eq('produit_id', a.produit_id);
+  }
   const { data, error } = await sb.rpc('traiter_produit', {
     p_demande: a.demande_id,
     p_produit: a.produit_id,
@@ -528,6 +539,10 @@ async function traiter(k, suite, bouton) {
   });
   bouton.disabled = false;
   if (error) return notifier(`Impossible (rien n'a été modifié) : ${error.message}`, 'erreur');
+  // nouveau visuel sur une diffusion existante : la durée suit la nouvelle vidéo
+  if (suite === 'visuel' && duree && data?.ligne_id) {
+    await sb.from('lignes_vendues').update({ duree_s: duree }).eq('id', data.ligne_id);
+  }
 
   notifier(`${{ ajoute: 'Ajouté au produit', visuel: 'Nouveau visuel mis', retire: 'Diffusion arrêtée', ignore: 'Demande ignorée pour ce produit' }[suite]} · ${p.nom}`
     + (data?.demande_traitee ? ' · la demande est complète : marquée « Traitée »' : ''));

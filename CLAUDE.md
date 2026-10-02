@@ -80,6 +80,14 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    demande + fenêtre Détails), détail d'une diffusion. Supprime LE FICHIER, pas la demande : RPC `supprimer_fichier`
    (visuel mis sur une diffusion → refusé « Mauvais fichier », l'ancien visuel revient, ⏳ visuel attendu ; ligne du
    dossier sponsor supprimée), puis retrait du stockage. Le bon fichier : « + Ajouter un fichier ».
+0-septies. **Durée et son lus dans la vidéo (02.10.2026, demandé par Léa, pas de migration, pas encore testé)** :
+   dans la demande, plus de champ « Durée du spot » à remplir : la durée est lue dans la vidéo déposée (la plus
+   longue s'il y a plusieurs versions) et enregistrée dans `duree_s`. Le son est détecté (`js/son-video.js` : piste
+   son dans le MP4 / MOV, puis décodage pour voir si elle est muette) → « Avec / Sans son » coché tout seul (le
+   Sponsoring peut changer ; ⚠ si son choix contredit la vidéo). Affiché à côté de chaque fichier (« 15 s · 🔊 avec
+   son »), aussi dans la carte de traitement ; « Ajouter » / « Mettre le nouveau visuel » reprennent la durée de la
+   vidéo (demande + diffusion). WebM : son non lu. Test : `pisteAudioIsoBmff` dans Node (OK) ; à tester par Léa avec
+   un vrai spot avec son, un sans son.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
@@ -189,6 +197,7 @@ outil-regie/
     ├── run-of-show.html / js/run-of-show.js ← run of show d'un match ou d'un modèle (Régie modifie, tous consultent)
     ├── js/ros-calcul.js   ← calcul pur des heures du run of show (testable dans Node)
     ├── js/changements.js  ← calcul pur des changements entre 2 matchs (testable dans Node)
+    ├── js/son-video.js    ← son d'une vidéo (piste son MP4 / MOV, muette ou non), lu dans le navigateur
     ├── js/traitement.js   ← LA carte de traitement d'un produit de demande (fiche produit + détail d'une demande)
     ├── matchs.html / js/matchs.js          ← « Par match » : ventes au match + demandes au match à ajouter, par match
     ├── calendrier.html / js/calendrier.js  ← matchs à domicile (lecture tous ; ajout/import/modif admin)

@@ -1,5 +1,6 @@
 import { sb, exigerConnexion, LIBELLES, echapper, dateCourte, notifier, debounce, nomFichierSur, taille, libelleFichier,
          descriptionProduit, specsProduit, dimensionsAttendues, alertesFichier, lireDimensions } from './app.js';
+import { analyserSon, LIBELLE_SON } from './son-video.js';
 
 await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
 
@@ -8,7 +9,7 @@ const etat = {
   sponsor: null,          // { id, nom } ou { nouveau: true, nom }
   produits: new Map(),    // id -> produit
   anneaux: new Map(),     // id -> produit anneau couplé (inactif, pas dans la liste) : pour son format
-  details: new Map(),     // id produit -> { quand, dates: Set, duree, remarque }
+  details: new Map(),     // id produit -> { quand, dates: Set, duree (lue dans la vidéo), son, remarque }
   matchs: [],             // matchs à venir
   saison: '',
 };
@@ -130,8 +131,9 @@ async function chargerSaisonEtMatchs() {
 function detailDe(id) {
   if (!etat.details.has(id)) {
     const p = etat.produits.get(id);
-    etat.details.set(id, { quand: p?.mode_vente === 'match' ? 'match' : 'saison', dates: new Set(), duree: '', remarque: '',
+    etat.details.set(id, { quand: p?.mode_vente === 'match' ? 'match' : 'saison', dates: new Set(), duree: null, remarque: '',
                            son: null, anneau: null,       // 'oui' / 'non' / null = pas encore choisi
+                           sonManuel: false,              // true = choisi à la main (la vidéo ne le change plus)
                            fichiers: { visuel: [], anneau: [] } });
   }
   return etat.details.get(id);
@@ -151,12 +153,45 @@ function rolesFichiers(p) {
 }
 
 // Contrôle de chaque fichier déposé (taille, type, durée) : alerte, jamais bloquant
-const controles = new WeakMap();      // File -> { alertes: [], lu: bool }
+// + durée et son d'une vidéo, lus dans le fichier (plus de saisie à la main)
+const controles = new WeakMap();      // File -> { alertes: [], lu: bool, duree: s | null, son: 'oui' | 'muet' | 'non' | null }
+const secondes = (s) => `${Math.round(s * 10) / 10} s`.replace('.', ',');
 function etatFichier(f, cible) {
   const c = controles.get(f);
   if (!c) return '<span class="doux petit">· vérification…</span>';
-  if (c.alertes.length) return c.alertes.map(a => `<span class="badge badge-a-venir">⚠ ${echapper(a)}</span>`).join(' ');
-  return c.lu && dimensionsAttendues(cible) ? '<span class="badge statut-traitee">format OK</span>' : '';
+  const infos = [c.duree ? secondes(c.duree) : '', c.son ? LIBELLE_SON[c.son] : ''].filter(Boolean).join(' · ');
+  return (infos ? `<span class="petit">· ${infos}</span> ` : '')
+    + (c.alertes.length ? c.alertes.map(a => `<span class="badge badge-a-venir">⚠ ${echapper(a)}</span>`).join(' ')
+       : c.lu && dimensionsAttendues(cible) ? '<span class="badge statut-traitee">format OK</span>' : '');
+}
+
+// Durée du spot et son, repris des vidéos déposées (rôle « visuel » : l'anneau LED n'a pas de son)
+function majDepuisFichiers(d) {
+  const lus = d.fichiers.visuel.map(f => controles.get(f)).filter(Boolean);
+  const durees = lus.map(c => c.duree).filter(Boolean);
+  d.duree = durees.length ? Math.max(...durees) : null;
+  if (d.sonManuel) return;
+  const sons = lus.map(c => c.son).filter(Boolean);
+  d.son = sons.includes('oui') ? 'oui' : sons.length ? 'non' : null;
+}
+
+// Son détecté dans la vidéo, sous le choix Avec / Sans son
+function noteSon(d) {
+  const sons = d.fichiers.visuel.map(f => controles.get(f)?.son).filter(Boolean);
+  if (!sons.length) return d.fichiers.visuel.length ? '' : '<span class="doux">Rempli tout seul quand la vidéo est déposée.</span>';
+  const detecte = sons.includes('oui') ? 'oui' : 'non';
+  const texte = sons.includes('oui') ? '🔊 La vidéo a du son.' : sons.includes('muet') ? '🔇 La piste son de la vidéo est muette.' : '🔇 La vidéo n’a pas de son.';
+  return d.son && d.son !== detecte
+    ? `<span class="badge badge-a-venir">⚠ ${texte} Vous avez choisi « ${d.son === 'oui' ? 'Avec son' : 'Sans son'} ».</span>`
+    : `<span class="doux">${texte}</span>`;
+}
+
+function texteDuree(d) {
+  const durees = [...new Set(d.fichiers.visuel.map(f => controles.get(f)?.duree).filter(Boolean).map(s => Math.round(s)))];
+  if (durees.length > 1) return `<strong>${durees.map(s => `${s} s`).join(' / ')}</strong> <span class="doux">(lue dans les vidéos)</span>`;
+  if (d.duree) return `<strong>${Math.round(d.duree)} s</strong> <span class="doux">(lue dans la vidéo)</span>`;
+  if (d.fichiers.visuel.some(f => !controles.get(f))) return '<span class="doux">lecture de la vidéo…</span>';
+  return '<span class="doux">lue automatiquement quand la vidéo est déposée</span>';
 }
 
 function zoneFichiers(d, { role, libelle, cible }) {
@@ -184,8 +219,10 @@ function ajouterFichiersProduit(id, role, liste) {
   for (const f of liste) {
     if (d.fichiers[role].some(x => x.name === f.name && x.size === f.size)) continue;
     d.fichiers[role].push(f);
-    lireDimensions(f).then(dim => {
-      controles.set(f, { lu: !!dim, alertes: alertesFichier(cible, { nom: f.name, ...(dim || {}) }) });
+    Promise.all([lireDimensions(f), role === 'visuel' ? analyserSon(f) : null]).then(([dim, son]) => {
+      controles.set(f, { lu: !!dim, alertes: alertesFichier(cible, { nom: f.name, ...(dim || {}) }),
+                         duree: dim?.duree || null, son });
+      majDepuisFichiers(d);
       afficherDetails();
     });
   }
@@ -233,15 +270,12 @@ function afficherDetails() {
           <div class="choix choix-compact">${matchs}</div>
         </div>
         ${demandeSon(p) ? `
-          <div class="champ-ligne"><span class="etiquette">Son</span>${choixOuiNon(id, 'son', d.son, 'Avec son', 'Sans son')}</div>` : ''}
+          <div class="champ-ligne"><span class="etiquette">Son</span>${choixOuiNon(id, 'son', d.son, 'Avec son', 'Sans son')}
+            <span class="petit" data-note-son>${noteSon(d)}</span></div>` : ''}
         ${demandeAnneau(p) ? `
           <div class="champ-ligne"><span class="etiquette">Anneau LED</span>${choixOuiNon(id, 'anneau', d.anneau, 'Avec anneau LED', 'Sans anneau LED')}</div>` : ''}
-        ${p.famille === 'temps' ? `
-          <div class="champ-ligne">
-            <label for="duree-${id}">Durée du spot <span class="doux petit">(facultatif)</span></label>
-            <input type="number" id="duree-${id}" data-champ="duree" min="1" step="1" value="${echapper(d.duree)}"
-                   placeholder="secondes" style="max-width:130px">
-          </div>` : ''}
+        ${p.famille === 'temps' || d.duree ? `
+          <div class="champ-ligne"><span class="etiquette">Durée du spot</span> <span class="petit">${texteDuree(d)}</span></div>` : ''}
         ${rolesFichiers(p).map(r => zoneFichiers(d, r)).join('')}
         <label for="remarque-${id}" class="petit" style="margin-top:.6rem">Remarque Sponsoring</label>
         <textarea id="remarque-${id}" data-champ="remarque" rows="2" style="min-height:0"
@@ -257,7 +291,9 @@ $('details-produits').addEventListener('click', (e) => {
   if (!bloc) return;
   const retirer = e.target.closest('[data-retirer-fichier]');
   if (retirer) {
-    detailDe(bloc.dataset.id).fichiers[retirer.dataset.retirerFichier].splice(Number(retirer.dataset.i), 1);
+    const d = detailDe(bloc.dataset.id);
+    d.fichiers[retirer.dataset.retirerFichier].splice(Number(retirer.dataset.i), 1);
+    majDepuisFichiers(d);
     afficherDetails();
     return;
   }
@@ -289,6 +325,10 @@ $('details-produits').addEventListener('input', (e) => {
   if (t.dataset.choix) {
     d[t.dataset.choix] = t.value;
     if (t.dataset.choix === 'anneau') bloc.querySelector('[data-role-bloc=anneau]').hidden = t.value !== 'oui';
+    if (t.dataset.choix === 'son') {
+      d.sonManuel = true;
+      bloc.querySelector('[data-note-son]').innerHTML = noteSon(d);
+    }
   } else if (t.type === 'radio') {
     d.quand = t.value;
     bloc.querySelector('.matchs-produit').hidden = d.quand !== 'match';
@@ -454,7 +494,7 @@ $('form-demande').addEventListener('submit', async (e) => {
           produit_id,
           type_vente: d.quand,
           dates_matchs: d.quand === 'match' ? [...d.dates].sort() : null,
-          duree_s: Number(d.duree) > 0 ? Math.round(Number(d.duree)) : null,
+          duree_s: d.duree ? Math.max(1, Math.round(d.duree)) : null,      // lue dans la vidéo
           remarque_sponsoring: d.remarque.trim() || null,
         };
       }));
