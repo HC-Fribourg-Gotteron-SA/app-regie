@@ -444,7 +444,8 @@ Autres règles décidées :
       facultatif. Fiche LED 3M : seulement la bande 3M (A/B) ; la bande 6M n'apparaît **que si la 3M est pleine**.
       Fiche LED 6M : seulement la bande 6M (C/D). Dans le détail d'une demande : état par produit (« Ajouté le … par … » / « À ajouter ») + lien vers
       la fiche ; « Marquer comme traitée » reste en secours.
-- [ ] **Par match** (`matchs.html`, menu Saison, pas encore testé) : pour chaque match (à venir / avec ventes au
+- [ ] **Par match** (`matchs.html` ; depuis le 02.10.2026 = **premier onglet « 📅 Par match » de la barre des fiches
+      produit**, Régie / admin, retiré du menu Saison, demandé par Léa ; pas encore testé) : pour chaque match (à venir / avec ventes au
       match / passés), les lignes vendues **au match** (produit, sponsor, son, état du visuel) et les produits de
       demandes « au match » pas encore ajoutés (lien vers la fiche produit). Future porte d'entrée de la
       préparation Colosseo.

@@ -1,8 +1,11 @@
-import { sb, exigerConnexion, LIBELLES, echapper, dateHeure, notifier } from './app.js';
+import { sb, exigerConnexion, LIBELLES, echapper, dateHeure, notifier, ongletsProduits } from './app.js';
 
 await exigerConnexion({ roles: ['regie', 'admin'] });
 
 const $ = (id) => document.getElementById(id);
+// un onglet des fiches produit (plus d'entrée à part dans le menu)
+ongletsProduits($('onglets-produits'), { page: 'matchs' });
+try { localStorage.setItem('dernier-onglet', 'matchs.html'); } catch { /* stockage indisponible */ }
 const pad = (n) => String(n).padStart(2, '0');
 const jourLocal = (d) => { const x = new Date(d); return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`; };
 const normaliser = (t) => (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();

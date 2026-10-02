@@ -225,14 +225,13 @@ const MENU = [
   ] },
   { titre: 'Produits', id: 'menu-produits', liens: [
     // « Vue d'ensemble » remplacée par les fiches en onglets (Léa, 01.10.2026 : « c'est la même chose »)
-    { href: 'produit.html', texte: 'Fiches produit', icone: 'produits', compteur: 'a_ajouter', aussi: ['categorie.html', 'produits.html'] },
+    { href: 'produit.html', texte: 'Fiches produit', icone: 'produits', compteur: 'a_ajouter', aussi: ['categorie.html', 'produits.html', 'matchs.html'] },
   ] },
   { titre: 'Sponsors', liens: [
     { href: 'sponsors.html', texte: 'Dossiers sponsors', icone: 'sponsors', aussi: ['sponsor.html'] },
     { href: 'import-dossiers.html', texte: 'Importer des dossiers', icone: 'onglets', roles: ['regie', 'admin'] },
   ] },
   { titre: 'Saison', liens: [
-    { href: 'matchs.html', texte: 'Par match', icone: 'match', roles: ['regie', 'admin'] },
     { href: 'calendrier.html', texte: 'Calendrier des matchs', icone: 'calendrier', roles: ['regie', 'admin'] },
   ] },
 ];
@@ -332,7 +331,9 @@ export async function ongletsProduits(zone, actif = {}) {
   for (const a of attente.data || []) aAjouter.set(a.produit_id, (aAjouter.get(a.produit_id) || 0) + 1);
   const compteur = (n) => n ? `<span class="menu-compteur">${n}</span>` : '';
 
-  const onglets = [];
+  // « Par match » : un onglet comme les fiches (Léa, 02.10.2026 : plus besoin d'une entrée à part dans le menu)
+  const onglets = regie ? [`<a href="matchs.html" class="onglet-produit${actif.page === 'matchs' ? ' actif' : ''}"
+    title="Ce qui est pris seulement pour certains matchs">📅 Par match</a>`] : [];
   let categoriePrecedente = null;
   for (const p of produits || []) {
     const cat = p.categorie || 'Autres';
