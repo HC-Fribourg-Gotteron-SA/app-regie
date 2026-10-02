@@ -2,12 +2,12 @@
 // La même carte partout (décidé par Léa le 01.10.2026) : fiche produit (« À ajouter »), détail d'une demande
 // (et donc depuis Match du jour, qui ouvre la demande). Fichiers, contrôle des dimensions, plan LED, remarques.
 import { sb, LIBELLES, echapper, dateCourte, notifier, taille, libelleFichier, depuis, dimensionsAttendues,
-         nomFichierSur, alertesFichier, specsProduit } from './app.js';
+         nomFichierSur, alertesFichier, specsProduit, devinerVersion } from './app.js';
 import { analyserSon, LIBELLE_SON } from './son-video.js';
 
 // Colonnes d'un produit de demande à traiter (demandes_produits + sa demande)
-export const CHAMPS_A_TRAITER = `demande_id, produit_id, type_vente, dates_matchs, duree_s, avec_son, avec_anneau,
-  remarque_sponsoring, remarque_regie, suite, ligne_id,
+// (« * » : reprend aussi rotation / versions / ordre_versions de la migration 34 sans casser la page avant)
+export const CHAMPS_A_TRAITER = `*,
   demande:demandes!inner(id, type, statut, created_at, sponsor_id, sponsor_nom_saisi, remarque_sponsoring,
                          sponsor:sponsors(id, nom))`;
 
@@ -28,7 +28,7 @@ function contexte(produitId) {
     const [{ data: p }, { data: lignes }] = await Promise.all([
       sb.from('produits').select('*').eq('id', produitId).maybeSingle(),
       sb.from('lignes_vendues')
-        .select('id, type_vente, statut, created_at, ligne_couplee_id, contrat:contrats(sponsor:sponsors(id, nom))')
+        .select('*, contrat:contrats(sponsor:sponsors(id, nom))')
         .eq('produit_id', produitId).not('statut', 'in', '(annule,termine)'),
     ]);
     let anneau = null, emplacements = [];
@@ -117,6 +117,11 @@ function dessiner(k) {
       ${proches.map(s => `<strong>${echapper(s.nom)}</strong>`).join(', ')}. Si c'est le même, corrigez la demande avant d'ajouter.</p>` : ''}
     ${a.type_vente === 'match' ? `<div class="petit" style="margin-bottom:.7rem"><span class="titre-bloc">Matchs</span><br>${(a.dates_matchs || []).map(j =>
       `${dateCourte(j + 'T12:00')}${adversaires?.has(j) ? ` · ${echapper(adversaires.get(j))}` : ''}`).join('<br>')}</div>` : ''}
+    ${versionsAlternees(c) && d.type !== 'suppression' ? `<p class="message message-info petit">Un match sur deux :
+      <strong>${versionsAlternees(c).map(echapper).join(' / ')}</strong>${a.rotation === 'alterner' ? ' (la 1re au prochain match)' : ''}.
+      Vérifiez la version de chaque fichier.</p>` : ''}
+    ${visuelReserve(c) ? `<p class="message message-info petit">Ce visuel passera <strong>seulement à ces matchs</strong> ;
+      le visuel habituel reste pour les autres matchs.</p>` : ''}
     ${d.type === 'suppression' ? '' : `
       <div class="titre-bloc">Fichiers</div>
       <div style="margin-bottom:.7rem">${blocFichiers(c)}</div>`}
@@ -193,6 +198,7 @@ async function chargerFichiers(k) {
     const role = i > 0 ? f.name.slice(0, i) : 'visuel';
     const nomCourt = i > 0 ? f.name.slice(i + 2) : f.name;
     return { role, nomCourt, storage_path: `${dossier}/${f.name}`, nom_visuel: nomCourt.replace(/\.[^.]+$/, ''),
+             variante: role === 'visuel' ? (a.versions?.[nomCourt] || devinerVersion(nomCourt)) : '',
              mime: f.metadata?.mimetype || null, taille_octets: f.metadata?.size || null,
              largeur_px: null, hauteur_px: null, duree_s: null, sonde: 'analyse…' };
   });
@@ -218,6 +224,9 @@ function blocFichiers(c) {
             <span class="petit">${echapper(f.nomCourt)}</span>
             <span class="doux petit">${taille(f.taille_octets || 0)} · ${echapper(f.sonde)}</span>
             ${choix.dejaMis.has(f.storage_path) ? '<span class="badge">déjà mis</span>' : controle(f, cible)}
+            ${role === 'visuel' && versionsAlternees(c) && !choix.dejaMis.has(f.storage_path) ? `<label class="petit" style="margin:0">Version
+              <input type="text" data-variante="${echapper(f.storage_path)}" value="${echapper(f.variante || '')}" placeholder="FR"
+                     style="width:4.5rem;min-height:0;padding:.2rem .4rem"></label>` : ''}
             <button type="button" class="btn btn-discret petit" data-fichier="${echapper(f.storage_path)}">Télécharger</button>
             ${options.estRegie ? boutonSupprimerFichier(f.storage_path) : ''}
           </div>`).join('')}
@@ -225,6 +234,24 @@ function blocFichiers(c) {
       </div>`;
   }).join('');
 }
+
+// ---------------------------------------------------------------------
+// Visuels qui changent selon le match (migration 34)
+// ---------------------------------------------------------------------
+// Diffusion visée par « Mettre le nouveau visuel » (null pour un ajout)
+function ligneVisee(c) {
+  const { a, choix, ctx } = c;
+  if (!a.ligne_id && a.demande.type !== 'changement_visuel') return null;
+  return ctx.lignes.find(l => l.id === (a.ligne_id || choix.ligne_id)) || null;
+}
+// FR / DE un match sur deux : ordre des versions de la demande, sinon celui de la diffusion
+function versionsAlternees(c) {
+  if (c.a.rotation === 'alterner' && c.a.ordre_versions?.length >= 2) return c.a.ordre_versions;
+  const l = ligneVisee(c);
+  return l?.regle_rotation === 'alterner' && l.ordre_variantes?.length >= 2 ? l.ordre_variantes : null;
+}
+// Changement de visuel pour certains matchs sur une diffusion à la saison : visuel réservé à ces matchs
+const visuelReserve = (c) => c.a.type_vente === 'match' && ligneVisee(c)?.type_vente === 'saison';
 
 // « Ajouter un fichier » (fichier reçu plus tard) : même bouton dans la demande et sur la fiche
 export const boutonAjoutFichier = (role) => `
@@ -443,7 +470,11 @@ function brancher(el) {
     const c = cartes.get(el.dataset.traitement);
     if (!c) return;
     const t = e.target;
-    if (t.dataset.ligne !== undefined) c.choix.ligne_id = t.value;
+    if (t.dataset.ligne !== undefined) { c.choix.ligne_id = t.value; dessiner(el.dataset.traitement); }
+    if (t.dataset.variante !== undefined) {
+      const f = c.choix.fichiers.find(x => x.storage_path === t.dataset.variante);
+      if (f) f.variante = t.value.trim();
+    }
     if (t.dataset.fin !== undefined) c.choix.date_fin = t.value;
     if (t.dataset.remarqueRegie !== undefined) {
       const texte = t.value.trim() || null;
@@ -515,6 +546,11 @@ async function traiter(k, suite, bouton) {
       && !confirm('Aucun emplacement choisi (ou pas assez) : le logo sera « à placer ».\nAjouter quand même ?')) return;
   if (suite === 'visuel' && !nouveaux.length
       && !confirm('Aucun nouveau fichier pour ce produit. Continuer quand même ?')) return;
+  const ordre = versionsAlternees(cartes.get(k));
+  const sansVersion = ordre ? nouveaux.filter(f => f.role === 'visuel' && !ordre.includes(f.variante)) : [];
+  if (['ajoute', 'visuel'].includes(suite) && sansVersion.length
+      && !confirm(`Version à vérifier pour ${sansVersion.map(f => f.nomCourt).join(', ')} : attendu ${ordre.join(' ou ')}.\n`
+        + 'Un fichier sans la bonne version ne passera pas dans l’alternance. Continuer quand même ?')) return;
 
   bouton.disabled = true;
   // durée du spot et son lus dans la vidéo (plus de saisie à la main) : repris par la diffusion
@@ -539,8 +575,9 @@ async function traiter(k, suite, bouton) {
       date_fin: choix.date_fin || null,
       emplacements: suite === 'ajoute' ? [...choix.emplacements] : [],
       fichiers: ['ajoute', 'visuel'].includes(suite)
-        ? nouveaux.map(({ role, storage_path, nom_visuel, mime, taille_octets, largeur_px, hauteur_px, duree_s }) =>
-            ({ role, storage_path, nom_visuel, mime, taille_octets, largeur_px, hauteur_px, duree_s }))
+        ? nouveaux.map(({ role, storage_path, nom_visuel, mime, taille_octets, largeur_px, hauteur_px, duree_s, variante }) =>
+            ({ role, storage_path, nom_visuel, mime, taille_octets, largeur_px, hauteur_px, duree_s,
+               variante: ordre && role === 'visuel' ? variante || null : null }))
         : [],
     },
   });
@@ -548,7 +585,8 @@ async function traiter(k, suite, bouton) {
   if (error) return notifier(`Impossible (rien n'a été modifié) : ${error.message}`, 'erreur');
   // nouveau visuel sur une diffusion existante : durée et son suivent la nouvelle vidéo
   const suit = { ...(duree ? { duree_s: duree } : {}), ...(avecSon !== null ? { avec_son: avecSon } : {}) };
-  if (suite === 'visuel' && data?.ligne_id && Object.keys(suit).length) {
+  // (pas pour une vidéo réservée à certains matchs : la diffusion garde son visuel habituel)
+  if (suite === 'visuel' && data?.ligne_id && Object.keys(suit).length && !visuelReserve(cartes.get(k))) {
     await sb.from('lignes_vendues').update(suit).eq('id', data.ligne_id);
   }
 

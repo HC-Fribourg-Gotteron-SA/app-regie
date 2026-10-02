@@ -46,12 +46,13 @@ const etat = {
 // ---------------------------------------------------------------------
 // Chargement
 // ---------------------------------------------------------------------
-const CHAMPS_LIGNE = `id, produit_id, type_vente, statut, avec_son, duree_s, occurrences, consignes, date_fin, created_at, ligne_couplee_id,
+const CHAMPS_LIGNE = `id, produit_id, type_vente, statut, avec_son, duree_s, occurrences, consignes, date_fin, created_at, ligne_couplee_id, regle_rotation,
   priorite, validee, validee_le, validee_par, suspendue, motif_suspension, visuel_attendu, demande_id, created_by,
   produit:produits(nom), contrat:contrats(sponsor:sponsors(id, nom)),
   matchs:lignes_matchs(match:matchs(date_heure, adversaire)),
   emplacements:lignes_emplacements(emplacement:emplacements(anneau, zone, position)),
-  assets(id, nom_visuel, statut, version, variante, depose_le, valide_le, motif_refus, storage_path, mime)`;
+  assets(id, nom_visuel, statut, version, variante, depose_le, valide_le, motif_refus, storage_path, mime,
+         match:matchs(date_heure, adversaire))`;
 
 // Diffusion de ce produit, ou d'un autre produit affichée ici (LED 3M sur la bande 6M)
 const trouverLigne = (id) => etat.lignes.find(x => x.id === id) || etat.autres.find(x => x.id === id)
@@ -291,7 +292,7 @@ function rangeeLigne(l, rang, cols, emplUnique = null) {
     : `<span title="${echapper(dates.map(m => `${dateCourte(m.date_heure)} ${m.adversaire}`).join('\n'))}">${dates.length} match${dates.length > 1 ? 's' : ''}</span>`;
   const empl = emplUnique || (l.emplacements || []).map(e => e.emplacement).filter(Boolean)
     .map(e => `${e.anneau}-${e.zone}-${e.position}`).join(', ');
-  const visuelEcran = celluleVisuel(l.assets);
+  const visuelEcran = celluleVisuel(l.assets, l);
   const cellules = {
     'N°': `<span class="doux" title="Ordre de diffusion">${rang + 1}</span>`,
     'État': celluleEtat(l),
@@ -423,13 +424,21 @@ function celluleEtat(l) {
     ${l.visuel_attendu ? '<span class="etat etat-attente" title="Nouveau visuel attendu (l’ancien passe en attendant)">⏳ visuel attendu</span>' : ''}`;
 }
 
-const visuelActuel = (assets) => (assets || []).filter(a => a.statut !== 'archive')
+const visuelActuel = (assets) => (assets || []).filter(a => a.statut !== 'archive' && !a.match)
   .sort((a, b) => new Date(b.depose_le) - new Date(a.depose_le))[0];
 // Nom du visuel qui passe ; « à valider » seulement s'il faut agir
-function celluleVisuel(assets) {
+// (FR / DE un match sur deux : les versions ; vidéos spéciales de certains matchs : leur nombre)
+function celluleVisuel(assets, ligne) {
   const a = visuelActuel(assets);
   if (!a) return '<span class="doux">—</span>';
-  return `<span class="petit">${echapper(a.nom_visuel)}</span>${a.statut === 'a_valider'
+  const valides = (assets || []).filter(x => x.statut === 'valide');
+  const versions = [...new Set(valides.filter(x => !x.match && x.variante).map(x => x.variante))];
+  const speciaux = valides.filter(x => x.match && new Date(x.match.date_heure) >= new Date(Date.now() - 864e5)).length;
+  const extra = [
+    ligne?.regle_rotation === 'alterner' && versions.length >= 2 ? `${versions.map(echapper).join(' / ')} · 1 match sur 2` : '',
+    speciaux ? `+ ${speciaux} visuel${speciaux > 1 ? 's' : ''} spécia${speciaux > 1 ? 'ux' : 'l'} à venir` : '',
+  ].filter(Boolean).join(' · ');
+  return `<span class="petit">${echapper(a.nom_visuel)}</span>${extra ? ` <span class="badge">${extra}</span>` : ''}${a.statut === 'a_valider'
     ? ` <span class="etat etat-attente">à valider</span>${estRegie ? ` <button type="button" class="btn btn-discret petit" data-valider="${a.id}">Valider</button>` : ''}` : ''}`;
 }
 
@@ -438,6 +447,7 @@ function listeVisuels(assets) {
   const visuels = (assets || []).slice().sort((a, b) => new Date(b.depose_le) - new Date(a.depose_le));
   return visuels.length ? `<ul class="liste-fichiers" style="margin:0">${visuels.map(a => `
     <li><span>${echapper(a.nom_visuel)}${a.variante ? ` <span class="doux petit">(${echapper(a.variante)})</span>` : ''}
+        ${a.match ? ` <span class="badge badge-match">seulement le ${dateCourte(a.match.date_heure)} · ${echapper(a.match.adversaire)}</span>` : ''}
         <span class="doux petit"> · déposé le ${dateCourte(a.depose_le)}</span></span>
       ${a.statut === 'archive' ? '<span class="badge">ancien</span>'
         : STATUT_ASSET[a.statut] ? `<span class="badge ${STATUT_ASSET[a.statut][1]}">${STATUT_ASSET[a.statut][0]}</span>` : ''}

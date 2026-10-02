@@ -1,7 +1,7 @@
 // Match du jour : ce que la Régie doit changer dans Colosseo (depuis le match précédent),
 // puis toute la playlist pour vérifier. Les playlists Colosseo restent d'un match à l'autre.
 import { sb, exigerConnexion, echapper, dateCourte, notifier, toutesLesLignes, libelleFichier, taille } from './app.js';
-import { calculerChangements, consigne, PASSE } from './changements.js';
+import { calculerChangements, consigne, PASSE, raisonVersion } from './changements.js';
 import { confirmerSuppressionProduit, boutonSupprimerFichier, confirmerSuppressionFichier } from './traitement.js';
 
 const { profil } = await exigerConnexion({ roles: ['regie', 'admin'] });
@@ -49,7 +49,7 @@ async function charger() {
                  contrat:contrats(sponsor_id, sponsor:sponsors(nom)), demande_id,
                  matchs:lignes_matchs(match:matchs(date_heure, adversaire)),
                  emplacements:lignes_emplacements(emplacement:emplacements(anneau, zone, position))`).range(de, a)),
-      toutesLesLignes((de, a) => sb.from('assets').select('id, nom_visuel, variante, storage_path').range(de, a)),
+      toutesLesLignes((de, a) => sb.from('assets').select('id, nom_visuel, variante, match_id, storage_path').range(de, a)),
       sb.from('profiles').select('id, nom, email'),
     ]);
     // dossiers sponsors (fichiers reçus) : proposés quand une diffusion n'a pas de fichier à elle
@@ -235,8 +235,12 @@ function afficher() {
     changements = etat.passagesCe.filter(p => PASSE.has(p.statut))
       .map(p => ({ action: 'ajouter', ligne_id: p.ligne_id, asset_id: p.asset_id, raison: 'vendu pour ce match' }));
   }
-  const tous = changements.map(c => ({ ...c, ...infos(c.ligne_id), fait: etat.fait.get(`${c.ligne_id}|${c.action}`) }))
-    .filter(auMatch);
+  // + visuels qui changent selon le match (FR / DE un match sur deux, vidéo spéciale), même à la saison
+  const version = (c) => c.action === 'visuel'
+    ? raisonVersion(etat.assets.get(c.asset_id), etat.assets.get(c.ancien_asset_id)) : null;
+  const tous = changements.map(c => ({ ...c, ...infos(c.ligne_id), fait: etat.fait.get(`${c.ligne_id}|${c.action}`),
+                                       ...(version(c) ? { raison: version(c), version: true } : {}) }))
+    .filter(i => auMatch(i) || i.version);
   // anneau ajouté / enlevé en même temps que sa Pub pause tiers : une seule ligne (« avec anneau LED »)
   const pubs = new Set(tous.filter(i => !i.anneau).map(i => `${i.ligne_id}|${i.action}`));
   const items = tous.filter(i => !(i.anneau && i.action !== 'visuel' && pubs.has(`${i.pubId}|${i.action}`)))

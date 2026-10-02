@@ -45,6 +45,19 @@ function raisonRetrait(l) {
   return 'ne passe plus';
 }
 
+// Visuel qui change à cause du match (migration 34) : version FR / DE un match sur deux, ou vidéo réservée
+// à certains matchs (ex. vidéo du chef). Ces changements sont listés même pour une diffusion à la saison,
+// car personne ne les fait dans l'outil le jour même. nouveau / ancien = { variante, match_id } ; null = pas lié au match.
+export function raisonVersion(nouveau, ancien) {
+  if (!nouveau || !ancien) return null;
+  if (nouveau.match_id) return 'visuel spécial pour ce match';
+  if (ancien.match_id) return 'retour au visuel habituel';
+  if (nouveau.variante && ancien.variante && nouveau.variante !== ancien.variante) {
+    return `version ${nouveau.variante} ce soir (un match sur deux)`;
+  }
+  return null;
+}
+
 // Ce que la Régie fait concrètement, selon le type de produit (le produit est en titre du groupe)
 // « Ajouter à <produit> » / « Enlever de <produit> » (demandé par Léa le 01.10.2026 : ex. « Ajouter à Sponsor du match ») ;
 // LED 3M / 6M : on parle du logo et du Banner HCFG

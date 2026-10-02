@@ -129,6 +129,17 @@ export function dimensionsAttendues(p) {
   return p.famille === 'emplacement' ? { l: 300 * (p.emplacements_requis || 1), h: 80 } : null;
 }
 
+// Version d'un visuel devinée d'après le nom du fichier (spot_FR.mp4, Logo-d.png…) ; '' si rien de reconnu
+export function devinerVersion(nom) {
+  const base = (nom || '').replace(/\.[^.]+$/, '');
+  const mots = base.split(/[^A-Za-zÀ-ÿ]+/).map(m => m.toLowerCase());
+  const LANGUES = { fr: 'FR', f: 'FR', francais: 'FR', français: 'FR', french: 'FR',
+                    de: 'DE', d: 'DE', dt: 'DE', deutsch: 'DE', allemand: 'DE', german: 'DE',
+                    it: 'IT', en: 'EN', eng: 'EN', english: 'EN' };
+  for (let i = mots.length - 1; i >= 0; i--) if (LANGUES[mots[i]]) return LANGUES[mots[i]];
+  return '';
+}
+
 // Nom du fichier attendu pour un produit (role = 'visuel' ou 'anneau')
 export function libelleFichier(p, role) {
   if (role === 'anneau') return 'Visuel anneau LED';
