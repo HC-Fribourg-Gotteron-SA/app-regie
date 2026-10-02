@@ -218,6 +218,7 @@ function blocFichiers(c) {
             <span class="doux petit">${taille(f.taille_octets || 0)} · ${echapper(f.sonde)}</span>
             ${choix.dejaMis.has(f.storage_path) ? '<span class="badge">déjà mis</span>' : controle(f, cible)}
             <button type="button" class="btn btn-discret petit" data-fichier="${echapper(f.storage_path)}">Télécharger</button>
+            ${options.estRegie ? boutonSupprimerFichier(f.storage_path) : ''}
           </div>`).join('')}
         ${options.estRegie ? boutonAjoutFichier(role) : ''}
       </div>`;
@@ -305,6 +306,31 @@ export async function confirmerSuppressionProduit({ demandeId, produitId, produi
     notifier(r.demandeSupprimee ? 'Demande supprimée' : `${produitNom} supprimé de la demande`);
     return true;
   } catch (err) { notifier(err.message, 'erreur'); return false; }
+}
+
+// ---------------------------------------------------------------------
+// Supprimer UN fichier qui n'est pas le bon (demandé par Léa le 02.10.2026) — pas la demande.
+// Régie / admin. Migration 33 : visuel déjà mis sur une diffusion = refusé, l'ancien revient,
+// « ⏳ visuel attendu » ; ligne du dossier sponsor supprimée. Puis le fichier quitte le stockage.
+// ---------------------------------------------------------------------
+export const boutonSupprimerFichier = (chemin) => `
+  <button type="button" class="btn btn-discret btn-danger petit" data-supprimer-fichier="${echapper(chemin)}"
+          title="Ce n’est pas le bon fichier : le supprimer">Supprimer</button>`;
+
+export async function confirmerSuppressionFichier(chemin) {
+  const nom = chemin.split('/').pop().replace(/^[a-z]+__/, '');
+  if (!confirm(`Supprimer le fichier « ${nom} » ?\n\n`
+    + 'À utiliser quand ce n’est pas le bon fichier. Le bon s’ajoute ensuite avec « + Ajouter un fichier ».\n'
+    + 'S’il était déjà mis sur une diffusion, elle passe en « ⏳ visuel attendu » (l’ancien visuel revient s’il y en avait un).')) return false;
+  const { data: lignes, error } = await sb.rpc('supprimer_fichier', { p_chemin: chemin });
+  if (error) {
+    notifier(/supprimer_fichier/.test(error.message) ? 'Exécutez d’abord la migration 33 dans Supabase.' : `Suppression impossible : ${error.message}`, 'erreur');
+    return false;
+  }
+  const { error: e2 } = await sb.storage.from('assets').remove([chemin]);
+  if (e2) { notifier(`Fichier retiré de l’outil, mais pas du stockage : ${e2.message}`, 'erreur'); return true; }
+  notifier(lignes ? 'Fichier supprimé · diffusion en « visuel attendu »' : 'Fichier supprimé');
+  return true;
 }
 
 // Contrôle du fichier par rapport au format du produit : alerte orange, jamais bloquant
@@ -442,6 +468,13 @@ function brancher(el) {
       const { data, error } = await sb.storage.from('assets').createSignedUrl(telecharger.dataset.fichier, 600, { download: true });
       if (error) return notifier(error.message, 'erreur');
       location.href = data.signedUrl;
+      return;
+    }
+    const suppr = e.target.closest('[data-supprimer-fichier]');
+    if (suppr) {
+      suppr.disabled = true;
+      if (await confirmerSuppressionFichier(suppr.dataset.supprimerFichier)) await chargerFichiers(k);
+      suppr.disabled = false;
       return;
     }
     const empl = e.target.closest('[data-empl]');

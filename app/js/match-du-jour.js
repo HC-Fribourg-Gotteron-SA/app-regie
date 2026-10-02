@@ -2,7 +2,7 @@
 // puis toute la playlist pour vérifier. Les playlists Colosseo restent d'un match à l'autre.
 import { sb, exigerConnexion, echapper, dateCourte, notifier, toutesLesLignes, libelleFichier, taille } from './app.js';
 import { calculerChangements, consigne, PASSE } from './changements.js';
-import { confirmerSuppressionProduit } from './traitement.js';
+import { confirmerSuppressionProduit, boutonSupprimerFichier, confirmerSuppressionFichier } from './traitement.js';
 
 const { profil } = await exigerConnexion({ roles: ['regie', 'admin'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
@@ -359,7 +359,8 @@ function carteDemande(i) {
           <ul class="liste-fichiers liste-documents">${a.fichiers.map(f => `
             <li><span><strong>${echapper(libelleFichier(a.produit, f.role))}</strong> : ${echapper(f.nom)}
                 ${f.taille ? `<span class="doux petit">${taille(f.taille)}</span>` : ''}</span>
-              <button type="button" class="btn" data-telecharger="${echapper(f.storage_path)}">Télécharger</button></li>`).join('')}
+              <span><button type="button" class="btn" data-telecharger="${echapper(f.storage_path)}">Télécharger</button>
+                ${estRegie ? boutonSupprimerFichier(f.storage_path) : ''}</span></li>`).join('')}
           </ul>`
           : '<div class="petit" style="margin-top:.3rem">⏳ <strong>Fichier à venir</strong> <span class="doux">(pas encore envoyé par le Sponsoring)</span></div>'}
       </div>
@@ -467,7 +468,8 @@ function ligneFichier(libelle, nom, chemin, octets) {
   return `<li><span><strong>${echapper(libelle)}</strong> : ${echapper(nom || '—')}
       ${octets ? `<span class="doux petit">${taille(octets)}</span>` : ''}
       ${chemin ? '' : '<span class="doux petit">· fichier pas dans l’outil</span>'}</span>
-    ${chemin ? `<button type="button" class="btn" data-telecharger="${echapper(chemin)}">Télécharger</button>` : ''}</li>`;
+    ${chemin ? `<span><button type="button" class="btn" data-telecharger="${echapper(chemin)}">Télécharger</button>
+      ${estRegie ? boutonSupprimerFichier(chemin) : ''}</span>` : ''}</li>`;
 }
 
 function ouvrirChangement(cleItem) {
@@ -615,6 +617,19 @@ document.addEventListener('click', async (e) => {
   const { data, error } = await sb.storage.from('assets').createSignedUrl(b.dataset.telecharger, 600, { download: true });
   if (error) return notifier(`Téléchargement impossible : ${error.message}`, 'erreur');
   location.href = data.signedUrl;
+});
+
+// Supprimer un fichier qui n'est pas le bon (carte d'une demande ou fenêtre « Détails ») : pas la demande
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-supprimer-fichier]');
+  if (!b) return;
+  const ouvert = etat.ouvert;
+  b.disabled = true;
+  if (await confirmerSuppressionFichier(b.dataset.supprimerFichier)) {
+    await chargerMatch();
+    if (ouvert && (etat.items || []).some(x => `${x.ligne_id}|${x.action}` === ouvert)) ouvrirChangement(ouvert);
+  }
+  b.disabled = false;
 });
 
 // Supprimer (erreur, ne se fera pas) — demandé par Léa le 02.10.2026 : ni « traité » ni « fait »

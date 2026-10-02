@@ -1,6 +1,6 @@
 import { sb, exigerConnexion, echapper, dateCourte, notifier, taille, debounce,
          descriptionProduit, specsProduit, CATEGORIES_UNE_PAGE, lienCategorie, ongletsProduits, etatAuMatch } from './app.js';
-import { carteTraitement, CHAMPS_A_TRAITER } from './traitement.js';
+import { carteTraitement, CHAMPS_A_TRAITER, boutonSupprimerFichier, confirmerSuppressionFichier } from './traitement.js';
 
 const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
@@ -442,6 +442,7 @@ function listeVisuels(assets) {
       ${a.statut === 'archive' ? '<span class="badge">ancien</span>'
         : STATUT_ASSET[a.statut] ? `<span class="badge ${STATUT_ASSET[a.statut][1]}">${STATUT_ASSET[a.statut][0]}</span>` : ''}
       ${a.storage_path ? `<button type="button" class="btn btn-discret" data-telecharger-visuel="${echapper(a.storage_path)}">Télécharger</button>` : ''}
+      ${a.storage_path && estRegie ? boutonSupprimerFichier(a.storage_path) : ''}
     </li>`).join('')}</ul>`
     : '<p class="doux petit" style="margin:0">Aucun visuel pour l’instant.</p>';
 }
@@ -652,7 +653,8 @@ async function afficherDossierSponsor(l) {
     <h3>Dossier du sponsor <span class="doux petit">· ${docs.length} fichier${docs.length > 1 ? 's' : ''}</span></h3>
     <ul class="liste-fichiers liste-documents" style="margin:0">${docs.slice(0, 10).map(d => `
       <li><span>${echapper(d.nom)} <span class="doux petit">· reçu le ${dateCourte(d.depose_le)}${d.taille_octets ? ` · ${taille(d.taille_octets)}` : ''}</span></span>
-        <button type="button" class="btn btn-discret" data-telecharger-visuel="${echapper(d.storage_path)}">Télécharger</button></li>`).join('')}
+        <span><button type="button" class="btn btn-discret" data-telecharger-visuel="${echapper(d.storage_path)}">Télécharger</button>
+        ${estRegie ? boutonSupprimerFichier(d.storage_path) : ''}</span></li>`).join('')}
     </ul>
     ${docs.length > 10 ? `<a class="petit" href="sponsor.html?id=${sponsorId}">Voir tout le dossier →</a>` : ''}`;
 }
@@ -678,6 +680,19 @@ document.addEventListener('click', async (e) => {
   const { data, error } = await sb.storage.from('assets').createSignedUrl(b.dataset.telechargerVisuel, 600, { download: true });
   if (error) return notifier(`Téléchargement impossible : ${error.message}`, 'erreur');
   location.href = data.signedUrl;
+});
+
+// Supprimer un fichier qui n'est pas le bon, depuis le détail d'une diffusion (les cartes « À ajouter » gèrent les leurs)
+$('d-corps').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-supprimer-fichier]');
+  if (!b) return;
+  const ouverte = etat.ouverte;
+  b.disabled = true;
+  if (await confirmerSuppressionFichier(b.dataset.supprimerFichier)) {
+    await charger();
+    if (ouverte && trouverLigne(ouverte)) ouvrirDetail(ouverte);
+  }
+  b.disabled = false;
 });
 
 $('btn-fermer').addEventListener('click', fermerParUtilisateur);

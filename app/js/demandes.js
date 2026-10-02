@@ -1,6 +1,7 @@
 import { sb, exigerConnexion, LIBELLES, echapper, dateCourte, dateHeure, notifier, debounce, taille, libelleFichier,
          depuis, initiales } from './app.js';
-import { carteTraitement, CHAMPS_A_TRAITER, ajouterFichierDemande, boutonAjoutFichier, supprimerDemande } from './traitement.js';
+import { carteTraitement, CHAMPS_A_TRAITER, ajouterFichierDemande, boutonAjoutFichier, supprimerDemande,
+         boutonSupprimerFichier, confirmerSuppressionFichier } from './traitement.js';
 
 const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
@@ -462,7 +463,8 @@ async function chargerFichiers(id) {
 
 const ligneFichier = (chemin, nom, octets) => `
   <li><span>${echapper(nom)} <span class="doux petit">${taille(octets)}</span></span>
-      <button class="btn" data-fichier="${echapper(chemin)}">Télécharger</button></li>`;
+      <span><button class="btn" data-fichier="${echapper(chemin)}">Télécharger</button>
+      ${estRegie ? boutonSupprimerFichier(chemin) : ''}</span></li>`;
 
 // Fichiers de chaque produit : demandes/<demande>/<produit>/<role>__<nom>
 // Une ligne par fichier attendu (ex. « Vidéo vidéotron », « Visuel anneau LED »), avec le fichier ou « à venir ».
@@ -509,6 +511,16 @@ $('d-corps').addEventListener('change', async (e) => {
   } catch (err) { notifier(err.message, 'erreur'); }
   await charger();
   ouvrir(d.id);
+});
+
+// Supprimer un fichier qui n'est pas le bon (les cartes de traitement gèrent les leurs)
+$('d-corps').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-supprimer-fichier]');
+  if (!b || b.closest('[data-traitement]')) return;
+  const id = etat.ouverte;
+  b.disabled = true;
+  if (await confirmerSuppressionFichier(b.dataset.supprimerFichier)) { await charger(); ouvrir(id); }
+  b.disabled = false;
 });
 
 // Téléchargement (un seul écouteur pour tous les boutons du détail)

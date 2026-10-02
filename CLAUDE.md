@@ -74,6 +74,12 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    exécuter sur les deux bases, pas encore testé)** : format attendu affiché dans la demande (par fichier, + « format OK »
    ou ⚠), dans la carte de traitement et en haut de la fiche produit (« ✏️ Format » pour la Régie : dimensions, formats,
    durée max, remarque). Toujours une **alerte, jamais un blocage** (LED 3M / 6M : souvent un logo seul, accepté).
+0-sexies. **Supprimer un mauvais fichier (02.10.2026, migration 33 à exécuter sur les deux bases, pas encore testé)** :
+   bouton « Supprimer » (Régie / admin) à côté de chaque fichier — carte de traitement (`boutonSupprimerFichier` /
+   `confirmerSuppressionFichier` de traitement.js, utilisés partout), détail d'une demande, Match du jour (carte de
+   demande + fenêtre Détails), détail d'une diffusion. Supprime LE FICHIER, pas la demande : RPC `supprimer_fichier`
+   (visuel mis sur une diffusion → refusé « Mauvais fichier », l'ancien visuel revient, ⏳ visuel attendu ; ligne du
+   dossier sponsor supprimée), puis retrait du stockage. Le bon fichier : « + Ajouter un fichier ».
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
@@ -166,7 +172,8 @@ outil-regie/
 │   ├── 29_ordre_produits_soiree.sql ← ordre des produits = déroulé de la soirée
 │   ├── 30_run_of_show.sql ← run of show (ros_modeles, ros_matchs, ros_lignes) + rôle « animation »
 │   ├── 31_run_of_show_rundown.sql ← colonnes du rundown Régie (quand, light, important, sections) + modèle NL
-│   └── 32_formats_produits.sql ← formats du media kit (dimensions, PNG/JPEG/MP4/MOV) + produits.remarque_format
+│   ├── 32_formats_produits.sql ← formats du media kit (dimensions, PNG/JPEG/MP4/MOV) + produits.remarque_format
+│   └── 33_supprimer_fichier.sql ← RPC supprimer_fichier(chemin) : mauvais fichier (visuel refusé, ancien revient, visuel attendu)
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
