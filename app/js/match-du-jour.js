@@ -253,18 +253,17 @@ function afficher() {
   const reste = items.filter(i => !i.fait).length;
   const taches = etat.notes.filter(n => n.type === 'tache' && !n.fait).length;
 
-  // bilan en une ligne
+  // bilan en une ligne : demandes et tâches seulement (la phrase sur le bloc 2 a été retirée, demandé par Léa)
   const morceaux = [
     demandes.length ? `${demandes.length} demande${demandes.length > 1 ? 's' : ''} à traiter` : '',
-    reste ? `${reste} vente${reste > 1 ? 's' : ''} au match à mettre ou enlever dans Colosseo` : '',
     taches ? `${taches} tâche${taches > 1 ? 's' : ''} pour ce soir` : '',
   ].filter(Boolean);
   const bilan = $('bilan');
-  bilan.hidden = false;
+  bilan.hidden = !morceaux.length && reste > 0;      // il reste du travail dans le bloc 2 : pas de « Tout est prêt »
   bilan.className = `carte bilan-match ${morceaux.length ? 'bilan-a-faire' : 'bilan-pret'}`;
   bilan.innerHTML = morceaux.length
-    ? `<strong>${morceaux.join(' · ')}</strong>${items.length - reste ? ` <span class="doux">· ${items.length - reste} déjà fait${items.length - reste > 1 ? 's' : ''}</span>` : ''}`
-    : '<strong>✓ Tout est prêt</strong> <span class="doux">— pas de demande à traiter ni de vente au match à changer.</span>';
+    ? `<strong>${morceaux.join(' · ')}</strong>`
+    : '<strong>✓ Tout est prêt</strong> <span class="doux">— rien à faire dans Colosseo pour ce match.</span>';
   afficherNotes();
   if (!etat.tableFait && estRegie && items.length) {
     bilan.innerHTML += '<p class="message message-erreur petit" style="margin:.6rem 0 0">Les cases « Fait » ne s’enregistrent pas encore : exécutez la migration 22 dans Supabase.</p>';
