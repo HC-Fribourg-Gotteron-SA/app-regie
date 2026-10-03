@@ -364,7 +364,6 @@ function carteDemande(i) {
           le ${dateCourte(a.traite_le)} à ${heure(a.traite_le)}</div>
       </div>
       <div class="changement-actions">
-        <span class="badge statut-traitee">✓ Traitée</span>
         <a class="btn btn-discret" href="demandes.html?id=${a.demande_id}&retour=${encodeURIComponent(`match-du-jour.html?match=${etat.match.id}`)}">Voir</a>
       </div>
     </div>`;
