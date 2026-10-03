@@ -73,8 +73,7 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    **Rôle `animation` = « Chrono & animation »** : ne voit QUE le run of show (menu filtré, accueil run-of-show.html,
    `est_membre()` l'exclut, lecture des matchs autorisée). Sponsoring : consulte. Import Excel : pas fait.
    **Défile tout seul** (03.10.2026, demandé par Léa) : la ligne en cours reste au milieu de l'écran (`suivreLigne`) ;
-   défilement à la main (molette, tactile, flèches) = pause 20 s ; case « Suivre la ligne en cours » (localStorage
-   `ros-suivre`, par écran) ; rien en mode Modifier. Barre du haut (face-off, horloge, compte à rebours) **fixe**
+   défilement à la main (molette, tactile, flèches) = pause 20 s ; rien en mode Modifier. Barre du haut (face-off, horloge, compte à rebours) **fixe**
    quand on défile (`position: sticky`). **Ligne en cours = la plus récente** des deux : ligne cliquée par la Régie
    (`reperes.en_cours` + `en_cours_le`) ou ligne dont l'heure est arrivée (avant : un clic bloquait les heures suivantes,
    signalé par Léa le 03.10.2026). La surbrillance automatique d'après l'heure ne marche que le jour du match (pas sur
@@ -90,8 +89,13 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    tiers 35 min / pause 20 min / prolongation-tirs au but 10 min (d'après son nom, `dureeSection`), ses lignes réparties
    régulièrement ; affiché « ≈ 20:20 » en gris (lecture) ; `ligneEnCours` les utilise (défilement jusqu'à la fin du
    match). Se décale si un tiers dure plus / moins : le clic de la Régie reste prioritaire (le plus récent gagne).
-   Autres idées proposées si l'essai ne convient pas : A = clic au début de chaque pause puis chrono de la pause ;
-   C = seulement le clic.0-quinquies. **Formats des produits (02.10.2026, media kit https://hcfg.brandboard.app/media-kit-hcfg ; migration 32 à
+   **Puis bouton « ▶ Lancer : <section> »** (même jour, maquette validée par Léa « on peut tester comme ça ») : dans la
+   barre fixe, Régie seulement, le jour du match ; lance la prochaine section du match (`prochaineSection`) à l'heure
+   du clic → `ros_matchs.reperes.sections[<id section>] = { debut, par }` ; `heuresLignes(lignes, fo, lancements)` fait
+   partir la section (et les suivantes, estimées) de là. Affiché à tous : « ✓ 1er TIERS lancé à 19:47 par Léa »
+   (+ « corriger » pour la Régie : prompt heure, vide = annuler) et sur le bandeau de la section. Rappel : bouton orange
+   clignotant si l'heure estimée est dépassée de 3 min. **Case « Suivre la ligne en cours » retirée** (Léa : inutile),
+   le suivi est toujours actif. Léa veut revoir le timing des tiers (arrêts de jeu) après l'essai.0-quinquies. **Formats des produits (02.10.2026, media kit https://hcfg.brandboard.app/media-kit-hcfg ; migration 32 à
    exécuter sur les deux bases, pas encore testé)** : format attendu affiché dans la demande (par fichier, + « format OK »
    ou ⚠), dans la carte de traitement et en haut de la fiche produit (« ✏️ Format » pour la Régie : dimensions, formats,
    durée max, remarque). Toujours une **alerte, jamais un blocage** (LED 3M / 6M : souvent un logo seul, accepté).

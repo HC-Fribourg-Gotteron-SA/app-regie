@@ -26,9 +26,9 @@
       <div class="ros-reperes" id="reperes"></div>
       <div class="ros-horloge"><span class="doux petit">Il est</span> <strong id="horloge">--:--:--</strong>
         <span class="doux petit" id="avant-fo"></span></div>
+      <!-- Lancer le tiers / la pause (Régie), et ce qui a été lancé (tout le monde) -->
+      <div class="ros-lancement" id="lancement"></div>
       <div class="ros-outils">
-        <label class="petit" style="margin:0;display:flex;gap:.35rem;align-items:center" title="La page défile toute seule jusqu'à la ligne en cours">
-          <input type="checkbox" id="suivre" checked> Suivre la ligne en cours</label>
         <button type="button" class="btn" id="btn-edition" hidden>✏️ Modifier</button>
         <button type="button" class="btn btn-discret" id="btn-imprimer">🖨 Imprimer</button>
       </div>
@@ -49,8 +49,9 @@
 
     <!-- Le rundown -->
     <section id="bloc-lignes" hidden>
-      <p class="aide" id="aide-en-cours" hidden>Pendant le match, cliquez sur une ligne pour la marquer « en cours » :
-        chrono et animation la voient en direct. Re-cliquez pour enlever.</p>
+      <p class="aide" id="aide-en-cours" hidden>Pendant le match, appuyez sur « ▶ Lancer » au début de chaque tiers et de
+        chaque pause : ses lignes avancent toutes seules (pause 20 min, tiers 35 min estimées). Pour corriger, cliquez sur la
+        bonne ligne (re-cliquez pour enlever). Chrono et animation voient tout en direct.</p>
       <div class="ros-tableau-cadre">
         <table class="tableau ros-tableau" id="tableau">
           <thead id="entete"></thead>

@@ -755,6 +755,14 @@ body.fenetre-ouverte { overflow: hidden; }
   border-top: 3px solid var(--noir, #0f2240); }
 .ros-ligne.ros-important td { background: #e8175d; color: #fff; font-weight: 700; }
 .ros-calcule { font-variant-numeric: tabular-nums; color: var(--texte-doux, #5b6780); }
+/* Lancer le tiers / la pause (barre fixe du haut) */
+.ros-lancement { display: flex; flex-wrap: wrap; gap: .4rem .9rem; align-items: center; }
+.ros-lancement .btn { font-size: 1rem; padding: .55rem 1rem; }
+.ros-lance { color: var(--ok, #1f7a4d); font-weight: 600; font-size: .9rem; text-transform: none; letter-spacing: 0; }
+.ros-section .ros-lance { font-size: .85em; }
+.btn-retard { background: #e07b00; border-color: #e07b00; color: #fff; animation: ros-clignote 1.6s ease-in-out infinite; }
+@keyframes ros-clignote { 50% { box-shadow: 0 0 0 6px rgba(224, 123, 0, .25); } }
+.btn-lien { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; font-weight: 400; }
 /* heure estimée pendant le match (tiers 35 min, pause 20 min) : grisée, avec « ≈ » */
 .ros-estimee { font-variant-numeric: tabular-nums; color: var(--texte-doux, #5b6780); font-weight: 400;
   text-transform: none; letter-spacing: 0; font-size: .85em; white-space: nowrap; }
@@ -771,7 +779,7 @@ body.fenetre-ouverte { overflow: hidden; }
 .page-ros .ros-ligne { cursor: default; }
 @media print {
   .menu-lateral, .barre-mobile, .voile-menu, .bandeau-base, .ros-choix, .ros-outils, .ros-pied, #aide-edition,
-  #aide-en-cours, .ros-horloge { display: none !important; }
+  #aide-en-cours, .ros-horloge, .ros-lancement { display: none !important; }
   .ros-ligne.en-cours td { background: inherit !important; color: inherit; box-shadow: none; }
   body.avec-menu main { margin: 0 !important; max-width: none !important; }
   .ros-tableau { min-width: 0; font-size: 9pt; }

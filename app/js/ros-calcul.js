@@ -81,35 +81,56 @@ export function dureeSection(nom) {
   return DUREES_SECTION_MIN.tiers * 60;
 }
 
-// Heure de chaque ligne : réelle si elle en a une, sinon estimée (voir plus haut) ; null si rien.
-// Renvoie [{ heure: Date | null, estimee: bool }] dans l'ordre des lignes.
-export function heuresLignes(lignes, faceOff) {
-  const res = lignes.map(l => ({ heure: heureLigne(l, faceOff), estimee: false }));
-  if (!faceOff) return res;
+// Sections du match (après la ligne du face-off) sans heures à elles : celles qu'on estime et qu'on « lance ».
+// Renvoie [{ k: index de la section, dedans: [index des lignes] }].
+export function sectionsDuMatch(lignes) {
   const debutMatch = lignes.findIndex(l => !l.est_section && l.decalage_s !== null && l.decalage_s !== undefined && l.decalage_s >= 0);
-  if (debutMatch < 0) return res;
-  let curseur = faceOff.getTime();
+  if (debutMatch < 0) return [];
+  const res = [];
   for (let k = debutMatch + 1; k < lignes.length; k++) {
     if (!lignes[k].est_section) continue;
-    // lignes de cette section (jusqu'à la suivante)
     let fin = k + 1;
     while (fin < lignes.length && !lignes[fin].est_section) fin++;
     const dedans = [];
     for (let j = k + 1; j < fin; j++) dedans.push(j);
-    if (dedans.some(j => res[j].heure)) { k = fin - 1; continue; }     // section avec de vraies heures : rien à estimer
-    const duree = dureeSection(lignes[k].action) * 1000;
-    res[k] = { heure: new Date(curseur), estimee: true };
-    dedans.forEach((j, n) => { res[j] = { heure: new Date(curseur + duree * n / dedans.length), estimee: true }; });
-    curseur += duree;
+    const avecHeures = dedans.some(j => lignes[j].decalage_s !== null && lignes[j].decalage_s !== undefined);
+    if (!avecHeures) res.push({ k, dedans });
     k = fin - 1;
   }
   return res;
 }
 
+// Heure de chaque ligne : réelle si elle en a une, sinon estimée (voir plus haut) ; null si rien.
+// lancements = { <id de la section>: { debut: ISO } } : la Régie a « lancé » le tiers / la pause à cette heure
+// (03.10.2026) ; la section démarre alors à l'heure du clic, et les suivantes s'estiment à partir de là.
+// Renvoie [{ heure: Date | null, estimee: bool, lancee: bool }] dans l'ordre des lignes.
+export function heuresLignes(lignes, faceOff, lancements = {}) {
+  const res = lignes.map(l => ({ heure: heureLigne(l, faceOff), estimee: false, lancee: false }));
+  if (!faceOff) return res;
+  let curseur = faceOff.getTime();
+  for (const { k, dedans } of sectionsDuMatch(lignes)) {
+    const lance = lancements?.[lignes[k].id]?.debut;
+    if (lance) curseur = new Date(lance).getTime();
+    const duree = dureeSection(lignes[k].action) * 1000;
+    res[k] = { heure: new Date(curseur), estimee: !lance, lancee: !!lance };
+    dedans.forEach((j, n) => { res[j] = { heure: new Date(curseur + duree * n / dedans.length), estimee: true, lancee: !!lance }; });
+    curseur += duree;
+  }
+  return res;
+}
+
+// Prochaine section à lancer : celle qui suit la dernière lancée (la première du match sinon). -1 si plus rien.
+export function prochaineSection(lignes, lancements = {}) {
+  const sections = sectionsDuMatch(lignes);
+  let derniere = -1;
+  sections.forEach((s, n) => { if (lancements?.[lignes[s.k].id]?.debut) derniere = n; });
+  return sections[derniere + 1]?.k ?? -1;
+}
+
 // Ligne en cours à l'instant `maintenant` : celle qui a commencé le plus récemment (heure réelle ou estimée).
 // Les sections ne sont jamais « en cours » (leur première ligne l'est). -1 si aucune.
-export function ligneEnCours(lignes, faceOff, maintenant) {
-  const heures = heuresLignes(lignes, faceOff);
+export function ligneEnCours(lignes, faceOff, maintenant, lancements = {}) {
+  const heures = heuresLignes(lignes, faceOff, lancements);
   let i = -1, plusRecent = null;
   lignes.forEach((l, k) => {
     const h = heures[k].heure;

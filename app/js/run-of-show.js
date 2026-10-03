@@ -4,7 +4,7 @@
 // Régie / admin : créent et modifient ; Sponsoring et « Chrono & animation » : consultent, en direct le soir du match.
 import { sb, exigerConnexion, echapper, dateCourte, notifier, debounce } from './app.js';
 import { lireHeure, lireDuree, formatHMS, secondesDuJour, colonnesTemps, ligneEnCours, heuresLignes,
-         tempsCourt, heureCourteLigne, dureeSection } from './ros-calcul.js';
+         tempsCourt, heureCourteLigne, dureeSection, prochaineSection } from './ros-calcul.js';
 
 const { profil } = await exigerConnexion({ roles: ['regie', 'admin', 'sponsoring', 'animation'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
@@ -145,14 +145,15 @@ function afficherLignes() {
   const fo = faceOff();
   const cols = CHAMPS.filter(([c]) => c !== 'lien' || etat.lignes.some(l => (l.lien || '').trim()));
   const nb = 3 + cols.length;
-  const heures = heuresLignes(etat.lignes, fo);      // pendant le match : heures estimées (≈), voir ros-calcul.js
+  const heures = heuresLignes(etat.lignes, fo, lancements());   // pendant le match : estimées (≈) ou depuis le lancement
   // lecture : pas de N°, colonnes de temps étroites (format court), le texte prend la place (Léa, 03.10.2026)
   $('tableau').classList.add('ros-lecture');
   $('entete').innerHTML = `<tr><th class="ros-col-temps">Heure</th><th class="ros-col-temps">Compte à rebours</th>
     <th class="ros-col-temps">Durée</th>${cols.map(([, t]) => `<th>${t}</th>`).join('')}</tr>`;
   $('lignes').innerHTML = etat.lignes.length ? etat.lignes.map((l, i) => {
     if (l.est_section) return `<tr class="ros-section" data-rang="${i}"><td colspan="${nb}">${echapper(l.action || '')}${
-      heures[i].estimee ? ` <span class="ros-estimee">≈ ${heureMin(heures[i].heure)} · ${Math.round(dureeSection(l.action) / 60)} min</span>` : ''}</td></tr>`;
+      heures[i].lancee ? ` <span class="ros-lance">✓ lancé à ${heureMin(heures[i].heure)}</span>`
+      : heures[i].estimee ? ` <span class="ros-estimee">pas encore lancé · ≈ ${heureMin(heures[i].heure)} · ${Math.round(dureeSection(l.action) / 60)} min</span>` : ''}</td></tr>`;
     const t = colonnesTemps(l, fo);
     const avecHeure = l.decalage_s !== null && l.decalage_s !== undefined;
     return `
@@ -222,14 +223,16 @@ function tic() {
   const leJour = !etat.modele && fo && memeJour(fo, maintenant);
   const reste = fo ? (fo - maintenant) / 1000 : null;
   $('avant-fo').textContent = !leJour ? '' : reste > 0 ? `· face-off dans ${formatHMS(reste)}` : '· match commencé';
+  majLancement(maintenant, leJour);
   if (etat.edition) return;
   // ligne en cours : la plus récente des deux — celle cliquée par la Régie (pendant le match) ou celle dont l'heure
-  // est arrivée (avant le match). Corrigé le 03.10.2026 : une ligne cliquée plus tôt bloquait les heures suivantes.
+  // (réelle, ou estimée depuis le lancement du tiers / de la pause) est arrivée. Le 03.10.2026 : une ligne cliquée
+  // plus tôt bloquait les heures suivantes.
   const choisie = etat.ros?.reperes?.en_cours;
   const iChoisie = choisie ? etat.lignes.findIndex(l => l.id === choisie) : -1;
-  const iHeure = leJour ? ligneEnCours(etat.lignes, fo, maintenant) : -1;
+  const iHeure = leJour ? ligneEnCours(etat.lignes, fo, maintenant, lancements()) : -1;
   const cliqueLe = etat.ros?.reperes?.en_cours_le ? new Date(etat.ros.reperes.en_cours_le) : new Date(0);
-  const heureArrivee = iHeure >= 0 ? heuresLignes(etat.lignes, fo)[iHeure].heure : null;   // réelle ou estimée
+  const heureArrivee = iHeure >= 0 ? heuresLignes(etat.lignes, fo, lancements())[iHeure].heure : null;
   const enCours = iChoisie >= 0 && !(heureArrivee && heureArrivee > cliqueLe) ? iChoisie : iHeure;
   document.querySelectorAll('#lignes tr[data-rang]').forEach(tr => tr.classList.toggle('en-cours', Number(tr.dataset.rang) === enCours));
   suivreLigne(enCours);
@@ -237,14 +240,9 @@ function tic() {
 setInterval(tic, 1000);
 
 // La page défile toute seule jusqu'à la ligne en cours (demandé par Léa le 03.10.2026), au milieu de l'écran.
-// Quelqu'un fait défiler à la main : pause de 20 s, puis retour sur la ligne en cours. Case « Suivre » : par écran.
+// Quelqu'un fait défiler à la main : pause de 20 s, puis retour sur la ligne en cours. (Case « Suivre » retirée :
+// « ça sert à rien », Léa.)
 const defilement = { derniere: -1, pauseJusqua: 0, aRecentrer: true };
-try { $('suivre').checked = localStorage.getItem('ros-suivre') !== 'non'; } catch { /* stockage indisponible */ }
-$('suivre').addEventListener('change', () => {
-  try { localStorage.setItem('ros-suivre', $('suivre').checked ? 'oui' : 'non'); } catch { /* stockage indisponible */ }
-  defilement.aRecentrer = true;
-  tic();
-});
 const pauseManuelle = () => { defilement.pauseJusqua = Date.now() + 20000; defilement.aRecentrer = true; };
 ['wheel', 'touchmove'].forEach(ev => window.addEventListener(ev, pauseManuelle, { passive: true }));
 window.addEventListener('keydown', (e) => {
@@ -252,7 +250,7 @@ window.addEventListener('keydown', (e) => {
 });
 
 function suivreLigne(enCours) {
-  if (!$('suivre').checked || enCours < 0 || Date.now() < defilement.pauseJusqua) return;
+  if (enCours < 0 || Date.now() < defilement.pauseJusqua) return;
   if (enCours === defilement.derniere && !defilement.aRecentrer) return;
   const tr = document.querySelector(`#lignes tr[data-rang="${enCours}"]`);
   if (!tr) return;
@@ -260,6 +258,77 @@ function suivreLigne(enCours) {
   defilement.derniere = enCours;
   defilement.aRecentrer = false;
 }
+
+// ---------------------------------------------------------------------
+// Lancer le tiers / la pause (essai du 03.10.2026, avec Léa) : la Régie clique quand la section commence ;
+// ses lignes partent de cette heure (pause 20 min, tiers 35 min estimés). Gardé dans ros_matchs.reperes.sections :
+// { <id de la section>: { debut: ISO, par: 'Léa' } }. Rappel orange si l'heure estimée est dépassée de 3 min.
+// ---------------------------------------------------------------------
+const lancements = () => etat.ros?.reperes?.sections || {};
+const nomSection = (l) => (l?.action || 'la section').trim();
+let cleLancement = '';
+
+function majLancement(maintenant, leJour) {
+  const zone = $('lancement');
+  if (etat.modele || !etat.ros) { zone.innerHTML = ''; cleLancement = ''; return; }
+  const fo = faceOff();
+  const lanc = lancements();
+  const heures = heuresLignes(etat.lignes, fo, lanc);
+  // dernière section lancée (affichée à tous)
+  const lancees = etat.lignes.map((l, i) => ({ l, i })).filter(x => x.l.est_section && lanc[x.l.id]?.debut);
+  const derniere = lancees.at(-1);
+  const kProchaine = prochaineSection(etat.lignes, lanc);
+  const prochaine = kProchaine >= 0 ? etat.lignes[kProchaine] : null;
+  const prevue = prochaine ? heures[kProchaine].heure : null;
+  const enRetard = !!(prevue && leJour && maintenant - prevue > 3 * 60000);
+  const cle = [derniere?.l.id, derniere && lanc[derniere.l.id].debut, prochaine?.id, enRetard, estRegie && leJour].join('|');
+  if (cle === cleLancement) return;          // rien n'a changé : on ne redessine pas (le bouton reste cliquable)
+  cleLancement = cle;
+  const fait = derniere ? `<span class="ros-lance">✓ ${echapper(nomSection(derniere.l))} lancé à ${heureMin(new Date(lanc[derniere.l.id].debut))}${
+    lanc[derniere.l.id].par ? ` par ${echapper(lanc[derniere.l.id].par)}` : ''}${estRegie
+    ? ` <button type="button" class="btn-lien" data-corriger="${derniere.l.id}">corriger</button>` : ''}</span>` : '';
+  const bouton = estRegie && leJour && prochaine ? `<button type="button" class="btn ${enRetard ? 'btn-retard' : 'btn-principal'}"
+      data-lancer="${prochaine.id}">${enRetard ? '⚠ ' : ''}▶ Lancer : ${echapper(nomSection(prochaine))}${
+      enRetard ? ` <span class="petit">· devait commencer vers ${heureMin(prevue)}</span>` : ''}</button>` : '';
+  zone.innerHTML = fait + bouton;
+}
+
+async function enregistrerLancement(idSection, debut) {
+  const reperes = { ...(etat.ros.reperes || {}) };
+  const sections = { ...(reperes.sections || {}) };
+  if (debut) sections[idSection] = { debut: debut.toISOString(), par: profil.nom || (profil.email || '').split('@')[0] };
+  else delete sections[idSection];
+  reperes.sections = sections;
+  const { error } = await sb.from('ros_matchs').update({ reperes, maj_le: new Date().toISOString() }).eq('id', etat.ros.id);
+  if (error) return notifier(`Enregistrement impossible : ${error.message}`, 'erreur');
+  etat.ros.reperes = reperes;
+  defilement.aRecentrer = true;
+  cleLancement = '';
+  afficherLignes();
+  tic();
+}
+
+$('lancement').addEventListener('click', async (e) => {
+  const lancer = e.target.closest('[data-lancer]');
+  if (lancer) {
+    const l = etat.lignes.find(x => x.id === lancer.dataset.lancer);
+    notifier(`${nomSection(l)} lancé`);
+    return enregistrerLancement(lancer.dataset.lancer, new Date());
+  }
+  const corriger = e.target.closest('[data-corriger]');
+  if (corriger) {
+    const id = corriger.dataset.corriger;
+    const l = etat.lignes.find(x => x.id === id);
+    const actuel = heureMin(new Date(lancements()[id]?.debut));
+    const rep = prompt(`Heure de début de ${nomSection(l)} (ex. 19:46).\nLaisser vide pour annuler le lancement.`, actuel);
+    if (rep === null) return;
+    if (!rep.trim()) return enregistrerLancement(id, null);
+    const s = lireHeure(rep);
+    if (s === null) return notifier('Heure illisible : écrivez par exemple 19:46', 'erreur');
+    const d = new Date(faceOff()); d.setHours(0, 0, 0, 0);
+    return enregistrerLancement(id, new Date(d.getTime() + s * 1000));
+  }
+});
 
 // ---------------------------------------------------------------------
 // Modifications (Régie / admin)
