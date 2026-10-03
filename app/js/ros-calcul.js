@@ -141,10 +141,17 @@ export function prochaineSection(lignes, lancements = {}) {
 // Les sections ne sont jamais « en cours » (leur première ligne l'est). -1 si aucune.
 export function ligneEnCours(lignes, faceOff, maintenant, lancements = {}) {
   const heures = heuresLignes(lignes, faceOff, lancements);
+  // Une fois une section lancée, on ne revient jamais avant elle (03.10.2026 : 3e tiers lancé avant la fin des
+  // 20 min estimées de la pause → les dernières lignes de la pause repassaient « en cours »).
+  let plancher = -1;
+  lignes.forEach((l, k) => {
+    const lance = l.est_section && lancements?.[l.id]?.debut;
+    if (lance && new Date(lance) <= maintenant) plancher = k;
+  });
   let i = -1, plusRecent = null;
   lignes.forEach((l, k) => {
     const h = heures[k].heure;
-    if (!l.est_section && h && h <= maintenant && (!plusRecent || h >= plusRecent)) { plusRecent = h; i = k; }
+    if (k > plancher && !l.est_section && h && h <= maintenant && (!plusRecent || h >= plusRecent)) { plusRecent = h; i = k; }
   });
   return i;
 }

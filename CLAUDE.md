@@ -100,7 +100,9 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    le suivi est toujours actif. **Plus d'estimation dans les tiers** (même jour, Léa : trop dur avec les arrêts de jeu) :
    tiers lancé = sa 1re ligne s'allume, puis la Régie clique les lignes ; seules les **pauses** lancées avancent seules
    (20 min, `estPause`). Rappel orange seulement si le début est connu (1er tiers = face-off ; tiers après une pause
-   lancée = +20 min).0-quinquies. **Formats des produits (02.10.2026, media kit https://hcfg.brandboard.app/media-kit-hcfg ; migration 32 à
+   lancée = +20 min). **Jamais de retour en arrière** (corrigé le 03.10.2026, signalé par Léa) : une fois une section
+   lancée, `ligneEnCours` ne propose plus aucune ligne avant elle (sinon les lignes de la pause estimées après le
+   lancement anticipé du tiers suivant repassaient « en cours »).0-quinquies. **Formats des produits (02.10.2026, media kit https://hcfg.brandboard.app/media-kit-hcfg ; migration 32 à
    exécuter sur les deux bases, pas encore testé)** : format attendu affiché dans la demande (par fichier, + « format OK »
    ou ⚠), dans la carte de traitement et en haut de la fiche produit (« ✏️ Format » pour la Régie : dimensions, formats,
    durée max, remarque). Toujours une **alerte, jamais un blocage** (LED 3M / 6M : souvent un logo seul, accepté).
