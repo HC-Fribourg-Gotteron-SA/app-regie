@@ -71,7 +71,10 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    la capture du rundown du 02.10.2026 ; script générateur dans le scratchpad de la session). Abandonné : repères
    pauses / « Pause 1 commence » / comptes à rebours saisis (V1 du 01.10, jugée mal adaptée par Léa).
    **Rôle `animation` = « Chrono & animation »** : ne voit QUE le run of show (menu filtré, accueil run-of-show.html,
-   `est_membre()` l'exclut, lecture des matchs autorisée). Sponsoring : consulte. Import Excel : pas fait.0-quinquies. **Formats des produits (02.10.2026, media kit https://hcfg.brandboard.app/media-kit-hcfg ; migration 32 à
+   `est_membre()` l'exclut, lecture des matchs autorisée). Sponsoring : consulte. Import Excel : pas fait.
+   **Défile tout seul** (03.10.2026, demandé par Léa) : la ligne en cours reste au milieu de l'écran (`suivreLigne`) ;
+   défilement à la main (molette, tactile, flèches) = pause 20 s ; case « Suivre la ligne en cours » (localStorage
+   `ros-suivre`, par écran) ; rien en mode Modifier.0-quinquies. **Formats des produits (02.10.2026, media kit https://hcfg.brandboard.app/media-kit-hcfg ; migration 32 à
    exécuter sur les deux bases, pas encore testé)** : format attendu affiché dans la demande (par fichier, + « format OK »
    ou ⚠), dans la carte de traitement et en haut de la fiche produit (« ✏️ Format » pour la Régie : dimensions, formats,
    durée max, remarque). Toujours une **alerte, jamais un blocage** (LED 3M / 6M : souvent un logo seul, accepté).

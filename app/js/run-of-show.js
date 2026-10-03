@@ -218,8 +218,34 @@ function tic() {
   const iChoisie = choisie ? etat.lignes.findIndex(l => l.id === choisie) : -1;
   const enCours = iChoisie >= 0 ? iChoisie : leJour ? ligneEnCours(etat.lignes, fo, maintenant) : -1;
   document.querySelectorAll('#lignes tr[data-rang]').forEach(tr => tr.classList.toggle('en-cours', Number(tr.dataset.rang) === enCours));
+  suivreLigne(enCours);
 }
 setInterval(tic, 1000);
+
+// La page défile toute seule jusqu'à la ligne en cours (demandé par Léa le 03.10.2026), au milieu de l'écran.
+// Quelqu'un fait défiler à la main : pause de 20 s, puis retour sur la ligne en cours. Case « Suivre » : par écran.
+const defilement = { derniere: -1, pauseJusqua: 0, aRecentrer: true };
+try { $('suivre').checked = localStorage.getItem('ros-suivre') !== 'non'; } catch { /* stockage indisponible */ }
+$('suivre').addEventListener('change', () => {
+  try { localStorage.setItem('ros-suivre', $('suivre').checked ? 'oui' : 'non'); } catch { /* stockage indisponible */ }
+  defilement.aRecentrer = true;
+  tic();
+});
+const pauseManuelle = () => { defilement.pauseJusqua = Date.now() + 20000; defilement.aRecentrer = true; };
+['wheel', 'touchmove'].forEach(ev => window.addEventListener(ev, pauseManuelle, { passive: true }));
+window.addEventListener('keydown', (e) => {
+  if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key) && !e.target.closest('input, textarea, select')) pauseManuelle();
+});
+
+function suivreLigne(enCours) {
+  if (!$('suivre').checked || enCours < 0 || Date.now() < defilement.pauseJusqua) return;
+  if (enCours === defilement.derniere && !defilement.aRecentrer) return;
+  const tr = document.querySelector(`#lignes tr[data-rang="${enCours}"]`);
+  if (!tr) return;
+  tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  defilement.derniere = enCours;
+  defilement.aRecentrer = false;
+}
 
 // ---------------------------------------------------------------------
 // Modifications (Régie / admin)
