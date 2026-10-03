@@ -173,7 +173,9 @@ function afficherEdition() {
   const fo = faceOff();
   const num = numeros();
   const nb = 6 + CHAMPS.length;
-  $('entete').innerHTML = `<tr><th></th><th>Heure</th><th>Compte à rebours / quand</th><th>Durée</th>${CHAMPS.map(([, t]) => `<th>${t}</th>`).join('')}<th title="Ligne importante (en rouge)">!</th><th></th></tr>`;
+  // édition : temps étroits, texte grand (demandé par Léa le 03.10.2026)
+  $('entete').innerHTML = `<tr><th></th><th class="ros-col-temps">Heure</th><th class="ros-col-temps">Compte à rebours / quand</th>
+    <th class="ros-col-temps">Durée</th>${CHAMPS.map(([c, t]) => `<th class="ros-col-${c}">${t}</th>`).join('')}<th title="Ligne importante (en rouge)">!</th><th></th></tr>`;
   const deplacer = (i) => `
       <td class="ros-deplacer">
         <span class="doux">${num[i] ?? ''}</span>
@@ -194,14 +196,14 @@ function afficherEdition() {
     return `
     <tr class="ros-ligne${l.important ? ' ros-important' : ''}" data-id="${l.id}">
       ${deplacer(i)}
-      <td><input type="text" data-champ="heure" value="${avecHeure ? echapper(t.heure) : ''}" placeholder="18:00" aria-label="Heure" class="ros-court"></td>
+      <td><input type="text" data-champ="heure" value="${avecHeure ? echapper(heureCourteLigne(t.heure)) : ''}" placeholder="18:00" aria-label="Heure" class="ros-court"></td>
       <td>${avecHeure
-        ? `<span class="ros-calcule" data-compte>${echapper(t.compte)}</span>`
-        : `<input type="text" data-champ="quand" value="${echapper(l.quand || '')}" placeholder="à la suite, arrêt de jeu…" aria-label="Quand">`}</td>
-      <td><input type="text" data-champ="duree" value="${l.duree_s ? formatHMS(l.duree_s) : ''}" placeholder="00:01:30" aria-label="Durée" class="ros-court"></td>
-      ${CHAMPS.map(([c, titre, genre]) => `<td>${genre === 'textarea'
-        ? `<textarea data-champ="${c}" rows="2" aria-label="${titre}">${echapper(l[c] || '')}</textarea>`
-        : `<input type="text" data-champ="${c}" value="${echapper(l[c] || '')}" aria-label="${titre}">`}</td>`).join('')}
+        ? `<span class="ros-calcule" data-compte>${echapper(tempsCourt(t.compte))}</span>`
+        : `<input type="text" data-champ="quand" value="${echapper(l.quand || '')}" placeholder="arrêt de jeu…" aria-label="Quand" class="ros-quand">`}</td>
+      <td><input type="text" data-champ="duree" value="${l.duree_s ? tempsCourt(formatHMS(l.duree_s)) : ''}" placeholder="1:30" aria-label="Durée" class="ros-court"></td>
+      ${CHAMPS.map(([c, titre, genre]) => `<td class="ros-col-${c}">${genre === 'textarea'
+        ? `<textarea data-champ="${c}" rows="2" aria-label="${titre}" class="ros-texte">${echapper(l[c] || '')}</textarea>`
+        : `<input type="text" data-champ="${c}" value="${echapper(l[c] || '')}" aria-label="${titre}" class="ros-texte">`}</td>`).join('')}
       <td><input type="checkbox" data-champ="important" ${l.important ? 'checked' : ''} title="Ligne importante (en rouge)" aria-label="Importante"></td>
       ${fin}
     </tr>`;

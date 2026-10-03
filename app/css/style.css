@@ -722,6 +722,15 @@ body.fenetre-ouverte { overflow: hidden; }
 .ros-tableau .ros-heure { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ros-tableau input, .ros-tableau select, .ros-tableau textarea { font-size: .85rem; padding: .3rem .4rem; min-height: 0; }
 .ros-tableau textarea { min-width: 11rem; resize: vertical; }
+/* Modifier : temps étroits, texte grand et lisible (demandé par Léa le 03.10.2026) */
+.ros-tableau:not(.ros-lecture) { min-width: 1150px; }
+.ros-tableau:not(.ros-lecture) th.ros-col-temps { white-space: normal; width: 1%; font-size: .72rem; line-height: 1.15; }
+.ros-tableau .ros-court { width: 4.4rem; text-align: center; }
+.ros-tableau .ros-quand { width: 7rem; }
+.ros-tableau .ros-texte { font-size: .95rem; padding: .4rem .5rem; }
+.ros-tableau input.ros-texte { min-width: 7.5rem; }
+.ros-tableau textarea.ros-texte { min-width: 12rem; min-height: 3.4em; field-sizing: content; line-height: 1.35; }
+.ros-tableau td.ros-col-action textarea, .ros-tableau td.ros-col-instructions textarea { min-width: 17rem; }
 /* Lecture : colonnes de temps étroites, les commentaires prennent la place et passent à la ligne (03.10.2026) */
 .ros-tableau.ros-lecture { min-width: 0; }
 .ros-lecture th.ros-col-temps { white-space: normal; width: 1%; font-size: .72rem; line-height: 1.15; padding-left: .35rem; padding-right: .35rem; }
@@ -740,7 +749,6 @@ body.fenetre-ouverte { overflow: hidden; }
 .ros-section td { background: #fbe9dc; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
   border-top: 3px solid var(--noir, #0f2240); }
 .ros-ligne.ros-important td { background: #e8175d; color: #fff; font-weight: 700; }
-.ros-tableau .ros-court { width: 6.5rem; }
 .ros-calcule { font-variant-numeric: tabular-nums; color: var(--texte-doux, #5b6780); }
 .ros-fin { white-space: nowrap; }
 .ros-face-off { display: inline-flex; align-items: center; gap: .5rem; padding: .35rem .8rem; border-radius: 8px;

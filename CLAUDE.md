@@ -81,7 +81,9 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    un modèle ni un autre jour). **Lecture compacte** (03.10.2026, Léa : « lire les commentaires sans défiler ») : pas
    de colonne N° (gardée en mode Modifier pour ↑ ↓), Heure / Compte à rebours / Durée étroites en format court
    (`tempsCourt`, `heureCourteLigne` dans ros-calcul.js : 45:00, 1:30, 18:00 ; texte libre « quand » inchangé),
-   tableau sans largeur minimale (`.ros-lecture`), le texte passe à la ligne.0-quinquies. **Formats des produits (02.10.2026, media kit https://hcfg.brandboard.app/media-kit-hcfg ; migration 32 à
+   tableau sans largeur minimale (`.ros-lecture`), le texte passe à la ligne. **Mode Modifier** (même jour) : Heure /
+   Durée en petits champs au format court (18:00, 1:30), « quand » 7rem, textes en .95rem, Action / Instructions grands
+   (17rem, s'agrandissent avec `field-sizing: content`), tableau 1150px min.0-quinquies. **Formats des produits (02.10.2026, media kit https://hcfg.brandboard.app/media-kit-hcfg ; migration 32 à
    exécuter sur les deux bases, pas encore testé)** : format attendu affiché dans la demande (par fichier, + « format OK »
    ou ⚠), dans la carte de traitement et en haut de la fiche produit (« ✏️ Format » pour la Régie : dimensions, formats,
    durée max, remarque). Toujours une **alerte, jamais un blocage** (LED 3M / 6M : souvent un logo seul, accepté).
