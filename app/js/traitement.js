@@ -116,6 +116,9 @@ function dessiner(k) {
       ${a.duree_s ? `<span class="badge">${a.duree_s} s</span>` : ''}
       ${options.mode === 'produit' ? `<span class="doux petit description">Reçue ${depuis(d.created_at)}${d.statut === 'question' ? ' · <strong>question en cours au Sponsoring</strong>' : ''}</span>` : ''}
     </div>
+    ${a.a_corriger ? `<p class="message message-erreur petit">⚠ <strong>Fichier à refaire</strong>${a.a_corriger_le
+      ? ` (demandé le ${dateCourte(a.a_corriger_le)})` : ''} : ${echapper(a.a_corriger)}<br>
+      En attente d'un nouveau fichier du Sponsoring : la demande reviendra ici toute seule quand il l'aura ajouté.</p>` : ''}
     ${!d.sponsor && identique ? `<p class="message message-info petit">« ${echapper(identique.nom)} » existe déjà dans l'outil : il sera repris.</p>` : ''}
     ${!d.sponsor && !identique && proches.length ? `<p class="message message-info petit">Sera créé comme nouveau sponsor. Noms proches déjà dans l'outil :
       ${proches.map(s => `<strong>${echapper(s.nom)}</strong>`).join(', ')}. Si c'est le même, corrigez la demande avant d'ajouter.</p>` : ''}
@@ -225,11 +228,18 @@ function blocFichiers(c) {
           ${liste.length ? '' : ' <span class="badge badge-a-venir">à venir</span>'}
           ${specsProduit(cible) ? `<span class="doux"> · attendu ${echapper(specsProduit(cible))}</span>` : ''}
           ${cible?.remarque_format ? `<span class="doux"> · ${echapper(cible.remarque_format)}</span>` : ''}</div>
-        ${liste.map(f => `
+        ${liste.map(f => estRefuse(a, f) ? `
+          <div class="visuel-infos fichier-refuse">
+            <span class="petit"><s>${echapper(f.nomCourt)}</s></span>
+            <span class="badge badge-a-venir">refusé · à refaire</span>
+            <button type="button" class="btn btn-discret petit" data-fichier="${echapper(f.storage_path)}">Télécharger</button>
+          </div>` : `
           <div class="visuel-infos">
             <span class="petit">${echapper(f.nomCourt)}</span>
             <span class="doux petit">${taille(f.taille_octets || 0)} · ${echapper(f.sonde)}</span>
             ${choix.dejaMis.has(f.storage_path) ? '<span class="badge">déjà mis</span>' : controle(f, cible)}
+            ${options.estRegie && !choix.dejaMis.has(f.storage_path) ? `<button type="button" class="btn btn-discret petit"
+                data-refaire="${echapper(f.storage_path)}" title="Le fichier n'est pas utilisable (ex. mauvais format) : le Sponsoring doit en envoyer un autre">Fichier à refaire…</button>` : ''}
             ${versionsAlternees(c, role) && !choix.dejaMis.has(f.storage_path) ? `<label class="petit" style="margin:0">Version
               <input type="text" data-variante="${echapper(f.storage_path)}" value="${echapper(f.variante || '')}" placeholder="FR"
                      style="width:4.5rem;min-height:0;padding:.2rem .4rem"></label>` : ''}
@@ -259,6 +269,37 @@ function versionsAlternees(c, role = 'visuel') {
   let l = ligneVisee(c);
   if (role === 'anneau') l = l?.ligne_couplee_id ? c.ctx.couplees?.get(l.ligne_couplee_id) : null;
   return l?.regle_rotation === 'alterner' && l.ordre_variantes?.length >= 2 ? l.ordre_variantes : null;
+}
+
+// ---------------------------------------------------------------------
+// « Fichier à refaire » (migration 37, demandé par Léa le 03.10.2026) : fichier pas utilisable (ex. LED au mauvais
+// format). Le fichier est refusé (gardé, barré), la demande passe en Question chez le Sponsoring avec le motif ;
+// le bon fichier ajouté par le Sponsoring la remet « à traiter ».
+// ---------------------------------------------------------------------
+const estRefuse = (a, f) => (a.fichiers_refuses || []).includes(f.storage_path);
+
+async function demanderFichierARefaire(k, chemin) {
+  const c = cartes.get(k);
+  const { a, ctx, choix } = c;
+  const f = choix.fichiers.find(x => x.storage_path === chemin);
+  if (!f) return;
+  const cible = f.role === 'anneau' ? ctx.anneau : ctx.p;
+  const alertes = alertesFichier(cible, { nom: f.nomCourt, largeur: f.largeur_px, hauteur: f.hauteur_px, duree: f.duree_s });
+  const motif = prompt(`Fichier à refaire : ${f.nomCourt}\n\nPourquoi ? (envoyé au Sponsoring, modifiable)`,
+    alertes.length ? `Mauvais format : ${alertes.join(' ; ')}` : 'Fichier pas utilisable : ');
+  if (motif === null) return;
+  const { error } = await sb.rpc('fichier_a_refaire', { p_demande: a.demande_id, p_produit: a.produit_id, p_chemin: chemin, p_motif: motif });
+  if (error) {
+    return notifier(/fichier_a_refaire/.test(error.message) ? 'Exécutez d’abord la migration 37 dans Supabase.'
+      : `Impossible : ${error.message}`, 'erreur');
+  }
+  a.a_corriger = motif.trim() || 'Fichier à refaire';
+  a.a_corriger_le = new Date().toISOString();
+  a.fichiers_refuses = [...(a.fichiers_refuses || []), chemin];
+  a.demande.statut = 'question';
+  notifier('Demande renvoyée au Sponsoring : fichier à refaire');
+  dessiner(k);
+  await c.options.apres?.({ refaire: true });
 }
 
 // « Ajouter un fichier » (fichier reçu plus tard) : même bouton dans la demande et sur la fiche
@@ -539,6 +580,8 @@ function brancher(el) {
       if (fait) { cartes.delete(k); oublierContextes(); await c.options.apres?.({ supprime: true }); }
       return;
     }
+    const refaire = e.target.closest('[data-refaire]');
+    if (refaire) return demanderFichierARefaire(k, refaire.dataset.refaire);
     const bouton = e.target.closest('[data-suite]');
     if (bouton) await traiter(k, bouton.dataset.suite, bouton);
   });
@@ -547,7 +590,10 @@ function brancher(el) {
 async function traiter(k, suite, bouton) {
   const { a, ctx, choix, options } = cartes.get(k);
   const p = ctx.p, requis = p.emplacements_requis || 1;
-  const nouveaux = choix.fichiers.filter(f => !choix.dejaMis.has(f.storage_path) && (f.role !== 'anneau' || a.avec_anneau));
+  const nouveaux = choix.fichiers.filter(f => !choix.dejaMis.has(f.storage_path) && !estRefuse(a, f)
+    && (f.role !== 'anneau' || a.avec_anneau));
+  if (['ajoute', 'visuel'].includes(suite) && a.a_corriger
+      && !confirm(`Un nouveau fichier a été demandé au Sponsoring (« ${a.a_corriger} »).\nAjouter quand même avec les fichiers actuels ?`)) return;
   if (suite === 'ignore' && bouton.hasAttribute('data-confirmer')
       && !confirm(`Ignorer la demande de ${nomSponsor(a.demande)} pour ${p.nom} ?\nRien ne sera programmé pour ce produit.`)) return;
   if (suite === 'ajoute' && p.famille === 'emplacement' && choix.emplacements.size < requis
@@ -592,6 +638,10 @@ async function traiter(k, suite, bouton) {
   });
   bouton.disabled = false;
   if (error) return notifier(`Impossible (rien n'a été modifié) : ${error.message}`, 'erreur');
+  // ajouté quand même alors qu'un fichier était à refaire : plus rien à corriger
+  if (a.a_corriger) {
+    await sb.from('demandes_produits').update({ a_corriger: null }).eq('demande_id', a.demande_id).eq('produit_id', a.produit_id);
+  }
   // nouveau visuel sur une diffusion existante : durée et son suivent la nouvelle vidéo
   const suit = { ...(duree ? { duree_s: duree } : {}), ...(avecSon !== null ? { avec_son: avecSon } : {}) };
   if (suite === 'visuel' && data?.ligne_id && Object.keys(suit).length) {

@@ -45,9 +45,7 @@ async function charger() {
   const [{ data, error }, { data: personnes }, { data: matchs }] = await Promise.all([
     sb.from('demandes')
       .select(`*, sponsor:sponsors(id, nom),
-               produits:demandes_produits(type_vente, dates_matchs, duree_s, avec_son, avec_anneau,
-                                          remarque_sponsoring, remarque_regie, suite, traite_le, traite_par,
-                                          produit:produits(id, nom, famille, support)),
+               produits:demandes_produits(*, produit:produits(id, nom, famille, support)),
                match_effet:matchs(numero, date_heure, adversaire),
                saison:saisons(libelle)`)
       .order('created_at', { ascending: false }),
@@ -67,6 +65,9 @@ const jourLocal = (d) => {
   return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
 };
 const nomSponsor = (d) => d.sponsor?.nom || d.sponsor_nom_saisi || '—';
+// statut affiché : « Fichier à refaire » quand la Régie attend un nouveau fichier (migration 37)
+const libelleStatut = (d) => d.statut === 'question' && d.produits.some(x => x.a_corriger && !x.traite_le)
+  ? '⚠ Fichier à refaire' : LIBELLES.statut_demande[d.statut];
 const listeProduits = (d) => d.produits.map(x => x.produit?.nom).filter(Boolean);
 // avant la migration 07, le « Quand ? » était donné pour toute la demande
 const ancienQuand = (d) => d.type_vente || d.match_effet || d.date_effet;
@@ -104,9 +105,12 @@ function blocProduits(d) {
       <div class="suivi-produit ${x.traite_le ? 'fait' : ''}">
         ${x.traite_le
           ? `✓ ${SUITES[x.suite] || 'Traité'} le ${dateHeure(x.traite_le)} par ${echapper(etat.personnes.get(x.traite_par) || '—')}`
-          : `En attente de la Régie`}
+          : x.a_corriger ? '⚠ Fichier à refaire' : `En attente de la Régie`}
         <a href="produit.html?id=${x.produit?.id}">Ouvrir la fiche →</a>
       </div>
+      ${x.a_corriger && !x.traite_le ? `<p class="message message-erreur petit">⚠ <strong>La Régie ne peut pas utiliser le fichier</strong>${
+        x.a_corriger_le ? ` (le ${dateCourte(x.a_corriger_le)})` : ''} : ${echapper(x.a_corriger)}<br>
+        Ajoutez le bon fichier ci-dessous avec « + Ajouter un fichier » : la Régie sera prévenue.</p>` : ''}
       <div class="detail-entete">
         <strong>${echapper(x.produit?.nom || '?')}</strong>
         ${ancienQuand(d) ? '' : x.type_vente === 'match'
@@ -180,7 +184,7 @@ function afficher() {
             ${produits.length > 4 ? `<span class="puce-produit">+${produits.length - 4}</span>` : ''}</div>` : ''}
         </td>
         <td class="col-optionnelle">${effet(d)}</td>
-        <td><span class="badge statut-${d.statut}">${LIBELLES.statut_demande[d.statut]}</span></td>
+        <td><span class="badge statut-${d.statut}">${libelleStatut(d)}</span></td>
         <td class="col-optionnelle">
           <span class="anciennete${enRetard ? ' en-retard' : ''}" title="${dateHeure(d.created_at)}">${depuis(d.created_at)}</span>
         </td>
@@ -221,7 +225,7 @@ async function ouvrir(id, { silencieux = false } = {}) {
   $('d-surtitre').textContent = LIBELLES.type_demande[d.type];
   $('d-titre').textContent = nomSponsor(d);
   $('d-sous-titre').innerHTML =
-    `<span class="badge statut-${d.statut}">${LIBELLES.statut_demande[d.statut]}</span>` +
+    `<span class="badge statut-${d.statut}">${libelleStatut(d)}</span>` +
     `${d.sponsor ? '' : ' <span class="badge badge-a-venir">nouveau sponsor</span>'}` +
     ` &nbsp;reçue ${depuis(d.created_at)} · ${dateHeure(d.created_at)}`;
 
@@ -488,7 +492,9 @@ async function chargerFichiersProduits(d) {
           <div class="petit"><strong>${libelleFichier(x.produit, role)}</strong>
             ${liste.length ? '' : ' <span class="badge badge-a-venir">à venir</span>'}</div>
           ${liste.length ? `<ul class="liste-fichiers" style="margin:.25rem 0 0">${liste.map(f =>
-            ligneFichier(`${dossier}/${f.name}`, f.nomCourt, f.metadata?.size)).join('')}</ul>` : ''}
+            (x.fichiers_refuses || []).includes(`${dossier}/${f.name}`)
+              ? `<li><span><s>${echapper(f.nomCourt)}</s> <span class="badge badge-a-venir">refusé · à refaire</span></span></li>`
+              : ligneFichier(`${dossier}/${f.name}`, f.nomCourt, f.metadata?.size)).join('')}</ul>` : ''}
           ${x.suite === 'retire' || x.suite === 'ignore' ? '' : boutonAjoutFichier(role)}
         </div>`;
     }).join('');

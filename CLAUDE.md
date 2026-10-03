@@ -144,6 +144,15 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    l'anneau. Ce n'est pas le produit « Anneau LED ». Mécanisme de la migration 17 : `lie_a_produit_id` → produit
    technique INACTIF « Anneau LED couplé » (partagé ; la Pub pause tiers garde « Anneau LED pause tiers »), jamais
    affiché. Slides exclues. L'ordre en 4 groupes (son / anneau) reste réservé à la Pub pause tiers.
+0-decies. **« Fichier à refaire » (03.10.2026, idée A validée par Léa ; migration 37 à exécuter sur les deux bases, pas
+   encore testé)** : fichier reçu pas utilisable (ex. LED au mauvais format). Carte de traitement : bouton « Fichier à
+   refaire… » à côté du fichier (Régie), motif pré-rempli avec l'alerte de format → RPC `fichier_a_refaire` : fichier
+   ajouté à `demandes_produits.fichiers_refuses` (gardé, barré « refusé · à refaire », jamais ajouté), `a_corriger`
+   = motif (+ `_le`, `_par`), demande → `question`, motif ajouté à `reponse_regie`. Sponsoring : statut « ⚠ Fichier à
+   refaire » dans la liste, message rouge sur le produit + « + Ajouter un fichier ». `fichier_ajoute_demande` (37) :
+   le bon fichier efface `a_corriger` et remet la demande « Nouvelle » s'il ne reste rien à corriger. Match du jour :
+   « ⏳ En attente d'un nouveau fichier du Sponsoring · motif », bouton « Voir » au lieu d'« Ajouter ». « Ajouter »
+   quand même = confirmation puis `a_corriger` effacé. Pas d'e-mail (Brevo pas branché).
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
@@ -240,7 +249,8 @@ outil-regie/
 │   ├── 33_supprimer_fichier.sql ← RPC supprimer_fichier(chemin) : mauvais fichier (visuel refusé, ancien revient, visuel attendu)
 │   ├── 34_versions_visuels.sql ← FR / DE un match sur deux (choisir_asset, traiter_produit, demandes_produits.rotation)
 │   ├── 35_anneau_tous_videotron.sql ← avec / sans anneau LED pour tout le vidéotron + action scenes (« Anneau LED couplé »)
-│   └── 36_versions_anneau.sql ← FR / DE un match sur deux aussi pour l'anneau LED (traiter_produit, rotation_anneau)
+│   ├── 36_versions_anneau.sql ← FR / DE un match sur deux aussi pour l'anneau LED (traiter_produit, rotation_anneau)
+│   └── 37_fichier_a_refaire.sql ← « Fichier à refaire » (fichier pas utilisable) : a_corriger, fichiers_refuses, RPC
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)

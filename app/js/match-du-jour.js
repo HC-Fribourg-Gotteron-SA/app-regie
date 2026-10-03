@@ -382,9 +382,13 @@ function carteDemande(i) {
           <span class="doux petit">(demande reçue le ${dateCourte(d.created_at)})</span></div>
         <div class="petit">${details.join(' · ')}</div>
         ${a.remarque_sponsoring ? `<div class="petit doux">Sponsoring : ${echapper(a.remarque_sponsoring)}</div>` : ''}
+        ${a.a_corriger ? `<div class="petit" style="margin-top:.2rem">⏳ <strong>En attente d'un nouveau fichier du Sponsoring</strong>
+          <span class="doux">· ${echapper(a.a_corriger)}</span></div>` : ''}
         ${d.type === 'suppression' ? '' : texteAlternance(a)}
         ${d.type === 'suppression' ? '' : (a.fichiers || []).length ? `
-          <ul class="liste-fichiers liste-documents">${a.fichiers.map(f => `
+          <ul class="liste-fichiers liste-documents">${a.fichiers.map(f => (a.fichiers_refuses || []).includes(f.storage_path) ? `
+            <li><span><s>${echapper(libelleFichier(a.produit, f.role))} : ${echapper(f.nom)}</s>
+              <span class="badge badge-a-venir">refusé · à refaire</span></span></li>` : `
             <li><span><strong>${echapper(libelleFichier(a.produit, f.role))}</strong> : ${echapper(f.nom)}
                 ${versionFichier(a, f) ? ` <span class="badge">${echapper(versionFichier(a, f))}</span>` : ''}
                 ${f.taille ? `<span class="doux petit">${taille(f.taille)}</span>` : ''}</span>
@@ -394,8 +398,9 @@ function carteDemande(i) {
           : '<div class="petit" style="margin-top:.3rem">⏳ <strong>Fichier à venir</strong> <span class="doux">(pas encore envoyé par le Sponsoring)</span></div>'}
       </div>
       <div class="changement-actions">
-        ${estRegie ? `<a class="btn btn-principal" title="Ouvrir la demande pour la traiter (comme dans Demandes)"
-            href="demandes.html?id=${a.demande_id}&retour=${encodeURIComponent(`match-du-jour.html?match=${etat.match.id}`)}">${BOUTON_DEMANDE[d.type] || 'Ajouter'}</a>
+        ${estRegie ? `<a class="btn ${a.a_corriger ? 'btn-discret' : 'btn-principal'}" title="Ouvrir la demande pour la traiter (comme dans Demandes)"
+            href="demandes.html?id=${a.demande_id}&retour=${encodeURIComponent(`match-du-jour.html?match=${etat.match.id}`)}">${
+            a.a_corriger ? 'Voir' : BOUTON_DEMANDE[d.type] || 'Ajouter'}</a>
             <button type="button" class="btn btn-discret btn-danger" data-supprimer-demande="${a.demande_id}|${a.produit_id}"
               title="Erreur ou demande qui ne se fera pas">Supprimer</button>`
                    : '<span class="doux petit">en attente de la Régie</span>'}
