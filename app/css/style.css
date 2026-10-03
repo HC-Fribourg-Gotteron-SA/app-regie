@@ -710,6 +710,8 @@ body.fenetre-ouverte { overflow: hidden; }
    --------------------------------------------------------------------- */
 .ros-choix { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
 .ros-barre { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; align-items: center; margin-bottom: 1rem; }
+/* face-off, horloge et compte à rebours restent visibles quand on fait défiler (demandé par Léa le 03.10.2026) */
+.page-ros .ros-barre { position: sticky; top: 0; z-index: 20; box-shadow: 0 4px 14px rgba(15, 34, 64, .12); }
 .ros-horloge strong { font-size: 1.6rem; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .ros-reperes { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; flex: 1; }
 .ros-outils { display: flex; gap: .5rem; }
@@ -752,6 +754,7 @@ body.fenetre-ouverte { overflow: hidden; }
   body.avec-menu main { margin: 0 !important; max-width: none !important; }
   .ros-tableau { min-width: 0; font-size: 9pt; }
   .ros-tableau-cadre { overflow: visible; }
+  .page-ros .ros-barre { position: static; box-shadow: none; }
   .ros-tableau td, .ros-tableau th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   @page { size: landscape; margin: 10mm; }
 }

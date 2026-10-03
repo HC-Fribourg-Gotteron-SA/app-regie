@@ -3,7 +3,7 @@
 // pendant le match : un « quand » en texte libre (arrêt de jeu, 00:01:00, 0:18:00…). Sections, lignes importantes.
 // Régie / admin : créent et modifient ; Sponsoring et « Chrono & animation » : consultent, en direct le soir du match.
 import { sb, exigerConnexion, echapper, dateCourte, notifier, debounce } from './app.js';
-import { lireHeure, lireDuree, formatHMS, secondesDuJour, colonnesTemps, ligneEnCours } from './ros-calcul.js';
+import { lireHeure, lireDuree, formatHMS, secondesDuJour, colonnesTemps, ligneEnCours, heureLigne } from './ros-calcul.js';
 
 const { profil } = await exigerConnexion({ roles: ['regie', 'admin', 'sponsoring', 'animation'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
@@ -213,10 +213,14 @@ function tic() {
   const reste = fo ? (fo - maintenant) / 1000 : null;
   $('avant-fo').textContent = !leJour ? '' : reste > 0 ? `· face-off dans ${formatHMS(reste)}` : '· match commencé';
   if (etat.edition) return;
-  // ligne en cours : celle choisie par la Régie (pendant le match), sinon d'après l'heure (avant le match)
+  // ligne en cours : la plus récente des deux — celle cliquée par la Régie (pendant le match) ou celle dont l'heure
+  // est arrivée (avant le match). Corrigé le 03.10.2026 : une ligne cliquée plus tôt bloquait les heures suivantes.
   const choisie = etat.ros?.reperes?.en_cours;
   const iChoisie = choisie ? etat.lignes.findIndex(l => l.id === choisie) : -1;
-  const enCours = iChoisie >= 0 ? iChoisie : leJour ? ligneEnCours(etat.lignes, fo, maintenant) : -1;
+  const iHeure = leJour ? ligneEnCours(etat.lignes, fo, maintenant) : -1;
+  const cliqueLe = etat.ros?.reperes?.en_cours_le ? new Date(etat.ros.reperes.en_cours_le) : new Date(0);
+  const heureArrivee = iHeure >= 0 ? heureLigne(etat.lignes[iHeure], fo) : null;
+  const enCours = iChoisie >= 0 && !(heureArrivee && heureArrivee > cliqueLe) ? iChoisie : iHeure;
   document.querySelectorAll('#lignes tr[data-rang]').forEach(tr => tr.classList.toggle('en-cours', Number(tr.dataset.rang) === enCours));
   suivreLigne(enCours);
 }
@@ -316,7 +320,8 @@ $('lignes').addEventListener('click', async (e) => {
   if (!etat.edition) {
     if (!estRegie || etat.modele || !etat.ros || !tr.dataset.id || e.target.closest('a')) return;
     const reperes = { ...(etat.ros.reperes || {}) };
-    if (reperes.en_cours === tr.dataset.id) delete reperes.en_cours; else reperes.en_cours = tr.dataset.id;
+    if (reperes.en_cours === tr.dataset.id) { delete reperes.en_cours; delete reperes.en_cours_le; }
+    else { reperes.en_cours = tr.dataset.id; reperes.en_cours_le = new Date().toISOString(); }
     const { error } = await sb.from('ros_matchs').update({ reperes, maj_le: new Date().toISOString() }).eq('id', etat.ros.id);
     if (error) return notifier(`Enregistrement impossible : ${error.message}`, 'erreur');
     etat.ros.reperes = reperes;
