@@ -4,7 +4,7 @@
 // Régie / admin : créent et modifient ; Sponsoring et « Chrono & animation » : consultent, en direct le soir du match.
 import { sb, exigerConnexion, echapper, dateCourte, notifier, debounce } from './app.js';
 import { lireHeure, lireDuree, formatHMS, secondesDuJour, colonnesTemps, ligneEnCours, heuresLignes,
-         tempsCourt, heureCourteLigne, dureeSection, prochaineSection } from './ros-calcul.js';
+         tempsCourt, heureCourteLigne, dureeSection, prochaineSection, sectionsDuMatch, estPause } from './ros-calcul.js';
 
 const { profil } = await exigerConnexion({ roles: ['regie', 'admin', 'sponsoring', 'animation'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
@@ -145,7 +145,8 @@ function afficherLignes() {
   const fo = faceOff();
   const cols = CHAMPS.filter(([c]) => c !== 'lien' || etat.lignes.some(l => (l.lien || '').trim()));
   const nb = 3 + cols.length;
-  const heures = heuresLignes(etat.lignes, fo, lancements());   // pendant le match : estimées (≈) ou depuis le lancement
+  const heures = heuresLignes(etat.lignes, fo, lancements());   // pauses : depuis le lancement (≈) ; tiers : pas d'heure
+  const sectionsMatch = new Set(sectionsDuMatch(etat.lignes).map(s => s.k));
   // lecture : pas de N°, colonnes de temps étroites (format court), le texte prend la place (Léa, 03.10.2026)
   $('tableau').classList.add('ros-lecture');
   $('entete').innerHTML = `<tr><th class="ros-col-temps">Heure</th><th class="ros-col-temps">Compte à rebours</th>
@@ -153,13 +154,14 @@ function afficherLignes() {
   $('lignes').innerHTML = etat.lignes.length ? etat.lignes.map((l, i) => {
     if (l.est_section) return `<tr class="ros-section" data-rang="${i}"><td colspan="${nb}">${echapper(l.action || '')}${
       heures[i].lancee ? ` <span class="ros-lance">✓ lancé à ${heureMin(heures[i].heure)}</span>`
-      : heures[i].estimee ? ` <span class="ros-estimee">pas encore lancé · ≈ ${heureMin(heures[i].heure)} · ${Math.round(dureeSection(l.action) / 60)} min</span>` : ''}</td></tr>`;
+      : sectionsMatch.has(i) ? ` <span class="ros-estimee">pas encore lancé${heures[i].heure ? ` · prévu ≈ ${heureMin(heures[i].heure)}` : ''}${
+          estPause(l.action) ? ` · ${Math.round(dureeSection(l.action) / 60)} min` : ''}</span>` : ''}</td></tr>`;
     const t = colonnesTemps(l, fo);
     const avecHeure = l.decalage_s !== null && l.decalage_s !== undefined;
     return `
     <tr class="ros-ligne${l.important ? ' ros-important' : ''}" data-rang="${i}" data-id="${l.id}">
       <td class="ros-heure">${heures[i].estimee
-        ? `<span class="ros-estimee" title="Heure estimée (tiers 35 min, pause 20 min)">≈ ${heureMin(heures[i].heure)}</span>`
+        ? `<span class="ros-estimee" title="Heure estimée depuis le lancement de la pause (20 min)">≈ ${heureMin(heures[i].heure)}</span>`
         : echapper(heureCourteLigne(t.heure))}</td>
       <td class="ros-heure">${echapper(avecHeure ? tempsCourt(t.compte) : t.compte)}</td>
       <td class="ros-heure">${l.duree_s ? tempsCourt(formatHMS(l.duree_s)) : '-'}</td>
@@ -261,7 +263,7 @@ function suivreLigne(enCours) {
 
 // ---------------------------------------------------------------------
 // Lancer le tiers / la pause (essai du 03.10.2026, avec Léa) : la Régie clique quand la section commence ;
-// ses lignes partent de cette heure (pause 20 min, tiers 35 min estimés). Gardé dans ros_matchs.reperes.sections :
+// pause : ses lignes avancent sur 20 min ; tiers : sa 1re ligne s'allume (pas d'estimation). Gardé dans ros_matchs.reperes.sections :
 // { <id de la section>: { debut: ISO, par: 'Léa' } }. Rappel orange si l'heure estimée est dépassée de 3 min.
 // ---------------------------------------------------------------------
 const lancements = () => etat.ros?.reperes?.sections || {};

@@ -763,7 +763,7 @@ body.fenetre-ouverte { overflow: hidden; }
 .btn-retard { background: #e07b00; border-color: #e07b00; color: #fff; animation: ros-clignote 1.6s ease-in-out infinite; }
 @keyframes ros-clignote { 50% { box-shadow: 0 0 0 6px rgba(224, 123, 0, .25); } }
 .btn-lien { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; font-weight: 400; }
-/* heure estimée pendant le match (tiers 35 min, pause 20 min) : grisée, avec « ≈ » */
+/* heure estimée (lignes d'une pause lancée, 20 min ; début prévu d'une section) : grisée, avec « ≈ » */
 .ros-estimee { font-variant-numeric: tabular-nums; color: var(--texte-doux, #5b6780); font-weight: 400;
   text-transform: none; letter-spacing: 0; font-size: .85em; white-space: nowrap; }
 .ros-ligne.en-cours .ros-estimee, .ros-ligne.ros-important .ros-estimee { color: inherit; opacity: .85; }

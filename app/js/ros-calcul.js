@@ -104,17 +104,27 @@ export function sectionsDuMatch(lignes) {
 // lancements = { <id de la section>: { debut: ISO } } : la Régie a « lancé » le tiers / la pause à cette heure
 // (03.10.2026) ; la section démarre alors à l'heure du clic, et les suivantes s'estiment à partir de là.
 // Renvoie [{ heure: Date | null, estimee: bool, lancee: bool }] dans l'ordre des lignes.
+// Tiers (et prolongation) : PAS d'estimation dans le tiers (03.10.2026, Léa : trop dur avec les arrêts de jeu) ;
+// lancé = sa 1re ligne s'allume, la Régie clique les suivantes ; on ne sait pas quand il finit.
+// Pause : lancée = ses lignes avancent toutes seules sur 20 min, et on sait quand commence la section suivante.
+export const estPause = (nom) => /pause|intermission|drittelpause/i.test(String(nom || ''));
+
 export function heuresLignes(lignes, faceOff, lancements = {}) {
   const res = lignes.map(l => ({ heure: heureLigne(l, faceOff), estimee: false, lancee: false }));
   if (!faceOff) return res;
-  let curseur = faceOff.getTime();
+  let curseur = faceOff.getTime();           // début prévu de la section suivante (null = on ne sait pas)
   for (const { k, dedans } of sectionsDuMatch(lignes)) {
     const lance = lancements?.[lignes[k].id]?.debut;
-    if (lance) curseur = new Date(lance).getTime();
+    const debut = lance ? new Date(lance).getTime() : curseur;
+    res[k] = { heure: debut === null ? null : new Date(debut), estimee: !lance && debut !== null, lancee: !!lance };
+    if (!estPause(lignes[k].action)) {
+      if (lance && dedans.length) res[dedans[0]] = { heure: new Date(debut), estimee: false, lancee: true };
+      curseur = null;
+      continue;
+    }
     const duree = dureeSection(lignes[k].action) * 1000;
-    res[k] = { heure: new Date(curseur), estimee: !lance, lancee: !!lance };
-    dedans.forEach((j, n) => { res[j] = { heure: new Date(curseur + duree * n / dedans.length), estimee: true, lancee: !!lance }; });
-    curseur += duree;
+    if (lance) dedans.forEach((j, n) => { res[j] = { heure: new Date(debut + duree * n / dedans.length), estimee: true, lancee: true }; });
+    curseur = debut === null ? null : debut + duree;
   }
   return res;
 }
