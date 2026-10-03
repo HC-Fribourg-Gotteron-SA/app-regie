@@ -132,15 +132,17 @@ async function chargerMatch() {
                produit:produits(id, nom, ordre, famille, support),
                demande:demandes!inner(id, type, statut, created_at, sponsor_nom_saisi, sponsor:sponsors(nom))`)
       .is('traite_le', null).neq('demande.statut', 'traitee'),
-    // demandes traitées depuis le match précédent (jusqu'au lendemain de ce match) : restent affichées, grisées
+    // demandes traitées : restent affichées, grisées (demandé par Léa). Celles traitées depuis le match précédent
+    // (jusqu'au lendemain de ce match), ET celles vendues pour CE match même traitées plus tôt (corrigé le 03.10.2026 :
+    // une demande pour le 7.10 traitée avant le match du 3.10 disparaissait au lieu d'être grisée)
     sb.from('demandes_produits')
       .select(`demande_id, produit_id, type_vente, dates_matchs, avec_son, avec_anneau, duree_s, remarque_sponsoring,
                ligne_id, suite, traite_le, traite_par,
                produit:produits(id, nom, ordre, famille, support),
                demande:demandes!inner(id, type, statut, created_at, sponsor_nom_saisi, sponsor:sponsors(nom))`)
       .not('traite_le', 'is', null)
-      .gte('traite_le', (etat.precedent ? new Date(etat.precedent.date_heure) : new Date(new Date(m.date_heure) - 7 * 864e5)).toISOString())
-      .lte('traite_le', new Date(new Date(m.date_heure).getTime() + 864e5).toISOString()),
+      .or(`and(traite_le.gte."${(etat.precedent ? new Date(etat.precedent.date_heure) : new Date(new Date(m.date_heure) - 7 * 864e5)).toISOString()}",`
+        + `traite_le.lte."${new Date(new Date(m.date_heure).getTime() + 864e5).toISOString()}"),dates_matchs.cs.{${jourLocal(m.date_heure)}}`),
   ]);
   etat.traitees = new Map((traitees || []).filter(t => t.ligne_id).map(t => [t.ligne_id, t]));
   etat.tableFait = !error;
@@ -362,6 +364,7 @@ function carteDemande(i) {
           le ${dateCourte(a.traite_le)} à ${heure(a.traite_le)}</div>
       </div>
       <div class="changement-actions">
+        <span class="badge statut-traitee">✓ Traitée</span>
         <a class="btn btn-discret" href="demandes.html?id=${a.demande_id}&retour=${encodeURIComponent(`match-du-jour.html?match=${etat.match.id}`)}">Voir</a>
       </div>
     </div>`;

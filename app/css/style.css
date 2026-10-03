@@ -504,6 +504,9 @@ body:has(.bandeau-test) { box-shadow: inset 0 4px 0 #e0a100; }
 .changement.est-fait { background: var(--surface-2); }
 .changement.est-fait .changement-texte { opacity: .55; }
 .changement.est-fait .changement-verbe { text-decoration: line-through; }
+/* demande traitée (Match du jour) : bien grisée, badge « ✓ Traitée » (03.10.2026) */
+.changement-demande.est-fait { background: #eceff3; border-color: #dde2e9; }
+.changement-demande.est-fait .changement-texte, .changement-demande.est-fait .changement-icone { opacity: .45; filter: grayscale(1); }
 .groupe-playlist { padding: .8rem 1.1rem; }
 .groupe-playlist + .groupe-playlist { margin-top: .5rem; }
 .groupe-playlist summary { cursor: pointer; display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
