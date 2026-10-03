@@ -729,8 +729,8 @@ body.fenetre-ouverte { overflow: hidden; }
   padding-left: .25rem; padding-right: .25rem; }
 .ros-tableau:not(.ros-lecture) td.ros-temps, .ros-tableau:not(.ros-lecture) td.ros-deplacer {
   width: 1%; white-space: nowrap; padding-left: .25rem; padding-right: .25rem; }
-.ros-tableau .ros-court { width: 3.6rem; text-align: center; padding-left: .2rem; padding-right: .2rem; }
-.ros-tableau .ros-quand { width: 6rem; }
+.ros-tableau .ros-court { width: 9ch; text-align: center; padding-left: .2rem; padding-right: .2rem; font-variant-numeric: tabular-nums; }
+.ros-tableau .ros-quand { width: 11ch; }
 .ros-tableau:not(.ros-lecture) td.ros-col-action, .ros-tableau:not(.ros-lecture) td.ros-col-instructions { width: 26%; }
 .ros-tableau .ros-texte { font-size: .95rem; padding: .4rem .5rem; }
 .ros-tableau input.ros-texte { min-width: 7.5rem; }
