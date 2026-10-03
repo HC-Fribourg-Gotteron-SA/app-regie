@@ -69,13 +69,51 @@ export function colonnesTemps(l, faceOff) {
   return { heure: /^à la suite$/i.test(q) ? 'à la suite' : '-', compte: q };
 }
 
-// Ligne en cours à l'instant `maintenant` (seulement les lignes avec une heure) : celle qui a commencé
-// le plus récemment. -1 si aucune.
+// Pendant le match, les lignes n'ont pas d'heure (temps de jeu, « arrêt de jeu »…). Estimation (essai demandé par
+// Léa le 03.10.2026, idée B) : après le face-off, chaque section sans heure dure un temps réel estimé — tiers 35 min
+// (20 min de jeu + arrêts), pause 20 min, prolongation / tirs au but 10 min — et ses lignes se répartissent
+// régulièrement dans ce temps. Ça se décale si un tiers dure plus ou moins : la Régie peut toujours cliquer la ligne.
+export const DUREES_SECTION_MIN = { pause: 20, prolongation: 10, tiers: 35 };
+export function dureeSection(nom) {
+  const n = String(nom || '').toLowerCase();
+  if (/pause|intermission|drittelpause/.test(n)) return DUREES_SECTION_MIN.pause * 60;
+  if (/prolong|overtime|\bot\b|tirs au but|shoot|penalty/.test(n)) return DUREES_SECTION_MIN.prolongation * 60;
+  return DUREES_SECTION_MIN.tiers * 60;
+}
+
+// Heure de chaque ligne : réelle si elle en a une, sinon estimée (voir plus haut) ; null si rien.
+// Renvoie [{ heure: Date | null, estimee: bool }] dans l'ordre des lignes.
+export function heuresLignes(lignes, faceOff) {
+  const res = lignes.map(l => ({ heure: heureLigne(l, faceOff), estimee: false }));
+  if (!faceOff) return res;
+  const debutMatch = lignes.findIndex(l => !l.est_section && l.decalage_s !== null && l.decalage_s !== undefined && l.decalage_s >= 0);
+  if (debutMatch < 0) return res;
+  let curseur = faceOff.getTime();
+  for (let k = debutMatch + 1; k < lignes.length; k++) {
+    if (!lignes[k].est_section) continue;
+    // lignes de cette section (jusqu'à la suivante)
+    let fin = k + 1;
+    while (fin < lignes.length && !lignes[fin].est_section) fin++;
+    const dedans = [];
+    for (let j = k + 1; j < fin; j++) dedans.push(j);
+    if (dedans.some(j => res[j].heure)) { k = fin - 1; continue; }     // section avec de vraies heures : rien à estimer
+    const duree = dureeSection(lignes[k].action) * 1000;
+    res[k] = { heure: new Date(curseur), estimee: true };
+    dedans.forEach((j, n) => { res[j] = { heure: new Date(curseur + duree * n / dedans.length), estimee: true }; });
+    curseur += duree;
+    k = fin - 1;
+  }
+  return res;
+}
+
+// Ligne en cours à l'instant `maintenant` : celle qui a commencé le plus récemment (heure réelle ou estimée).
+// Les sections ne sont jamais « en cours » (leur première ligne l'est). -1 si aucune.
 export function ligneEnCours(lignes, faceOff, maintenant) {
+  const heures = heuresLignes(lignes, faceOff);
   let i = -1, plusRecent = null;
   lignes.forEach((l, k) => {
-    const h = heureLigne(l, faceOff);
-    if (h && h <= maintenant && (!plusRecent || h >= plusRecent)) { plusRecent = h; i = k; }
+    const h = heures[k].heure;
+    if (!l.est_section && h && h <= maintenant && (!plusRecent || h >= plusRecent)) { plusRecent = h; i = k; }
   });
   return i;
 }

@@ -724,9 +724,14 @@ body.fenetre-ouverte { overflow: hidden; }
 .ros-tableau textarea { min-width: 11rem; resize: vertical; }
 /* Modifier : temps étroits, texte grand et lisible (demandé par Léa le 03.10.2026) */
 .ros-tableau:not(.ros-lecture) { min-width: 1150px; }
-.ros-tableau:not(.ros-lecture) th.ros-col-temps { white-space: normal; width: 1%; font-size: .72rem; line-height: 1.15; }
-.ros-tableau .ros-court { width: 4.4rem; text-align: center; }
-.ros-tableau .ros-quand { width: 7rem; }
+/* colonnes de temps au strict minimum (width 1 % = la largeur du contenu), le reste va aux textes */
+.ros-tableau:not(.ros-lecture) th.ros-col-temps { white-space: normal; width: 1%; font-size: .72rem; line-height: 1.15;
+  padding-left: .25rem; padding-right: .25rem; }
+.ros-tableau:not(.ros-lecture) td.ros-temps, .ros-tableau:not(.ros-lecture) td.ros-deplacer {
+  width: 1%; white-space: nowrap; padding-left: .25rem; padding-right: .25rem; }
+.ros-tableau .ros-court { width: 3.6rem; text-align: center; padding-left: .2rem; padding-right: .2rem; }
+.ros-tableau .ros-quand { width: 6rem; }
+.ros-tableau:not(.ros-lecture) td.ros-col-action, .ros-tableau:not(.ros-lecture) td.ros-col-instructions { width: 26%; }
 .ros-tableau .ros-texte { font-size: .95rem; padding: .4rem .5rem; }
 .ros-tableau input.ros-texte { min-width: 7.5rem; }
 .ros-tableau textarea.ros-texte { min-width: 12rem; min-height: 3.4em; field-sizing: content; line-height: 1.35; }
@@ -750,6 +755,10 @@ body.fenetre-ouverte { overflow: hidden; }
   border-top: 3px solid var(--noir, #0f2240); }
 .ros-ligne.ros-important td { background: #e8175d; color: #fff; font-weight: 700; }
 .ros-calcule { font-variant-numeric: tabular-nums; color: var(--texte-doux, #5b6780); }
+/* heure estimée pendant le match (tiers 35 min, pause 20 min) : grisée, avec « ≈ » */
+.ros-estimee { font-variant-numeric: tabular-nums; color: var(--texte-doux, #5b6780); font-weight: 400;
+  text-transform: none; letter-spacing: 0; font-size: .85em; white-space: nowrap; }
+.ros-ligne.en-cours .ros-estimee, .ros-ligne.ros-important .ros-estimee { color: inherit; opacity: .85; }
 .ros-fin { white-space: nowrap; }
 .ros-face-off { display: inline-flex; align-items: center; gap: .5rem; padding: .35rem .8rem; border-radius: 8px;
   background: #fff35c; color: #0f2240; font-size: 1.1rem; font-variant-numeric: tabular-nums; }

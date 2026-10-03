@@ -83,7 +83,15 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    (`tempsCourt`, `heureCourteLigne` dans ros-calcul.js : 45:00, 1:30, 18:00 ; texte libre « quand » inchangé),
    tableau sans largeur minimale (`.ros-lecture`), le texte passe à la ligne. **Mode Modifier** (même jour) : Heure /
    Durée en petits champs au format court (18:00, 1:30), « quand » 7rem, textes en .95rem, Action / Instructions grands
-   (17rem, s'agrandissent avec `field-sizing: content`), tableau 1150px min.0-quinquies. **Formats des produits (02.10.2026, media kit https://hcfg.brandboard.app/media-kit-hcfg ; migration 32 à
+   (17rem, s'agrandissent avec `field-sizing: content`), tableau 1150px min ; colonnes de temps à `width: 1%` (strict
+   minimum, Léa : « beaucoup de place là où il y a des trucs à écrire »), Action / Instructions 26 %.
+   **Heures estimées pendant le match (idée B, essai demandé par Léa le 03.10.2026)** : `heuresLignes()` dans
+   ros-calcul.js — après la ligne du face-off (1re ligne avec `decalage_s >= 0`), chaque section SANS heure dure
+   tiers 35 min / pause 20 min / prolongation-tirs au but 10 min (d'après son nom, `dureeSection`), ses lignes réparties
+   régulièrement ; affiché « ≈ 20:20 » en gris (lecture) ; `ligneEnCours` les utilise (défilement jusqu'à la fin du
+   match). Se décale si un tiers dure plus / moins : le clic de la Régie reste prioritaire (le plus récent gagne).
+   Autres idées proposées si l'essai ne convient pas : A = clic au début de chaque pause puis chrono de la pause ;
+   C = seulement le clic.0-quinquies. **Formats des produits (02.10.2026, media kit https://hcfg.brandboard.app/media-kit-hcfg ; migration 32 à
    exécuter sur les deux bases, pas encore testé)** : format attendu affiché dans la demande (par fichier, + « format OK »
    ou ⚠), dans la carte de traitement et en haut de la fiche produit (« ✏️ Format » pour la Régie : dimensions, formats,
    durée max, remarque). Toujours une **alerte, jamais un blocage** (LED 3M / 6M : souvent un logo seul, accepté).

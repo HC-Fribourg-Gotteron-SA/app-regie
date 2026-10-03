@@ -3,8 +3,8 @@
 // pendant le match : un « quand » en texte libre (arrêt de jeu, 00:01:00, 0:18:00…). Sections, lignes importantes.
 // Régie / admin : créent et modifient ; Sponsoring et « Chrono & animation » : consultent, en direct le soir du match.
 import { sb, exigerConnexion, echapper, dateCourte, notifier, debounce } from './app.js';
-import { lireHeure, lireDuree, formatHMS, secondesDuJour, colonnesTemps, ligneEnCours, heureLigne,
-         tempsCourt, heureCourteLigne } from './ros-calcul.js';
+import { lireHeure, lireDuree, formatHMS, secondesDuJour, colonnesTemps, ligneEnCours, heuresLignes,
+         tempsCourt, heureCourteLigne, dureeSection } from './ros-calcul.js';
 
 const { profil } = await exigerConnexion({ roles: ['regie', 'admin', 'sponsoring', 'animation'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
@@ -145,17 +145,21 @@ function afficherLignes() {
   const fo = faceOff();
   const cols = CHAMPS.filter(([c]) => c !== 'lien' || etat.lignes.some(l => (l.lien || '').trim()));
   const nb = 3 + cols.length;
+  const heures = heuresLignes(etat.lignes, fo);      // pendant le match : heures estimées (≈), voir ros-calcul.js
   // lecture : pas de N°, colonnes de temps étroites (format court), le texte prend la place (Léa, 03.10.2026)
   $('tableau').classList.add('ros-lecture');
   $('entete').innerHTML = `<tr><th class="ros-col-temps">Heure</th><th class="ros-col-temps">Compte à rebours</th>
     <th class="ros-col-temps">Durée</th>${cols.map(([, t]) => `<th>${t}</th>`).join('')}</tr>`;
   $('lignes').innerHTML = etat.lignes.length ? etat.lignes.map((l, i) => {
-    if (l.est_section) return `<tr class="ros-section" data-rang="${i}"><td colspan="${nb}">${echapper(l.action || '')}</td></tr>`;
+    if (l.est_section) return `<tr class="ros-section" data-rang="${i}"><td colspan="${nb}">${echapper(l.action || '')}${
+      heures[i].estimee ? ` <span class="ros-estimee">≈ ${heureMin(heures[i].heure)} · ${Math.round(dureeSection(l.action) / 60)} min</span>` : ''}</td></tr>`;
     const t = colonnesTemps(l, fo);
     const avecHeure = l.decalage_s !== null && l.decalage_s !== undefined;
     return `
     <tr class="ros-ligne${l.important ? ' ros-important' : ''}" data-rang="${i}" data-id="${l.id}">
-      <td class="ros-heure">${echapper(heureCourteLigne(t.heure))}</td>
+      <td class="ros-heure">${heures[i].estimee
+        ? `<span class="ros-estimee" title="Heure estimée (tiers 35 min, pause 20 min)">≈ ${heureMin(heures[i].heure)}</span>`
+        : echapper(heureCourteLigne(t.heure))}</td>
       <td class="ros-heure">${echapper(avecHeure ? tempsCourt(t.compte) : t.compte)}</td>
       <td class="ros-heure">${l.duree_s ? tempsCourt(formatHMS(l.duree_s)) : '-'}</td>
       ${cols.map(([c]) => `<td class="${c === 'action' ? 'ros-action' : 'petit'}">${c === 'lien' ? lienCliquable(l.lien) : texte(l[c])}</td>`).join('')}
@@ -196,11 +200,11 @@ function afficherEdition() {
     return `
     <tr class="ros-ligne${l.important ? ' ros-important' : ''}" data-id="${l.id}">
       ${deplacer(i)}
-      <td><input type="text" data-champ="heure" value="${avecHeure ? echapper(heureCourteLigne(t.heure)) : ''}" placeholder="18:00" aria-label="Heure" class="ros-court"></td>
-      <td>${avecHeure
+      <td class="ros-temps"><input type="text" data-champ="heure" value="${avecHeure ? echapper(heureCourteLigne(t.heure)) : ''}" placeholder="18:00" aria-label="Heure" class="ros-court"></td>
+      <td class="ros-temps">${avecHeure
         ? `<span class="ros-calcule" data-compte>${echapper(tempsCourt(t.compte))}</span>`
         : `<input type="text" data-champ="quand" value="${echapper(l.quand || '')}" placeholder="arrêt de jeu…" aria-label="Quand" class="ros-quand">`}</td>
-      <td><input type="text" data-champ="duree" value="${l.duree_s ? tempsCourt(formatHMS(l.duree_s)) : ''}" placeholder="1:30" aria-label="Durée" class="ros-court"></td>
+      <td class="ros-temps"><input type="text" data-champ="duree" value="${l.duree_s ? tempsCourt(formatHMS(l.duree_s)) : ''}" placeholder="1:30" aria-label="Durée" class="ros-court"></td>
       ${CHAMPS.map(([c, titre, genre]) => `<td class="ros-col-${c}">${genre === 'textarea'
         ? `<textarea data-champ="${c}" rows="2" aria-label="${titre}" class="ros-texte">${echapper(l[c] || '')}</textarea>`
         : `<input type="text" data-champ="${c}" value="${echapper(l[c] || '')}" aria-label="${titre}" class="ros-texte">`}</td>`).join('')}
@@ -225,7 +229,7 @@ function tic() {
   const iChoisie = choisie ? etat.lignes.findIndex(l => l.id === choisie) : -1;
   const iHeure = leJour ? ligneEnCours(etat.lignes, fo, maintenant) : -1;
   const cliqueLe = etat.ros?.reperes?.en_cours_le ? new Date(etat.ros.reperes.en_cours_le) : new Date(0);
-  const heureArrivee = iHeure >= 0 ? heureLigne(etat.lignes[iHeure], fo) : null;
+  const heureArrivee = iHeure >= 0 ? heuresLignes(etat.lignes, fo)[iHeure].heure : null;   // réelle ou estimée
   const enCours = iChoisie >= 0 && !(heureArrivee && heureArrivee > cliqueLe) ? iChoisie : iHeure;
   document.querySelectorAll('#lignes tr[data-rang]').forEach(tr => tr.classList.toggle('en-cours', Number(tr.dataset.rang) === enCours));
   suivreLigne(enCours);
