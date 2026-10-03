@@ -722,6 +722,11 @@ body.fenetre-ouverte { overflow: hidden; }
 .ros-tableau .ros-heure { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ros-tableau input, .ros-tableau select, .ros-tableau textarea { font-size: .85rem; padding: .3rem .4rem; min-height: 0; }
 .ros-tableau textarea { min-width: 11rem; resize: vertical; }
+/* Lecture : colonnes de temps étroites, les commentaires prennent la place et passent à la ligne (03.10.2026) */
+.ros-tableau.ros-lecture { min-width: 0; }
+.ros-lecture th.ros-col-temps { white-space: normal; width: 1%; font-size: .72rem; line-height: 1.15; padding-left: .35rem; padding-right: .35rem; }
+.ros-lecture td.ros-heure { width: 1%; font-size: .85rem; padding-left: .35rem; padding-right: .35rem; }
+.ros-lecture td { overflow-wrap: anywhere; }
 
 
 

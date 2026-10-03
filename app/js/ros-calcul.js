@@ -38,6 +38,16 @@ export function formatHMS(s) {
   return `${pad(Math.floor(a / 3600))}:${pad(Math.floor((a % 3600) / 60))}:${pad(a % 60)}`;
 }
 
+// Format court pour la lecture (03.10.2026 : colonnes plus étroites, les commentaires d'abord) :
+// « 00:45:00 » -> « 45:00 », « 01:45:00 » -> « 1:45:00 », « +00:05:00 » -> « +5:00 », « 18:00:00 » (heure) -> « 18:00 »
+export function tempsCourt(hms) {
+  const m = String(hms ?? '').match(/^(\+?)(\d{2}):(\d{2}):(\d{2})$/);
+  if (!m) return hms ?? '';
+  const [, signe, h, mi, s] = m;
+  return Number(h) ? `${signe}${Number(h)}:${mi}:${s}` : `${signe}${Number(mi)}:${s}`;
+}
+export const heureCourteLigne = (h) => String(h ?? '').replace(/^(\d{2}:\d{2}):00$/, '$1');
+
 // secondes depuis minuit d'une date
 export const secondesDuJour = (d) => d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();
 

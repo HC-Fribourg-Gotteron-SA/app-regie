@@ -3,7 +3,8 @@
 // pendant le match : un « quand » en texte libre (arrêt de jeu, 00:01:00, 0:18:00…). Sections, lignes importantes.
 // Régie / admin : créent et modifient ; Sponsoring et « Chrono & animation » : consultent, en direct le soir du match.
 import { sb, exigerConnexion, echapper, dateCourte, notifier, debounce } from './app.js';
-import { lireHeure, lireDuree, formatHMS, secondesDuJour, colonnesTemps, ligneEnCours, heureLigne } from './ros-calcul.js';
+import { lireHeure, lireDuree, formatHMS, secondesDuJour, colonnesTemps, ligneEnCours, heureLigne,
+         tempsCourt, heureCourteLigne } from './ros-calcul.js';
 
 const { profil } = await exigerConnexion({ roles: ['regie', 'admin', 'sponsoring', 'animation'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
@@ -143,18 +144,20 @@ function afficherLignes() {
   if (etat.edition && estRegie) return afficherEdition();
   const fo = faceOff();
   const cols = CHAMPS.filter(([c]) => c !== 'lien' || etat.lignes.some(l => (l.lien || '').trim()));
-  const nb = 4 + cols.length;
-  const num = numeros();
-  $('entete').innerHTML = `<tr><th>N°</th><th>Heure</th><th>Compte à rebours</th><th>Durée</th>${cols.map(([, t]) => `<th>${t}</th>`).join('')}</tr>`;
+  const nb = 3 + cols.length;
+  // lecture : pas de N°, colonnes de temps étroites (format court), le texte prend la place (Léa, 03.10.2026)
+  $('tableau').classList.add('ros-lecture');
+  $('entete').innerHTML = `<tr><th class="ros-col-temps">Heure</th><th class="ros-col-temps">Compte à rebours</th>
+    <th class="ros-col-temps">Durée</th>${cols.map(([, t]) => `<th>${t}</th>`).join('')}</tr>`;
   $('lignes').innerHTML = etat.lignes.length ? etat.lignes.map((l, i) => {
     if (l.est_section) return `<tr class="ros-section" data-rang="${i}"><td colspan="${nb}">${echapper(l.action || '')}</td></tr>`;
     const t = colonnesTemps(l, fo);
+    const avecHeure = l.decalage_s !== null && l.decalage_s !== undefined;
     return `
     <tr class="ros-ligne${l.important ? ' ros-important' : ''}" data-rang="${i}" data-id="${l.id}">
-      <td class="ros-num">${num[i]}</td>
-      <td class="ros-heure">${echapper(t.heure)}</td>
-      <td class="ros-heure">${echapper(t.compte)}</td>
-      <td class="ros-heure">${l.duree_s ? formatHMS(l.duree_s) : '-'}</td>
+      <td class="ros-heure">${echapper(heureCourteLigne(t.heure))}</td>
+      <td class="ros-heure">${echapper(avecHeure ? tempsCourt(t.compte) : t.compte)}</td>
+      <td class="ros-heure">${l.duree_s ? tempsCourt(formatHMS(l.duree_s)) : '-'}</td>
       ${cols.map(([c]) => `<td class="${c === 'action' ? 'ros-action' : 'petit'}">${c === 'lien' ? lienCliquable(l.lien) : texte(l[c])}</td>`).join('')}
     </tr>`;
   }).join('') : `<tr><td colspan="${nb}" class="doux">Aucune ligne pour l’instant.</td></tr>`;
@@ -166,6 +169,7 @@ const lienCliquable = (v) => !v ? '' : /^https?:\/\//i.test(v.trim())
 
 // Mode modification (Régie) : chaque cellule est un champ, enregistré dès qu'on le quitte
 function afficherEdition() {
+  $('tableau').classList.remove('ros-lecture');
   const fo = faceOff();
   const num = numeros();
   const nb = 6 + CHAMPS.length;
