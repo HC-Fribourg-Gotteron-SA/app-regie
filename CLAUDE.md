@@ -33,7 +33,9 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
      Traiter une demande = l'ajouter dans l'outil ET dans Colosseo en même temps (nouveau sponsor à la saison, nouveau
      logo / vidéo, retrait…). Puis on regarde le **spécial du match** (vendu pour ce match) et on l'ajoute dans Colosseo.
      **Match du jour = 2 blocs** : 1) « Demandes à traiter » (bouton Ajouter / Changer le visuel / Retirer → ouvre la
-     demande ; traitée = reste affichée **grisée** « ✓ Ajouté par … le … » + Voir, demandé par Léa ; pas de case Fait ;
+     demande ; traitée = reste affichée **grisée** (même grisé que « Fait », validé par Léa le 03.10.2026) + badge
+     « ✓ Traitée » + « ✓ Ajouté par … le … » + Voir ; aussi une demande pour CE match traitée avant le match précédent
+     (avant : elle disparaissait) ; pas de case Fait ;
      « Prendre en charge » retiré de Demandes, inutile) ; 2) « À changer dans Colosseo » (02.10.2026 : « Spécial de ce match » puis « Ventes au match » refusés par Léa ;
      phrase du bilan en haut retirée, le bilan ne parle plus que des demandes et tâches) = changements des seules diffusions
      **au match** (➕ ce soir, ➖ celles du match précédent, 🔄) avec case « Fait » + « Détails ». Les changements à la
