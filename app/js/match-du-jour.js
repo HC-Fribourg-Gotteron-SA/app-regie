@@ -1,6 +1,7 @@
 // Match du jour : ce que la Régie doit changer dans Colosseo (depuis le match précédent),
 // puis toute la playlist pour vérifier. Les playlists Colosseo restent d'un match à l'autre.
-import { sb, exigerConnexion, echapper, dateCourte, notifier, toutesLesLignes, libelleFichier, taille, devinerVersion } from './app.js';
+import { sb, exigerConnexion, echapper, dateCourte, notifier, toutesLesLignes, libelleFichier, taille, devinerVersion,
+         nomFichierSur } from './app.js';
 import { calculerChangements, consigne, PASSE, changementDeVersion } from './changements.js';
 import { confirmerSuppressionProduit, boutonSupprimerFichier, confirmerSuppressionFichier } from './traitement.js';
 
@@ -128,7 +129,7 @@ async function chargerMatch() {
 
   const [{ data: fait, error }, { data: notes, error: eNotes }, { data: attente }, { data: traitees }] = await Promise.all([
     sb.from('colosseo_fait').select('ligne_id, action, fait_par, fait_le').eq('match_id', m.id),
-    sb.from('notes_match').select('id, type, texte, fait, fait_par, fait_le, cree_par, cree_le')
+    sb.from('notes_match').select('*')    // « * » : aussi les fichiers (migration 41) sans casser la page avant
       .eq('match_id', m.id).order('cree_le'),
     // produits de demandes pas encore ajoutés sur leur fiche (« * » : aussi les versions FR / DE des migrations 34 / 36)
     sb.from('demandes_produits')
@@ -320,7 +321,10 @@ function afficherNotes() {
         ? `<input type="checkbox" data-note-fait="${n.id}" ${n.fait ? 'checked' : ''} ${estRegie ? '' : 'disabled'} aria-label="Fait">`
         : '<span class="note-icone" aria-hidden="true">📝</span>'}
       <span class="note-texte">${echapper(n.texte)}
-        <span class="doux petit">· ${n.fait ? `fait par ${qui(n.fait_par)} à ${heure(n.fait_le)}` : `${qui(n.cree_par)}, ${dateCourte(n.cree_le)} ${heure(n.cree_le)}`}</span></span>
+        <span class="doux petit">· ${n.fait ? `fait par ${qui(n.fait_par)} à ${heure(n.fait_le)}` : `${qui(n.cree_par)}, ${dateCourte(n.cree_le)} ${heure(n.cree_le)}`}</span>
+        ${(n.fichiers || []).length ? `<span class="note-fichiers">${n.fichiers.map(f => `
+          <button type="button" class="btn btn-discret petit" data-telecharger="${echapper(f.chemin)}"
+            title="Télécharger${f.taille ? ` · ${taille(f.taille)}` : ''}">📎 ${echapper(f.nom)}</button>`).join('')}</span>` : ''}</span>
       ${estRegie ? `<button type="button" class="btn btn-discret petit" data-suppr-note="${n.id}" aria-label="Supprimer">✕</button>` : ''}
     </li>`).join('');
   $('notes-vide').hidden = notes.length > 0;
@@ -700,17 +704,96 @@ document.addEventListener('click', async (e) => {
   await charger();
 });
 
-// « Pour ce soir » : ajouter, cocher, supprimer
+// « Pour ce soir » : ajouter (avec des fichiers ou un dossier glissés, migration 41), cocher, supprimer
+let fichiersNote = [];      // [{ fichier: File, nom: 'dossier/visuel.png' }]
+function afficherFichiersNote() {
+  const ul = $('note-fichiers-choisis');
+  ul.hidden = !fichiersNote.length;
+  ul.innerHTML = fichiersNote.map((x, i) => `
+    <li class="fichier-depose"><span class="fichier-nom" title="${echapper(x.nom)}">${echapper(x.nom)}</span>
+      <span class="fichier-etat doux petit">${taille(x.fichier.size)}</span>
+      <button type="button" class="btn btn-discret" data-retirer-fichier-note="${i}">Retirer</button></li>`).join('');
+}
+const ajouterFichiersNote = (liste) => {
+  for (const x of liste) if (!fichiersNote.some(y => y.nom === x.nom && y.fichier.size === x.fichier.size)) fichiersNote.push(x);
+  afficherFichiersNote();
+};
+// Fichiers d'un glisser-déposer, dossiers compris (on garde le chemin « dossier/fichier » comme nom)
+async function fichiersDuDepot(dt) {
+  const entrees = [...(dt.items || [])].map(it => it.webkitGetAsEntry?.()).filter(Boolean);
+  if (!entrees.length) return [...dt.files].map(f => ({ fichier: f, nom: f.name }));
+  const res = [];
+  const parcourir = async (entree, chemin) => {
+    if (entree.isFile) {
+      const f = await new Promise((ok, ko) => entree.file(ok, ko));
+      res.push({ fichier: f, nom: chemin + f.name });
+    } else if (entree.isDirectory) {
+      const lecteur = entree.createReader();
+      let lot;
+      do {     // readEntries rend les fichiers par paquets
+        lot = await new Promise((ok, ko) => lecteur.readEntries(ok, ko));
+        for (const e of lot) await parcourir(e, `${chemin}${entree.name}/`);
+      } while (lot.length);
+    }
+  };
+  for (const e of entrees) await parcourir(e, '');
+  return res;
+}
+const depotNote = $('depot-note');
+depotNote.addEventListener('click', (e) => { if (e.target.tagName !== 'INPUT') $('note-fichiers').click(); });
+$('note-fichiers').addEventListener('change', (e) => {
+  ajouterFichiersNote([...e.target.files].map(f => ({ fichier: f, nom: f.name })));
+  e.target.value = '';
+});
+depotNote.addEventListener('dragover', (e) => { e.preventDefault(); depotNote.classList.add('survol'); });
+depotNote.addEventListener('dragleave', () => depotNote.classList.remove('survol'));
+depotNote.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  depotNote.classList.remove('survol');
+  ajouterFichiersNote(await fichiersDuDepot(e.dataTransfer));
+});
+$('note-fichiers-choisis').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-retirer-fichier-note]');
+  if (!b) return;
+  fichiersNote.splice(Number(b.dataset.retirerFichierNote), 1);
+  afficherFichiersNote();
+});
+
 $('form-note').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const texte = $('note-texte').value.trim();
+  let texte = $('note-texte').value.trim();
+  // fichiers seuls : la ligne prend le nom du premier (ou du dossier)
+  if (!texte && fichiersNote.length) texte = fichiersNote[0].nom.split('/')[0];
   if (!texte) { $('note-texte').focus(); return; }
+  const bouton = e.submitter || $('form-note').querySelector('[type=submit]');
+  bouton.disabled = true;
   const { data, error } = await sb.from('notes_match')
     .insert({ match_id: etat.match.id, type: $('note-type').value, texte })
-    .select('id, type, texte, fait, fait_par, fait_le, cree_par, cree_le').single();
-  if (error) return notifier(`Ajout impossible : ${error.message}`, 'erreur');
+    .select('*').single();
+  if (error) { bouton.disabled = false; return notifier(`Ajout impossible : ${error.message}`, 'erreur'); }
+  // envoi des fichiers dans notes/<match>/<note>/…, puis liste enregistrée sur la note
+  if (fichiersNote.length) {
+    const recus = [], echecs = [];
+    for (const [k, x] of fichiersNote.entries()) {
+      bouton.textContent = `Envoi ${k + 1}/${fichiersNote.length}…`;
+      const chemin = `notes/${etat.match.id}/${data.id}/${Date.now().toString(36)}${k}__${nomFichierSur(x.nom)}`;
+      const { error: e2 } = await sb.storage.from('assets').upload(chemin, x.fichier, { upsert: false });
+      if (e2) echecs.push(x.nom); else recus.push({ chemin, nom: x.nom, taille: x.fichier.size });
+    }
+    if (recus.length) {
+      const { error: e3 } = await sb.from('notes_match').update({ fichiers: recus }).eq('id', data.id);
+      if (e3) notifier(/fichiers/.test(e3.message) ? 'Fichiers envoyés, mais exécutez la migration 41 pour les voir ici.'
+        : `Fichiers non rattachés : ${e3.message}`, 'erreur');
+      else data.fichiers = recus;
+    }
+    if (echecs.length) notifier(`${echecs.length} fichier(s) non envoyé(s) : ${echecs.join(', ')}`, 'erreur');
+  }
+  bouton.disabled = false;
+  bouton.textContent = 'Ajouter';
   etat.notes.push(data);
   $('note-texte').value = '';
+  fichiersNote = [];
+  afficherFichiersNote();
   afficher();
   $('note-texte').focus();
 });
@@ -719,7 +802,7 @@ document.addEventListener('change', async (e) => {
   const c = e.target.closest('[data-note-fait]');
   if (!c) return;
   const { data, error } = await sb.from('notes_match').update({ fait: c.checked }).eq('id', c.dataset.noteFait)
-    .select('id, type, texte, fait, fait_par, fait_le, cree_par, cree_le').single();
+    .select('*').single();
   if (error) { c.checked = !c.checked; return notifier(`Enregistrement impossible : ${error.message}`, 'erreur'); }
   etat.notes = etat.notes.map(n => n.id === data.id ? data : n);
   afficher();
@@ -729,9 +812,14 @@ document.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-suppr-note]');
   if (!b) return;
   const n = etat.notes.find(x => x.id === b.dataset.supprNote);
-  if (!n || !confirm(`Supprimer « ${n.texte} » ?`)) return;
+  const nb = (n?.fichiers || []).length;
+  if (!n || !confirm(`Supprimer « ${n.texte} »${nb ? ` et ${nb > 1 ? `ses ${nb} fichiers` : 'son fichier'}` : ''} ?`)) return;
   const { error } = await sb.from('notes_match').delete().eq('id', n.id);
   if (error) return notifier(`Suppression impossible : ${error.message}`, 'erreur');
+  if (nb) {
+    const { error: e2 } = await sb.storage.from('assets').remove(n.fichiers.map(f => f.chemin));
+    if (e2) console.warn('Fichiers de la note non supprimés :', e2.message);
+  }
   etat.notes = etat.notes.filter(x => x.id !== n.id);
   afficher();
 });

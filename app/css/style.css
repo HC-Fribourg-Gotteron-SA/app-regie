@@ -482,6 +482,11 @@ body:has(.bandeau-test) { box-shadow: inset 0 4px 0 #e0a100; }
 .note .btn { flex: none; padding: .15rem .45rem; }
 .ajout-note { display: flex; gap: .5rem; margin-top: .8rem; flex-wrap: wrap; }
 .ajout-note input { flex: 1; min-width: 200px; }
+/* fichiers joints à une tâche / info « Pour ce soir » (migration 41) */
+.ajout-note .depot-note, .ajout-note #note-fichiers-choisis { flex-basis: 100%; margin: 0; }
+.note-fichiers { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .3rem; }
+.note-fichiers .btn { padding: .15rem .5rem; font-weight: 500; }
+.note.est-fait .note-fichiers { opacity: .7; }
 .lien-demandes-attente { display: block; text-decoration: none; color: inherit; margin-bottom: 1.25rem;
   box-shadow: inset 5px 0 0 var(--info), var(--ombre); }
 .lien-demandes-attente:hover { border-color: var(--noir); }

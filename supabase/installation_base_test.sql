@@ -1,7 +1,7 @@
 -- =====================================================================
 -- INSTALLATION COMPLÈTE d'une base neuve (base de TEST) — généré par outils/installation-base-test.mjs
 -- À exécuter UNE fois dans le SQL Editor du projet de test (jamais sur la vraie base).
--- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40.
+-- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41.
 -- Ensuite : créer son compte (Authentication > Users), se mettre admin (voir en bas),
 -- importer le calendrier dans l'outil (.ics), puis lancer supabase/demo_donnees_test.sql.
 -- =====================================================================
@@ -3418,6 +3418,24 @@ from ros_modeles m left join ros_lignes l on l.modele_id = m.id
 group by m.nom order by m.nom;
 
 
+-- #####################################################################
+-- 41_fichiers_notes_match.sql
+-- #####################################################################
+-- =====================================================================
+-- 41 — Fichiers joints aux tâches et infos « Pour ce soir » (Match du jour)
+-- À exécuter une fois dans Supabase > SQL Editor, APRÈS la 26, sur la base de TEST puis sur la vraie base.
+-- Peut être exécuté plusieurs fois.
+-- =====================================================================
+-- Demandé par Léa (05.10.2026) : des visuels à faire qui ne viennent pas du Sponsoring (pour l'un ou l'autre) →
+-- en ajoutant une tâche ou une info, on peut glisser des fichiers (ou un dossier) avec la ligne.
+-- Fichiers dans le bucket « assets » : notes/<match>/<note>/<horodatage>__<nom>. Ici, la liste :
+-- [{ "chemin": "notes/…", "nom": "visuel hommage.png", "taille": 123456 }, …]
+
+alter table notes_match add column if not exists fichiers jsonb not null default '[]';
+
+select 'Migration 41 OK : fichiers joints aux notes « Pour ce soir »' as "Résultat";
+
+
 -- Après avoir créé ton compte dans Authentication > Users, lance ceci séparément :
 -- update profiles set role = 'admin', nom = 'Léa Talon' where email = 'lea.talon@fribourg-gotteron.ch';
-select 'Installation terminée : 38 fichiers.' as "Résultat";
+select 'Installation terminée : 39 fichiers.' as "Résultat";

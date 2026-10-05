@@ -33,6 +33,12 @@
         </select>
         <input type="text" id="note-texte" placeholder="Ex. : tester le micro du speaker · match télévisé, pause raccourcie…" maxlength="500">
         <button type="submit" class="btn btn-principal">Ajouter</button>
+        <!-- fichiers joints (facultatif) : visuels à faire, etc. ; on peut glisser un dossier entier -->
+        <div class="zone-depot zone-compacte depot-note" id="depot-note">
+          📎 Glissez des fichiers ou un dossier ici, ou <u>cliquez pour choisir</u> <span class="petit">(facultatif)</span>
+          <input type="file" id="note-fichiers" multiple hidden>
+        </div>
+        <ul class="liste-fichiers" id="note-fichiers-choisis" hidden></ul>
       </form>
     </section>
 

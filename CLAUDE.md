@@ -270,7 +270,8 @@ outil-regie/
 │   ├── 37_fichier_a_refaire.sql ← « Fichier à refaire » (fichier pas utilisable) : a_corriger, fichiers_refuses, RPC
 │   ├── 38_champions_league.sql ← type de match « Champions League »
 │   ├── 39_matchs_plus_rapides.sql ← tg_match_passages : plus de « statement timeout » en enregistrant un match
-│   └── 40_run_of_show_modele_chl.sql ← modèle de run of show « CHL Regular Season 26/27 » (rundown officiel CHL)
+│   ├── 40_run_of_show_modele_chl.sql ← modèle de run of show « CHL Regular Season 26/27 » (rundown officiel CHL)
+│   └── 41_fichiers_notes_match.sql ← notes_match.fichiers : fichiers joints aux tâches / infos « Pour ce soir »
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
@@ -591,6 +592,11 @@ Autres règles décidées :
       **« Pour ce soir »** (demandé par Léa, migration 26) : bloc sous le bilan pour les infos générales du match et
       les tâches hors sponsors (📝 info / ☐ tâche à cocher, qui / quand, ✕ supprimer) ; Régie / admin écrivent,
       Sponsoring lit ; le bilan compte les tâches restantes. Caché si la table n'existe pas encore.
+      **Fichiers joints** (05.10.2026, migration 41, pas encore testé ; Léa : visuels à faire qui ne viennent pas du
+      Sponsoring) : sous la ligne d'ajout, zone « 📎 Glissez des fichiers ou un dossier » (dossier parcouru avec
+      `webkitGetAsEntry`, nom = « dossier/fichier ») ; envoyés à l'ajout dans `notes/<match>/<note>/…` (bucket assets),
+      liste dans `notes_match.fichiers` jsonb ; affichés sous la note (📎 nom = Télécharger) ; supprimer la note
+      supprime ses fichiers. Pas d'ajout de fichier sur une note déjà créée (pas demandé).
       « Retirer de ce produit » met maintenant `date_fin = hier` (ne passe plus dès le prochain match, même le soir même).
 - [ ] Préparation Colosseo par match (+ case « saisi dans Colosseo », zip des fichiers, retraits)
 - [ ] Vue produit, grille de capacité, plan des emplacements LED
