@@ -156,7 +156,8 @@ async function chargerMatch() {
   // celles qui concernent ce match : pour la saison, ou vendues pour ce jour de match
   const jourMatch = jourLocal(m.date_heure);
   etat.attente = attente || [];
-  const pourCeMatch = (a) => a.type_vente !== 'match' || (a.dates_matchs || []).includes(jourMatch);
+  // Champions League = une autre playlist : les demandes « toute la saison » ne la concernent pas (Léa, 05.10.2026)
+  const pourCeMatch = (a) => a.type_vente === 'match' ? (a.dates_matchs || []).includes(jourMatch) : !estChl(m);
   etat.demandesMatch = etat.attente.filter(pourCeMatch);
   // déjà traitées pour ce match : affichées grisées sous les demandes à traiter (demandé par Léa)
   etat.demandesFaites = (traitees || []).filter(pourCeMatch);
