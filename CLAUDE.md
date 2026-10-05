@@ -146,8 +146,8 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    l'anneau. Ce n'est pas le produit « Anneau LED ». Mécanisme de la migration 17 : `lie_a_produit_id` → produit
    technique INACTIF « Anneau LED couplé » (partagé ; la Pub pause tiers garde « Anneau LED pause tiers »), jamais
    affiché. Slides exclues. L'ordre en 4 groupes (son / anneau) reste réservé à la Pub pause tiers.
-0-decies. **« Fichier à refaire » (03.10.2026, idée A validée par Léa ; migration 37 à exécuter sur les deux bases, pas
-   encore testé)** : fichier reçu pas utilisable (ex. LED au mauvais format). Carte de traitement : bouton « Fichier à
+0-decies. **« Fichier à refaire » — REMPLACÉ le 05.10.2026 par « ✉ Avertir le Sponsoring » (voir 0-undecies) ;
+   bouton retiré, le reste ci-dessous ne sert plus qu'aux anciennes demandes** (03.10.2026, migration 37) : fichier reçu pas utilisable (ex. LED au mauvais format). Carte de traitement : bouton « Fichier à
    refaire… » à côté du fichier (Régie), motif pré-rempli avec l'alerte de format → RPC `fichier_a_refaire` : fichier
    ajouté à `demandes_produits.fichiers_refuses` (gardé, barré « refusé · à refaire », jamais ajouté), `a_corriger`
    = motif (+ `_le`, `_par`), demande → `question` (le motif n'est plus recopié dans `reponse_regie`, 05.10.2026). Sponsoring : statut « ⚠ Fichier à
@@ -161,7 +161,11 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    jour) ; seul « Fichier à refaire » met encore une demande en `question` (Sponsoring : « La Régie attend un nouveau
    fichier »). Ancienne réponse déjà écrite : affichée en lecture seule (« Ancienne réponse de la Régie »), et
    toujours dans l'historique. Migration 37 mise à jour (n'écrit plus dans `reponse_regie`) : à (ré)exécuter.
-   **Idée de Léa, pas encore faite** : un bouton « Avertir le Sponsoring d'un défaut » qui ouvre un e-mail.
+   **« ✉ Avertir le Sponsoring »** (même jour, **remplace « Fichier à refaire »**, choix de Léa) : bouton à côté de
+   chaque fichier dans la carte de traitement → `mailto:` à l'auteur de la demande (`demandes.cree_par` → profiles.email),
+   objet « Demande <sponsor> · <produit> : fichier à corriger », texte avec le fichier, les défauts lus
+   (`alertesFichier`), le format attendu et le lien vers la demande. Rien n'est changé dans l'outil (pas de statut).
+   Colonnes / RPC de la migration 37 gardées (anciennes demandes : fichier refusé toujours barré).
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.

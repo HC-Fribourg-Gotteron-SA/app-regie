@@ -8,7 +8,7 @@ import { analyserSon, LIBELLE_SON } from './son-video.js';
 // Colonnes d'un produit de demande à traiter (demandes_produits + sa demande)
 // (« * » : reprend aussi rotation / versions / ordre_versions de la migration 34 sans casser la page avant)
 export const CHAMPS_A_TRAITER = `*,
-  demande:demandes!inner(id, type, statut, created_at, sponsor_id, sponsor_nom_saisi, remarque_sponsoring,
+  demande:demandes!inner(id, type, statut, created_at, cree_par, sponsor_id, sponsor_nom_saisi, remarque_sponsoring,
                          sponsor:sponsors(id, nom))`;
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -239,7 +239,7 @@ function blocFichiers(c) {
             <span class="doux petit">${taille(f.taille_octets || 0)} · ${echapper(f.sonde)}</span>
             ${choix.dejaMis.has(f.storage_path) ? '<span class="badge">déjà mis</span>' : controle(f, cible)}
             ${options.estRegie && !choix.dejaMis.has(f.storage_path) ? `<button type="button" class="btn btn-discret petit"
-                data-refaire="${echapper(f.storage_path)}" title="Le fichier n'est pas utilisable (ex. mauvais format) : le Sponsoring doit en envoyer un autre">Fichier à refaire…</button>` : ''}
+                data-avertir="${echapper(f.storage_path)}" title="Fichier pas utilisable (ex. mauvais format) : ouvre un e-mail prêt pour la personne qui a fait la demande">✉ Avertir le Sponsoring</button>` : ''}
             ${versionsAlternees(c, role) && !choix.dejaMis.has(f.storage_path) ? `<label class="petit" style="margin:0">Version
               <input type="text" data-variante="${echapper(f.storage_path)}" value="${echapper(f.variante || '')}" placeholder="FR"
                      style="width:4.5rem;min-height:0;padding:.2rem .4rem"></label>` : ''}
@@ -272,34 +272,42 @@ function versionsAlternees(c, role = 'visuel') {
 }
 
 // ---------------------------------------------------------------------
-// « Fichier à refaire » (migration 37, demandé par Léa le 03.10.2026) : fichier pas utilisable (ex. LED au mauvais
-// format). Le fichier est refusé (gardé, barré), la demande passe en Question chez le Sponsoring avec le motif ;
-// le bon fichier ajouté par le Sponsoring la remet « à traiter ».
+// « Avertir le Sponsoring » (05.10.2026, remplace « Fichier à refaire », choix de Léa) : fichier pas utilisable
+// (ex. LED au mauvais format) → la messagerie s'ouvre avec un e-mail prêt pour la personne qui a fait la demande
+// (produit, fichier, défaut lu, lien vers la demande). Rien n'est changé dans l'outil ; la Régie relit et envoie.
+// Le bon fichier arrive ensuite par « + Ajouter un fichier ».
 // ---------------------------------------------------------------------
+// (anciennes demandes passées par « Fichier à refaire » : leur fichier refusé reste barré)
 const estRefuse = (a, f) => (a.fichiers_refuses || []).includes(f.storage_path);
 
-async function demanderFichierARefaire(k, chemin) {
-  const c = cartes.get(k);
-  const { a, ctx, choix } = c;
+async function avertirSponsoring(k, chemin) {
+  const { a, ctx, choix } = cartes.get(k);
   const f = choix.fichiers.find(x => x.storage_path === chemin);
   if (!f) return;
   const cible = f.role === 'anneau' ? ctx.anneau : ctx.p;
   const alertes = alertesFichier(cible, { nom: f.nomCourt, largeur: f.largeur_px, hauteur: f.hauteur_px, duree: f.duree_s });
-  const motif = prompt(`Fichier à refaire : ${f.nomCourt}\n\nPourquoi ? (envoyé au Sponsoring, modifiable)`,
-    alertes.length ? `Mauvais format : ${alertes.join(' ; ')}` : 'Fichier pas utilisable : ');
-  if (motif === null) return;
-  const { error } = await sb.rpc('fichier_a_refaire', { p_demande: a.demande_id, p_produit: a.produit_id, p_chemin: chemin, p_motif: motif });
-  if (error) {
-    return notifier(/fichier_a_refaire/.test(error.message) ? 'Exécutez d’abord la migration 37 dans Supabase.'
-      : `Impossible : ${error.message}`, 'erreur');
-  }
-  a.a_corriger = motif.trim() || 'Fichier à refaire';
-  a.a_corriger_le = new Date().toISOString();
-  a.fichiers_refuses = [...(a.fichiers_refuses || []), chemin];
-  a.demande.statut = 'question';
-  notifier('Demande renvoyée au Sponsoring : fichier à refaire');
-  dessiner(k);
-  await c.options.apres?.({ refaire: true });
+  const { data: auteur } = a.demande.cree_par
+    ? await sb.from('profiles').select('email, nom').eq('id', a.demande.cree_par).maybeSingle() : { data: null };
+  const sponsor = nomSponsor(a.demande);
+  const produit = ctx.p?.nom || 'le produit';
+  const attendu = specsProduit(cible);
+  const lien = new URL(`demandes.html?id=${a.demande_id}`, location.href).href;
+  const prenom = (auteur?.nom || '').split(' ')[0];
+  const corps = [
+    `Bonjour${prenom ? ` ${prenom}` : ''},`,
+    '',
+    `Le fichier « ${f.nomCourt} » reçu pour ${produit} (${sponsor}) ne peut pas être utilisé tel quel :`,
+    alertes.length ? alertes.map(x => `- ${x}`).join('\n') : '- (préciser le défaut)',
+    attendu ? `\nFormat attendu : ${attendu}` : '',
+    '',
+    'Peux-tu demander un fichier corrigé au sponsor et l’ajouter dans la demande (« + Ajouter un fichier ») ?',
+    lien,
+    '',
+    'Merci !',
+  ].join('\n');
+  const sujet = `Demande ${sponsor} · ${produit} : fichier à corriger`;
+  location.href = `mailto:${(auteur?.email || '').replace(/[^\w.+@-]/g, '')}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`;
+  if (!auteur?.email) notifier('Auteur de la demande introuvable : ajoutez le destinataire dans l’e-mail.', 'erreur');
 }
 
 // « Ajouter un fichier » (fichier reçu plus tard) : même bouton dans la demande et sur la fiche
@@ -580,8 +588,8 @@ function brancher(el) {
       if (fait) { cartes.delete(k); oublierContextes(); await c.options.apres?.({ supprime: true }); }
       return;
     }
-    const refaire = e.target.closest('[data-refaire]');
-    if (refaire) return demanderFichierARefaire(k, refaire.dataset.refaire);
+    const avertir = e.target.closest('[data-avertir]');
+    if (avertir) return avertirSponsoring(k, avertir.dataset.avertir);
     const bouton = e.target.closest('[data-suite]');
     if (bouton) await traiter(k, bouton.dataset.suite, bouton);
   });
