@@ -170,6 +170,15 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    objet « Demande <sponsor> · <produit> : fichier à corriger », texte avec le fichier, les défauts lus
    (`alertesFichier`), le format attendu et le lien vers la demande. Rien n'est changé dans l'outil (pas de statut).
    Colonnes / RPC de la migration 37 gardées (anciennes demandes : fichier refusé toujours barré).
+0-duodecies. **« Déroulement du match » : idée EN ATTENTE (05.10.2026, Léa : « on fait ça une autre fois », elle doit
+   voir avec Yann comment il veut faire)**. Rien codé. Besoin : à côté du run of show (technique / Régie), un
+   déroulement pour **toutes les personnes qui travaillent le soir du match** (aujourd'hui : feuille PDF de Yann +
+   e-mail « Divers / Informations pour le public : Ticketing, Programme, Parking, Fanshop, Place du Fairplay / Sponsor
+   de match / mentions Ice Cleaners », contact Yann 026/564.21.61). Décidé : **option A** (liste à part par match, pas
+   tirée du run of show), **Yann remplit**, page dans l'outil comme le run of show, **bouton pour envoyer l'e-mail à
+   tous**. Proposé (pas validé) : rôle « Événementiel » pour Yann, « Partir du match précédent », sponsor du match
+   repris de la fiche, bouton « ✉ Envoyer à tous » = copie du déroulement mis en forme + Outlook ouvert avec la liste
+   de destinataires et l'objet (Yann colle). Questions ouvertes : liste des destinataires, compte de Yann.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
