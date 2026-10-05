@@ -264,7 +264,8 @@ outil-regie/
 │   ├── 35_anneau_tous_videotron.sql ← avec / sans anneau LED pour tout le vidéotron + action scenes (« Anneau LED couplé »)
 │   ├── 36_versions_anneau.sql ← FR / DE un match sur deux aussi pour l'anneau LED (traiter_produit, rotation_anneau)
 │   ├── 37_fichier_a_refaire.sql ← « Fichier à refaire » (fichier pas utilisable) : a_corriger, fichiers_refuses, RPC
-│   └── 38_champions_league.sql ← type de match « Champions League »
+│   ├── 38_champions_league.sql ← type de match « Champions League »
+│   └── 39_matchs_plus_rapides.sql ← tg_match_passages : plus de « statement timeout » en enregistrant un match
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
@@ -389,6 +390,10 @@ Autres règles décidées :
   (`matchs_de_ligne` ne prend que « saison » + playoffs si inclus) ; seuls les produits vendus pour ces matchs y
   passent. Match du jour : un match CHL se compare au match CHL précédent, les autres sautent les CHL.
   **Playoffs** (Léa, même jour) : même playlist que la saison + des produits en plus → **à voir plus tard**.
+  **Migration 39** (même jour, « statement timeout » en enregistrant un match CHL) : `tg_match_passages` régénérait
+  les passages des 600+ diffusions saison à chaque match ajouté ET à chaque match renuméroté ; maintenant :
+  renumérotation seule → seulement `un_match_sur > 1` / rotation ; CHL / amical → rien ; playoffs → `inclut_playoffs`.
+  Ajouter / modifier un match de SAISON recalcule encore toutes les diffusions saison (à surveiller si ça coupe).
 - **Répartition des rôles (décidé le 25.09.2026)** : c'est le **Sponsoring** qui précise ce qu'il faut diffuser
   (durée, nombre de passages, son, consignes…) dans sa demande. La **Régie ne gère pas les contrats** : on lui
   envoie ce qu'il faut afficher pour la saison. Le contrat reste un conteneur technique créé **automatiquement**
