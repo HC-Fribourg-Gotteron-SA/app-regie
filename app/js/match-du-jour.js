@@ -96,8 +96,11 @@ function remplirChoix() {
 async function chargerMatch() {
   const m = etat.match;
   // match précédent = le dernier joué avant celui-ci, même s'il est de la saison d'avant
-  // (premier match de la saison : on compare avec la fin de la saison précédente)
-  const avant = etat.matchs.filter(x => new Date(x.date_heure) < new Date(m.date_heure));
+  // (premier match de la saison : on compare avec la fin de la saison précédente).
+  // Champions League = une autre playlist (05.10.2026, Léa : « ce qu'on affiche n'est pas pareil ») :
+  // un match CHL se compare au match CHL précédent, les autres sautent les matchs CHL.
+  const estChl = (x) => x.type === 'champions_league';
+  const avant = etat.matchs.filter(x => new Date(x.date_heure) < new Date(m.date_heure) && estChl(x) === estChl(m));
   etat.precedent = avant[avant.length - 1] || null;
 
   const aujourdhui = new Date().toDateString() === new Date(m.date_heure).toDateString();
@@ -105,6 +108,7 @@ async function chargerMatch() {
   $('m-surtitre').textContent = aujourdhui ? 'Match du jour' : passe ? 'Match passé' : 'Prochain match';
   $('m-titre').textContent = `${aujourdhui ? 'Ce soir' : jour(m.date_heure)} · contre ${m.adversaire}`;
   $('m-sous-titre').textContent = `${aujourdhui ? jour(m.date_heure) + ' · ' : ''}${heure(m.date_heure)} · match n° ${m.numero}`
+    + (estChl(m) ? ' · Champions League (comparé au match CHL précédent)' : '')
     + (etat.precedent ? ` · comparé au match du ${dateCourte(etat.precedent.date_heure)} contre ${etat.precedent.adversaire}`
       + (etat.precedent.saison_id !== m.saison_id ? ' (dernier match de la saison précédente)' : '') : '');
   $('quand-playlist').textContent = aujourdhui ? 'ce soir' : `le ${dateCourte(m.date_heure)}`;

@@ -252,7 +252,8 @@ outil-regie/
 │   ├── 34_versions_visuels.sql ← FR / DE un match sur deux (choisir_asset, traiter_produit, demandes_produits.rotation)
 │   ├── 35_anneau_tous_videotron.sql ← avec / sans anneau LED pour tout le vidéotron + action scenes (« Anneau LED couplé »)
 │   ├── 36_versions_anneau.sql ← FR / DE un match sur deux aussi pour l'anneau LED (traiter_produit, rotation_anneau)
-│   └── 37_fichier_a_refaire.sql ← « Fichier à refaire » (fichier pas utilisable) : a_corriger, fichiers_refuses, RPC
+│   ├── 37_fichier_a_refaire.sql ← « Fichier à refaire » (fichier pas utilisable) : a_corriger, fichiers_refuses, RPC
+│   └── 38_champions_league.sql ← type de match « Champions League »
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
@@ -371,7 +372,12 @@ Autres règles décidées :
 - Tout le monde en Régie peut traiter les demandes et valider les fichiers. Pas de preuve photo exigée,
   mais il faut un **export de ce qui a été diffusé par match**.
 - Produits hors Airtable (speaker, glace…) : **hors périmètre** (pas gérés par la Régie).
-- **Champions League : pas traitée pour l'instant** (types de match inchangés : saison / playoffs / amical).
+- **Champions League** (05.10.2026, migration 38 à exécuter sur les deux bases, pas encore testé) : type de match
+  `champions_league` (calendrier : ajout manuel, import détecté « CHL / Champions (Hockey) League », type modifiable
+  dans l'aperçu de l'import). **Ce qu'on affiche en CHL ≠ saison** (Léa) : un sponsor « à la saison » n'y passe pas
+  (`matchs_de_ligne` ne prend que « saison » + playoffs si inclus) ; seuls les produits vendus pour ces matchs y
+  passent. Match du jour : un match CHL se compare au match CHL précédent, les autres sautent les CHL.
+  **Playoffs** (Léa, même jour) : même playlist que la saison + des produits en plus → **à voir plus tard**.
 - **Répartition des rôles (décidé le 25.09.2026)** : c'est le **Sponsoring** qui précise ce qu'il faut diffuser
   (durée, nombre de passages, son, consignes…) dans sa demande. La **Régie ne gère pas les contrats** : on lui
   envoie ce qu'il faut afficher pour la saison. Le contrat reste un conteneur technique créé **automatiquement**

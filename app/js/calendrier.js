@@ -66,7 +66,10 @@ $('lignes').addEventListener('click', (e) => {
 const RE_DATE = /(\d{4})-(\d{1,2})-(\d{1,2})|(\d{1,2})[./](\d{1,2})[./](\d{2,4})/;
 const RE_HEURE = /(?:^|[^\d])(\d{1,2})\s?[:h.]\s?(\d{2})(?!\d)/i;
 const RE_JOUR = /(?:^|\s)(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|lun|mar|mer|jeu|ven|sam|dim|lu|ma|me|je|ve|sa|di|mo|mi|do|fr|so)\.?,?(?=\s|$)/gi;
+// Champions League (CHL) : testé en premier (la CHL a aussi des « playoffs »)
+const RE_CHL = /\b(champions\s+hockey\s+league|champions\s+league|chl)\b/gi;
 const RE_PLAYOFFS = /\b(play-?offs?|pr[ée]-?playoffs?|play-?in|quarts?|demi|finale?|viertelfinal|halbfinal)\b/gi;
+const typeDe = (t) => t.match(RE_CHL) ? 'champions_league' : t.match(RE_PLAYOFFS) ? 'playoffs' : t.match(RE_AMICAL) ? 'amical' : 'saison';
 const RE_AMICAL = /\b(amical|test|exhibition( games?)?|pr[ée]pa(ration)?|freundschaftsspiel)\b/gi;
 // mots du site de la ligue (sihf.ch) à ignorer
 const RE_BRUIT = /\b(national league|nl|regular season|qualification|fin|comme prévu|en cours|après (ot\d*|so|prol\.?)|reporté)\b/gi;
@@ -106,9 +109,9 @@ function icsVersLignes(texte) {
       quand = d ? `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
                 : `${quand} ${m[4]}:${m[5]}`;
     }
-    // le type (amical, playoffs) peut n'être que dans la description ou les catégories
+    // le type (Champions League, amical, playoffs) peut n'être que dans la description ou les catégories
     const infos = `${valeur(bloc, 'DESCRIPTION')?.texte || ''} ${valeur(bloc, 'CATEGORIES')?.texte || ''}`;
-    const type = infos.match(RE_PLAYOFFS) ? ' playoffs' : infos.match(RE_AMICAL) ? ' amical' : '';
+    const type = { champions_league: ' CHL', playoffs: ' playoffs', amical: ' amical', saison: '' }[typeDe(infos)];
     return `${quand} ${resume}${type}`;
   });
 }
@@ -136,8 +139,8 @@ function analyserLigne(brute) {
     ligne.remarques.push(`heure manquante : ${HEURE_DEFAUT} par défaut`);
   }
 
-  ligne.type = texte.match(RE_PLAYOFFS) ? 'playoffs' : texte.match(RE_AMICAL) ? 'amical' : 'saison';
-  texte = texte.replace(RE_PLAYOFFS, ' ').replace(RE_AMICAL, ' ').replace(RE_BRUIT, ' ').replace(RE_JOUR, ' ')
+  ligne.type = typeDe(texte);
+  texte = texte.replace(RE_CHL, ' ').replace(RE_PLAYOFFS, ' ').replace(RE_AMICAL, ' ').replace(RE_BRUIT, ' ').replace(RE_JOUR, ' ')
                .replace(/\bvs\b\.?/gi, ' ');
 
   // L'équipe qui reçoit est écrite en premier : « Fribourg-Gottéron – SC Bern » = à domicile,
@@ -244,7 +247,8 @@ function afficherApercu() {
          <td>${jourSemaine(l.jour + 'T12:00')} ${dateCourte(l.jour + 'T12:00')}</td>
          <td>${l.heure}</td>
          <td>${echapper(l.adversaire)}</td>
-         <td>${LIBELLES.type_match[l.type]}</td>
+         <td><select data-type-i="${i}" aria-label="Type de match" style="width:auto">${Object.entries(LIBELLES.type_match)
+           .map(([v, t]) => `<option value="${v}" ${v === l.type ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
          <td class="petit doux">${echapper(l.remarques.join(' ; '))}</td></tr>`).join('');
   majCompteImport();
 }
@@ -261,6 +265,8 @@ function majCompteImport() {
 $('apercu-lignes').addEventListener('change', (e) => {
   const i = e.target.dataset.i;
   if (i !== undefined) { etat.apercu[i].inclure = e.target.checked; majCompteImport(); }
+  // type corrigé à la main (ex. matchs de Champions League dont le fichier ne dit pas « CHL »)
+  if (e.target.dataset.typeI !== undefined) etat.apercu[e.target.dataset.typeI].type = e.target.value;
 });
 
 $('btn-confirmer-import').addEventListener('click', async () => {

@@ -1,7 +1,7 @@
 -- =====================================================================
 -- INSTALLATION COMPLÈTE d'une base neuve (base de TEST) — généré par outils/installation-base-test.mjs
 -- À exécuter UNE fois dans le SQL Editor du projet de test (jamais sur la vraie base).
--- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37.
+-- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38.
 -- Ensuite : créer son compte (Authentication > Users), se mettre admin (voir en bas),
 -- importer le calendrier dans l'outil (.ics), puis lancer supabase/demo_donnees_test.sql.
 -- =====================================================================
@@ -3237,6 +3237,25 @@ grant execute on function fichier_ajoute_demande(uuid, uuid, text) to authentica
 select 'Migration 37 OK : « Fichier à refaire »' as "Résultat";
 
 
+-- #####################################################################
+-- 38_champions_league.sql
+-- #####################################################################
+-- =====================================================================
+-- 38 — Type de match « Champions League »
+-- À exécuter une fois dans Supabase > SQL Editor, sur la base de TEST puis sur la vraie base.
+-- Peut être exécuté plusieurs fois.
+-- =====================================================================
+-- Demandé par Léa (05.10.2026) : importer les matchs de Champions League (CHL) au calendrier.
+-- Ce qu'on affiche en CHL n'est PAS la playlist de la saison : un sponsor pris « à la saison » n'y passe pas
+-- (matchs_de_ligne ne prend que les matchs « saison », et les playoffs si la diffusion les inclut) ; seuls les
+-- produits vendus pour ces matchs (« Seulement certains matchs ») y passent. Rien d'autre à changer en base.
+-- (Playoffs : même playlist que la saison + des produits en plus — à voir plus tard avec Léa.)
+
+alter type type_match add value if not exists 'champions_league';
+
+select 'Migration 38 OK : type de match « Champions League »' as "Résultat";
+
+
 -- Après avoir créé ton compte dans Authentication > Users, lance ceci séparément :
 -- update profiles set role = 'admin', nom = 'Léa Talon' where email = 'lea.talon@fribourg-gotteron.ch';
-select 'Installation terminée : 35 fichiers.' as "Résultat";
+select 'Installation terminée : 36 fichiers.' as "Résultat";

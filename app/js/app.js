@@ -40,7 +40,7 @@ export const LIBELLES = {
     question: 'Question au Sponsoring',
     traitee: 'Traitée',
   },
-  type_match: { saison: 'Saison', playoffs: 'Playoffs', amical: 'Amical' },
+  type_match: { saison: 'Saison', playoffs: 'Playoffs', amical: 'Amical', champions_league: 'Champions League' },
 };
 
 const MOMENTS = {
