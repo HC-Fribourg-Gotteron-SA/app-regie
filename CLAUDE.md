@@ -102,7 +102,11 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    (20 min, `estPause`). Rappel orange seulement si le début est connu (1er tiers = face-off ; tiers après une pause
    lancée = +20 min). **Jamais de retour en arrière** (corrigé le 03.10.2026, signalé par Léa) : une fois une section
    lancée, `ligneEnCours` ne propose plus aucune ligne avant elle (sinon les lignes de la pause estimées après le
-   lancement anticipé du tiers suivant repassaient « en cours »).0-quinquies. **Formats des produits (02.10.2026, media kit https://hcfg.brandboard.app/media-kit-hcfg ; migration 32 à
+   lancement anticipé du tiers suivant repassaient « en cours »).
+   **Modèle « CHL Regular Season 26/27 »** (migration 40, 05.10.2026) : transcrit du « Jumbotron Operator Rundown » CHL
+   collé par Léa (FO 19:45, 66 éléments, textes en anglais ; sections en français pour « Lancer » / pauses ;
+   « +0:06:00 » / « 0:18:00 » dans `quand` ; liens dans `lien` ; face-off et « Timing is fix! » en rouge ; lignes du
+   1er match (100 CHL Games, GD1) gardées). Léa supprime elle-même son ancien modèle CHL (bouton dans l'outil).0-quinquies. **Formats des produits (02.10.2026, media kit https://hcfg.brandboard.app/media-kit-hcfg ; migration 32 à
    exécuter sur les deux bases, pas encore testé)** : format attendu affiché dans la demande (par fichier, + « format OK »
    ou ⚠), dans la carte de traitement et en haut de la fiche produit (« ✏️ Format » pour la Régie : dimensions, formats,
    durée max, remarque). Toujours une **alerte, jamais un blocage** (LED 3M / 6M : souvent un logo seul, accepté).
@@ -265,7 +269,8 @@ outil-regie/
 │   ├── 36_versions_anneau.sql ← FR / DE un match sur deux aussi pour l'anneau LED (traiter_produit, rotation_anneau)
 │   ├── 37_fichier_a_refaire.sql ← « Fichier à refaire » (fichier pas utilisable) : a_corriger, fichiers_refuses, RPC
 │   ├── 38_champions_league.sql ← type de match « Champions League »
-│   └── 39_matchs_plus_rapides.sql ← tg_match_passages : plus de « statement timeout » en enregistrant un match
+│   ├── 39_matchs_plus_rapides.sql ← tg_match_passages : plus de « statement timeout » en enregistrant un match
+│   └── 40_run_of_show_modele_chl.sql ← modèle de run of show « CHL Regular Season 26/27 » (rundown officiel CHL)
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
