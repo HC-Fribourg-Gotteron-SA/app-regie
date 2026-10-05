@@ -157,10 +157,11 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    quand même = confirmation puis `a_corriger` effacé. Pas d'e-mail (Brevo pas branché).
 0-undecies. **Une seule remarque de la Régie (05.10.2026, idée A choisie par Léa)** : plus de « Réponse de la Régie »
    (`demandes.reponse_regie`, toute la demande) — seulement la **« Remarque Régie » par produit**
-   (`demandes_produits.remarque_regie`). « Poser une question » : il faut une Remarque Régie écrite sur un produit ;
-   côté Sponsoring, elle ressort en orange « Remarque Régie · question pour vous » + « La Régie a une question » au-dessus
-   de « Votre réponse ». Ancienne réponse déjà écrite : affichée en lecture seule (« Ancienne réponse de la Régie »),
-   et toujours dans l'historique. Migration 37 mise à jour (n'écrit plus dans `reponse_regie`) : à (ré)exécuter.
+   (`demandes_produits.remarque_regie`, « Remarque / commentaire »). **Bouton « Poser une question » retiré** (Léa, même
+   jour) ; seul « Fichier à refaire » met encore une demande en `question` (Sponsoring : « La Régie attend un nouveau
+   fichier »). Ancienne réponse déjà écrite : affichée en lecture seule (« Ancienne réponse de la Régie »), et
+   toujours dans l'historique. Migration 37 mise à jour (n'écrit plus dans `reponse_regie`) : à (ré)exécuter.
+   **Idée de Léa, pas encore faite** : un bouton « Avertir le Sponsoring d'un défaut » qui ouvre un e-mail.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.

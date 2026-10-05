@@ -141,7 +141,7 @@ function dessiner(k) {
         <div class="titre-bloc">Remarque Régie</div>
         ${options.estRegie
           ? `<textarea class="petit" data-remarque-regie rows="2" style="min-height:0"
-               placeholder="Remarque, ou question au Sponsoring (puis « Poser une question »)">${echapper(a.remarque_regie || '')}</textarea>`
+               placeholder="Remarque / commentaire">${echapper(a.remarque_regie || '')}</textarea>`
           : `<div class="bloc-texte petit">${echapper(a.remarque_regie || '—')}</div>`}
       </div>
     </div>
