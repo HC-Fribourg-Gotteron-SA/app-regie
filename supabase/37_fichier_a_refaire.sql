@@ -6,8 +6,8 @@
 -- Demandé par Léa (03.10.2026, idée A) : dans la carte de traitement, la Régie clique « Fichier à refaire… » à côté
 -- du fichier, avec un motif (pré-rempli avec l'alerte de format). En une fois :
 --   • le fichier est marqué refusé (pas effacé : on garde la trace) et ne sera pas ajouté ;
---   • le produit est « à corriger » (motif), la demande passe en « Question » chez le Sponsoring, le motif est ajouté
---     à la réponse de la Régie (visible dans la demande et son historique) ;
+--   • le produit est « à corriger » (motif, affiché en rouge sur le produit), la demande passe en « Question »
+--     chez le Sponsoring ;
 --   • quand le Sponsoring dépose le bon fichier (« + Ajouter un fichier »), le produit n'est plus à corriger et la
 --     demande revient « Nouvelle » chez la Régie (s'il ne reste rien à corriger).
 -- Pas d'e-mail : le Sponsoring le voit dans l'outil (onglet Questions / sa liste de demandes).
@@ -28,12 +28,10 @@ set search_path = public
 as $$
 declare
   v_motif   text := coalesce(nullif(trim(p_motif), ''), 'Fichier à refaire');
-  v_produit text;
 begin
   if not a_role('regie', 'admin') then
     raise exception 'Seule la Régie peut demander un nouveau fichier';
   end if;
-  select nom into v_produit from produits where id = p_produit;
 
   update demandes_produits
   set a_corriger = v_motif, a_corriger_le = now(), a_corriger_par = auth.uid(),
@@ -42,11 +40,9 @@ begin
   where demande_id = p_demande and produit_id = p_produit;
   if not found then raise exception 'Ce produit ne fait pas partie de la demande'; end if;
 
-  update demandes
-  set statut = 'question',
-      reponse_regie = concat_ws(E'\n\n', reponse_regie,
-        '⚠ Fichier à refaire — ' || coalesce(v_produit, '?') || ' : ' || v_motif)
-  where id = p_demande;
+  -- (05.10.2026 : plus rien dans « reponse_regie », remplacée par la Remarque Régie par produit ; le motif
+  --  s'affiche sur le produit via a_corriger)
+  update demandes set statut = 'question' where id = p_demande;
 end $$;
 
 grant execute on function fichier_a_refaire(uuid, uuid, text, text) to authenticated;

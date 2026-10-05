@@ -150,11 +150,17 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    encore testé)** : fichier reçu pas utilisable (ex. LED au mauvais format). Carte de traitement : bouton « Fichier à
    refaire… » à côté du fichier (Régie), motif pré-rempli avec l'alerte de format → RPC `fichier_a_refaire` : fichier
    ajouté à `demandes_produits.fichiers_refuses` (gardé, barré « refusé · à refaire », jamais ajouté), `a_corriger`
-   = motif (+ `_le`, `_par`), demande → `question`, motif ajouté à `reponse_regie`. Sponsoring : statut « ⚠ Fichier à
+   = motif (+ `_le`, `_par`), demande → `question` (le motif n'est plus recopié dans `reponse_regie`, 05.10.2026). Sponsoring : statut « ⚠ Fichier à
    refaire » dans la liste, message rouge sur le produit + « + Ajouter un fichier ». `fichier_ajoute_demande` (37) :
    le bon fichier efface `a_corriger` et remet la demande « Nouvelle » s'il ne reste rien à corriger. Match du jour :
    « ⏳ En attente d'un nouveau fichier du Sponsoring · motif », bouton « Voir » au lieu d'« Ajouter ». « Ajouter »
    quand même = confirmation puis `a_corriger` effacé. Pas d'e-mail (Brevo pas branché).
+0-undecies. **Une seule remarque de la Régie (05.10.2026, idée A choisie par Léa)** : plus de « Réponse de la Régie »
+   (`demandes.reponse_regie`, toute la demande) — seulement la **« Remarque Régie » par produit**
+   (`demandes_produits.remarque_regie`). « Poser une question » : il faut une Remarque Régie écrite sur un produit ;
+   côté Sponsoring, elle ressort en orange « Remarque Régie · question pour vous » + « La Régie a une question » au-dessus
+   de « Votre réponse ». Ancienne réponse déjà écrite : affichée en lecture seule (« Ancienne réponse de la Régie »),
+   et toujours dans l'historique. Migration 37 mise à jour (n'écrit plus dans `reponse_regie`) : à (ré)exécuter.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.

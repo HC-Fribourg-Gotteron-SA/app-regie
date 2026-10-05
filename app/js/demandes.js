@@ -133,11 +133,11 @@ function blocProduits(d) {
           <div class="bloc-texte petit">${echapper(x.remarque_sponsoring || '—')}</div>
         </div>
         <div>
-          <div class="titre-bloc">Remarque Régie</div>
+          <div class="titre-bloc">Remarque Régie${!estRegie && d.statut === 'question' && x.remarque_regie ? ' · question pour vous' : ''}</div>
           ${estRegie
             ? `<textarea class="petit" data-remarque-regie="${x.produit?.id}" rows="2" style="min-height:0"
-                 placeholder="Ex. : logo reçu, à retravailler…">${echapper(x.remarque_regie || '')}</textarea>`
-            : `<div class="bloc-texte petit">${echapper(x.remarque_regie || '—')}</div>`}
+                 placeholder="Remarque, ou question au Sponsoring (puis « Poser une question »)">${echapper(x.remarque_regie || '')}</textarea>`
+            : `<div class="bloc-texte petit${d.statut === 'question' && x.remarque_regie ? ' remarque-question' : ''}">${echapper(x.remarque_regie || '—')}</div>`}
         </div>
       </div>
     </div>`).join('')}</div>`;
@@ -249,9 +249,9 @@ async function ouvrir(id, { silencieux = false } = {}) {
           <ul class="liste-fichiers" id="d-fichiers" style="margin:0"><li class="doux">Chargement…</li></ul>
         </section>
 
-        <section class="detail-section encart encart-regie">
+        ${(estRegie ? blocRegie(d) : blocSponsoring(d)) ? `<section class="detail-section encart encart-regie">
           ${estRegie ? blocRegie(d) : blocSponsoring(d)}
-        </section>
+        </section>` : ''}
       </div>
 
       <aside class="detail-cote">
@@ -366,10 +366,13 @@ function decrireEvenement(j) {
   return null;
 }
 
+// Une seule zone pour la Régie : la « Remarque Régie » de chaque produit (05.10.2026, idée A de Léa : « ça sert à
+// rien d'en avoir deux »). L'ancienne « Réponse de la Régie » n'est plus modifiable ; affichée seulement si remplie.
 function blocRegie(d) {
-  return `
-    <h3>Réponse de la Régie</h3>
-    <textarea id="d-reponse" placeholder="Réponse au Sponsoring, ou la question à lui poser. Ex. : 3M ok, honorary à faire…">${echapper(d.reponse_regie || '')}</textarea>`;
+  return d.reponse_regie ? `
+    <h3>Ancienne réponse de la Régie</h3>
+    <div class="bloc-texte">${echapper(d.reponse_regie)}</div>
+    <p class="aide" style="margin:.4rem 0 0">Remarques et questions se notent maintenant dans la « Remarque Régie » de chaque produit.</p>` : '';
 }
 
 // Barre d'actions en bas de la fenêtre (toujours visible)
@@ -387,12 +390,14 @@ function piedRegie(d) {
 const SUITES = { ajoute: 'Ajouté', visuel: 'Nouveau visuel mis', retire: 'Retiré', ignore: 'Ignoré' };
 
 function blocSponsoring(d) {
-  return `
+  return `${d.reponse_regie ? `
     <h3>Réponse de la Régie</h3>
-    <div class="bloc-texte">${echapper(d.reponse_regie || 'Pas encore de réponse.')}</div>
+    <div class="bloc-texte">${echapper(d.reponse_regie)}</div>` : ''}
     ${d.statut === 'question' ? `
+      <h3${d.reponse_regie ? ' style="margin-top:1rem"' : ''}>La Régie a une question</h3>
+      <p class="aide" style="margin-top:-.2rem">Voir la « Remarque Régie » du produit concerné, plus haut.</p>
       <h3 style="margin-top:1rem">Votre réponse</h3>
-      <textarea id="d-complement" placeholder="Répondez à la question de la Régie"></textarea>` : ''}`;
+      <textarea id="d-complement" placeholder="Répondez à la question de la Régie"></textarea>` : ''}`.trim();
 }
 
 function piedSponsoring(d) {
@@ -416,13 +421,14 @@ function brancherActions(d) {
 
   document.querySelectorAll('#d-pied [data-statut]').forEach(b => b.addEventListener('click', async () => {
     const statut = b.dataset.statut;
-    const reponse = $('d-reponse').value.trim();
-    if (statut === 'question' && !reponse) {
-      notifier('Écrivez la question dans la réponse de la Régie.', 'erreur');
-      $('d-reponse').focus();
+    // la question s'écrit dans la « Remarque Régie » du produit concerné
+    const remarques = [...document.querySelectorAll('#d-corps textarea[data-remarque-regie]')];
+    if (statut === 'question' && !remarques.some(t => t.value.trim()) && !d.produits.some(x => (x.remarque_regie || '').trim())) {
+      notifier('Écrivez la question dans la « Remarque Régie » du produit concerné.', 'erreur');
+      remarques[0]?.focus();
       return;
     }
-    await enregistrer(d.id, { statut, reponse_regie: reponse || null },
+    await enregistrer(d.id, { statut },
       { en_cours: 'Demande prise en charge', question: 'Question envoyée au Sponsoring', traitee: 'Demande traitée' }[statut]);
   }));
 
