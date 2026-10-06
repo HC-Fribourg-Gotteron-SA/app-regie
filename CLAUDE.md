@@ -187,6 +187,14 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    logos par slide, format. Nouveau produit : `ordre` = celui de sa catégorie, sinon 100 ; Action scenes : préfixe
    « Action scene – » ajouté. Nom non modifiable pour les produits que l'outil reconnaît par leur nom (pause tiers,
    sponsor du match, LED, slides). Désactiver / changer l'ordre : pas demandé.
+   **« + Ajouter un sponsor » sans demande (même jour, option B choisie par Léa ; migration 42 à exécuter sur les deux
+   bases, pas encore testé)** : pour ce qui passe sans être passé par Airtable (ex. Pub warm-up décidée en discussion).
+   Bouton sur la fiche produit (Régie / admin, pas les bandes LED) → `js/ajout-diffusion.js` → RPC `ajouter_diffusion` :
+   sponsor (liste ou nouveau), « Passe déjà » (passages aussi sur les matchs passés → rien dans Match du jour) ou
+   « À mettre » (`date_debut` = aujourd'hui → « Ajouter » au prochain match), saison / certains matchs, son, anneau,
+   durée (lue dans la vidéo), visuel = nom Colosseo et / ou fichier (`diffusions/<ligne_id>/<role>__…`, aussi dans le
+   dossier du sponsor), remarques ; validé directement. « Ajouter et en saisir un autre ». Origine affichée :
+   « ajouté par …, sans demande ».
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
@@ -288,7 +296,8 @@ outil-regie/
 │   ├── 38_champions_league.sql ← type de match « Champions League »
 │   ├── 39_matchs_plus_rapides.sql ← tg_match_passages : plus de « statement timeout » en enregistrant un match
 │   ├── 40_run_of_show_modele_chl.sql ← modèle de run of show « CHL Regular Season 26/27 » (rundown officiel CHL)
-│   └── 41_fichiers_notes_match.sql ← notes_match.fichiers : fichiers joints aux tâches / infos « Pour ce soir »
+│   ├── 41_fichiers_notes_match.sql ← notes_match.fichiers : fichiers joints aux tâches / infos « Pour ce soir »
+│   └── 42_ajouter_sans_demande.sql ← RPC ajouter_diffusion : la Régie ajoute un sponsor sur un produit sans demande
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
@@ -306,6 +315,7 @@ outil-regie/
     ├── js/changements.js  ← calcul pur des changements entre 2 matchs (testable dans Node)
     ├── js/son-video.js    ← son d'une vidéo (piste son MP4 / MOV, muette ou non), lu dans le navigateur
     ├── js/produit-edition.js ← fenêtre « Nouveau produit » / « Modifier le produit » (Régie / admin)
+    ├── js/ajout-diffusion.js ← fenêtre « + Ajouter un sponsor » sans demande (fiche produit, Régie / admin)
     ├── js/traitement.js   ← LA carte de traitement d'un produit de demande (fiche produit + détail d'une demande)
     ├── matchs.html / js/matchs.js          ← « Par match » : ventes au match + demandes au match à ajouter, par match
     ├── calendrier.html / js/calendrier.js  ← matchs à domicile (lecture tous ; ajout/import/modif admin)

@@ -137,6 +137,9 @@ async function charger() {
   if (estRegie) {
     $('modifier-produit').hidden = false;
     $('modifier-produit').onclick = async () => (await import('./produit-edition.js')).ouvrirEditionProduit(etat.p);
+    // sans demande (migration 42) ; pas pour les bandes LED, placées sur le plan des emplacements
+    $('ajouter-sponsor').hidden = p.famille === 'emplacement';
+    $('ajouter-sponsor').onclick = async () => (await import('./ajout-diffusion.js')).ouvrirAjoutDiffusion(etat.p, charger);
   }
 
   afficherAttente();
@@ -640,7 +643,7 @@ function ouvrirDetail(id) {
             ${p.famille === 'temps' && p.support === 'Vidéotron' ? info('Son', l.avec_son ? 'avec son' : 'sans son') : ''}
             ${p.lie_a_produit_id ? info('Anneau LED', l.ligne_couplee_id ? 'oui (couplé)' : 'non') : ''}
             ${p.famille === 'emplacement' ? info('Emplacement', empl.length ? empl.join(', ') : '<span class="badge badge-a-venir">à placer</span>') : ''}
-            ${info('Origine', l.demande_id ? `<a href="demandes.html?id=${l.demande_id}">voir la demande</a>` : l.created_by ? '' : 'import Airtable')}
+            ${info('Origine', l.demande_id ? `<a href="demandes.html?id=${l.demande_id}">voir la demande</a>` : l.created_by ? `ajouté par ${echapper(etat.personnes.get(l.created_by) || 'la Régie')}, sans demande` : 'import Airtable')}
             ${info('Créée le', dateCourte(l.created_at))}
           </dl>
         </div>

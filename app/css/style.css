@@ -447,6 +447,10 @@ button.onglet-produit { font: inherit; font-size: .98rem; font-weight: 600; curs
 .cadre-format { border: 0; padding: 0; margin-left: 0; margin-right: 0; }
 .cadre-format legend { font-weight: 600; padding: 0; margin-bottom: .4rem; }
 @media (max-width: 600px) { .form-produit .grille-2 { grid-template-columns: 1fr; } }
+.titre-section { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.liste-matchs-ajout { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: .2rem .8rem;
+  max-height: 14rem; overflow: auto; margin-top: .6rem; padding: .5rem .7rem; border: 1px solid var(--bordure); border-radius: var(--rayon-petit); }
+.liste-matchs-ajout label { display: flex; gap: .4rem; align-items: center; font-weight: 500; margin: 0; font-size: .9rem; }
 @media (max-width: 860px) {
   .onglets-produits { position: static; margin-top: 0; }
 }
