@@ -106,7 +106,11 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    **Modèle « CHL Regular Season 26/27 »** (migration 40, 05.10.2026) : transcrit du « Jumbotron Operator Rundown » CHL
    collé par Léa (FO 19:45, 66 éléments, textes en anglais ; sections en français pour « Lancer » / pauses ;
    « +0:06:00 » / « 0:18:00 » dans `quand` ; liens dans `lien` ; face-off et « Timing is fix! » en rouge ; lignes du
-   1er match (100 CHL Games, GD1) gardées). Léa supprime elle-même son ancien modèle CHL (bouton dans l'outil).0-quinquies. **Formats des produits (02.10.2026, media kit https://hcfg.brandboard.app/media-kit-hcfg ; migration 32 à
+   1er match (100 CHL Games, GD1) gardées). Léa supprime elle-même son ancien modèle CHL (bouton dans l'outil).
+   **Migration 43 (06.10.2026)** : c'était le mauvais rundown ; lignes du modèle remplacées par le rundown
+   **Game Day 5 (HK Nitra)** (capture de Léa : plus de cérémonie, heures décalées, TEXT 1–12, boucle sponsors à -8:00
+   dans les pauses, CHL Live Standings) ; Cube / Instructions / Lien repris de la 40. Run of show de match déjà créé :
+   le supprimer puis le recréer depuis le modèle.0-quinquies. **Formats des produits (02.10.2026, media kit https://hcfg.brandboard.app/media-kit-hcfg ; migration 32 à
    exécuter sur les deux bases, pas encore testé)** : format attendu affiché dans la demande (par fichier, + « format OK »
    ou ⚠), dans la carte de traitement et en haut de la fiche produit (« ✏️ Format » pour la Régie : dimensions, formats,
    durée max, remarque). Toujours une **alerte, jamais un blocage** (LED 3M / 6M : souvent un logo seul, accepté).
@@ -297,7 +301,8 @@ outil-regie/
 │   ├── 39_matchs_plus_rapides.sql ← tg_match_passages : plus de « statement timeout » en enregistrant un match
 │   ├── 40_run_of_show_modele_chl.sql ← modèle de run of show « CHL Regular Season 26/27 » (rundown officiel CHL)
 │   ├── 41_fichiers_notes_match.sql ← notes_match.fichiers : fichiers joints aux tâches / infos « Pour ce soir »
-│   └── 42_ajouter_sans_demande.sql ← RPC ajouter_diffusion : la Régie ajoute un sponsor sur un produit sans demande
+│   ├── 42_ajouter_sans_demande.sql ← RPC ajouter_diffusion : la Régie ajoute un sponsor sur un produit sans demande
+│   └── 43_run_of_show_chl_gd5.sql ← modèle CHL remplacé par le bon rundown (Game Day 5, HK Nitra)
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
