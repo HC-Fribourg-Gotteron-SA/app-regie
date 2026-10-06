@@ -134,6 +134,10 @@ async function charger() {
   $('p-description').textContent = [descriptionProduit(p),
     p.capacite_s ? `max ${Math.round(p.capacite_s / 60)} min par match` : ''].filter(Boolean).join(' · ');
   afficherFormat();
+  if (estRegie) {
+    $('modifier-produit').hidden = false;
+    $('modifier-produit').onclick = async () => (await import('./produit-edition.js')).ouvrirEditionProduit(etat.p);
+  }
 
   afficherAttente();
   afficherLignes();

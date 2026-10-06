@@ -179,6 +179,14 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    tous**. Proposé (pas validé) : rôle « Événementiel » pour Yann, « Partir du match précédent », sponsor du match
    repris de la fiche, bouton « ✉ Envoyer à tous » = copie du déroulement mis en forme + Outlook ouvert avec la liste
    de destinataires et l'objet (Yann colle). Questions ouvertes : liste des destinataires, compte de Yann.
+0-terdecies. **Créer / modifier un produit (06.10.2026, demandé par Léa, pas de migration, pas encore testé)** :
+   Régie + admin. Onglet « + Nouveau produit » au bout de la barre des fiches, « ✏️ Modifier le produit » en haut
+   d'une fiche → `js/produit-edition.js` (fenêtre) : nom, catégorie (existante ou nouvelle), type (temps / un seul
+   sponsor / slides ; pas les bandes LED ; non modifiable ensuite), écran (« Vidéotron » = question son), moment,
+   saison / certains matchs par défaut, avec / sans anneau LED (→ « Anneau LED couplé », migration 35), temps max,
+   logos par slide, format. Nouveau produit : `ordre` = celui de sa catégorie, sinon 100 ; Action scenes : préfixe
+   « Action scene – » ajouté. Nom non modifiable pour les produits que l'outil reconnaît par leur nom (pause tiers,
+   sponsor du match, LED, slides). Désactiver / changer l'ordre : pas demandé.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
@@ -297,6 +305,7 @@ outil-regie/
     ├── js/ros-calcul.js   ← calcul pur des heures du run of show (testable dans Node)
     ├── js/changements.js  ← calcul pur des changements entre 2 matchs (testable dans Node)
     ├── js/son-video.js    ← son d'une vidéo (piste son MP4 / MOV, muette ou non), lu dans le navigateur
+    ├── js/produit-edition.js ← fenêtre « Nouveau produit » / « Modifier le produit » (Régie / admin)
     ├── js/traitement.js   ← LA carte de traitement d'un produit de demande (fiche produit + détail d'une demande)
     ├── matchs.html / js/matchs.js          ← « Par match » : ventes au match + demandes au match à ajouter, par match
     ├── calendrier.html / js/calendrier.js  ← matchs à domicile (lecture tous ; ajout/import/modif admin)

@@ -43,7 +43,7 @@ export const LIBELLES = {
   type_match: { saison: 'Saison', playoffs: 'Playoffs', amical: 'Amical', champions_league: 'Champions League' },
 };
 
-const MOMENTS = {
+export const MOMENTS = {
   avant_match: 'avant le match', echauffement: 'pendant le warm-up', apres_echauffement: 'après le warm-up',
   pendant_jeu: 'pendant le match', pause_tiers: 'pendant les pauses', arret_de_jeu: 'aux arrêts de jeu',
   fin_de_match: 'en fin de match', continu: 'en continu',
@@ -349,8 +349,12 @@ export async function ongletsProduits(zone, actif = {}) {
     onglets.push(`<a href="produit.html?id=${p.id}" class="onglet-produit${nouvelleCat ? ' debut-categorie' : ''}${
       actif.produit === p.id ? ' actif' : ''}" title="${echapper(cat)}">${echapper(p.nom)}${compteur(aAjouter.get(p.id))}</a>`);
   }
+  // Régie / admin : créer un produit (06.10.2026)
+  if (regie) onglets.push('<button type="button" class="onglet-produit onglet-nouveau debut-categorie" id="nouveau-produit">+ Nouveau produit</button>');
   zone.innerHTML = onglets.join('');
   zone.hidden = false;
+  zone.querySelector('#nouveau-produit')?.addEventListener('click', async () =>
+    (await import('./produit-edition.js')).ouvrirEditionProduit());
   zone.querySelector('.actif')?.scrollIntoView({ block: 'nearest', inline: 'center' });
 }
 
