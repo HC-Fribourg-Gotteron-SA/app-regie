@@ -140,6 +140,10 @@ async function charger() {
     // sans demande (migration 42) ; pas pour les bandes LED, placées sur le plan des emplacements
     $('ajouter-sponsor').hidden = p.famille === 'emplacement';
     $('ajouter-sponsor').onclick = async () => (await import('./ajout-diffusion.js')).ouvrirAjoutDiffusion(etat.p, charger);
+    // PSD des LED / Canva des slides (migration 44)
+    if (['emplacement', 'slide'].includes(p.famille)) {
+      import('./fichiers-travail.js').then(m => m.afficherFichiersTravail($('bloc-travail'), p));
+    }
   }
 
   afficherAttente();

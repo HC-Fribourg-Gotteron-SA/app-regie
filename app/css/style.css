@@ -447,6 +447,15 @@ button.onglet-produit { font: inherit; font-size: .98rem; font-weight: 600; curs
 .cadre-format { border: 0; padding: 0; margin-left: 0; margin-right: 0; }
 .cadre-format legend { font-weight: 600; padding: 0; margin-bottom: .4rem; }
 @media (max-width: 600px) { .form-produit .grille-2 { grid-template-columns: 1fr; } }
+/* Fichier de travail de la Régie : PSD des LED, Canva des slides (fichiers-travail.js) */
+.bloc-travail { margin-bottom: 1.75rem; }
+.travail-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.travail-actions label.btn { margin: 0; cursor: pointer; }
+.travail-liste { list-style: none; padding: 0; margin: 0 0 .6rem; display: grid; gap: .3rem; }
+.travail-changement { display: grid; grid-template-columns: 9.5rem 1fr auto; gap: .6rem; align-items: center;
+  padding: .35rem .6rem; border: 1px solid var(--bordure); border-radius: var(--rayon-petit); background: var(--surface); }
+.travail-changement .badge { margin: 0 .3rem; }
+@media (max-width: 600px) { .travail-changement { grid-template-columns: 1fr; } }
 .titre-section { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .liste-matchs-ajout { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: .2rem .8rem;
   max-height: 14rem; overflow: auto; margin-top: .6rem; padding: .5rem .7rem; border: 1px solid var(--bordure); border-radius: var(--rayon-petit); }
