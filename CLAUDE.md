@@ -41,6 +41,10 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
      **au match** (➕ ce soir, ➖ celles du match précédent, 🔄) avec case « Fait » + « Détails ». Les changements à la
      saison faits sur une fiche (retrait, case À l'écran) **ne sont pas listés** (Colosseo fait au même moment).
      Ne PAS remettre une liste de « tous les changements depuis le match précédent » (confusion Ajouter / Fait).
+     **08.10.2026** : une demande traitée **le jour du match** n'est pas répétée en ➕ dans le bloc 2 (déjà mise dans
+     Colosseo en la traitant) ; traitée un autre jour, elle y reste. « Supprimer la demande… » aussi sur une demande
+     traitée ; demande déjà ajoutée → confirmation, ses diffusions sont annulées (+ anneau) et détachées, puis la
+     demande est supprimée (elle disparaît partout).
    - **Supprimer (erreur, ne se fera pas)** (02.10.2026, demandé par Léa : ni « traité » ni « fait ») : carte de traitement
      (« Ignorer » remplacé par « Supprimer »), détail d'une demande (« Supprimer la demande… », Régie / admin) et Match du
      jour (demande à traiter → `confirmerSuppressionProduit` de traitement.js : un produit, ou toute la demande si c'est le
