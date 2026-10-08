@@ -429,7 +429,7 @@ function brancherActions(d) {
     if (!confirm(`Supprimer la demande de ${nomSponsor(d)} ?\n\nÀ utiliser pour une erreur ou une demande qui ne se fera pas : `
       + 'elle disparaît de l’outil avec ses fichiers.')) return;
     try {
-      await supprimerDemande(d.id);
+      if ((await supprimerDemande(d.id)).annule) return;
       notifier('Demande supprimée');
       await rouvrirOuFermer(d.id)();
     } catch (err) { notifier(err.message, 'erreur'); }

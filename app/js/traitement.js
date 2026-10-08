@@ -357,13 +357,22 @@ async function effacerFichiers(chemins) {
 }
 
 export async function supprimerDemande(demandeId) {
-  const { data: lignes } = await sb.from('lignes_vendues').select('id, statut, date_fin').eq('demande_id', demandeId);
-  // diffusion créée par erreur puis retirée (08.10.2026) : la demande peut partir ; la diffusion reste dans
-  // l'historique, détachée de la demande. Une diffusion encore active : on la retire d'abord sur la fiche produit.
+  const { data: lignes } = await sb.from('lignes_vendues').select('id, statut, date_fin, ligne_couplee_id, produit:produits(nom)')
+    .eq('demande_id', demandeId);
+  // Demande ajoutée par erreur (08.10.2026, Léa : « quand je supprime une demande je ne veux plus qu'elle apparaisse ») :
+  // ses diffusions encore actives sont annulées (ne passent plus, passages futurs retirés), puis détachées de la
+  // demande : elles restent dans l'historique du produit. Diffusions déjà retirées : simplement détachées.
   const aujourdhui = new Date().toISOString().slice(0, 10);
   const retiree = (l) => ['annule', 'termine'].includes(l.statut) || (l.date_fin && l.date_fin < aujourdhui);
-  if ((lignes || []).some(l => !retiree(l))) {
-    throw new Error('Cette demande a déjà été ajoutée à un produit : retirez d’abord le sponsor sur la fiche produit, puis supprimez la demande.');
+  const actives = (lignes || []).filter(l => !retiree(l));
+  if (actives.length) {
+    const produits = [...new Set(actives.map(l => l.produit?.nom).filter(Boolean))].join(', ');
+    if (!confirm(`Cette demande a déjà été ajoutée${produits ? ` (${produits})` : ''}.\n\n`
+      + 'En la supprimant, le sponsor est aussi enlevé de ce produit dans l’outil (il ne passera plus). '
+      + 'Pensez à l’enlever aussi dans Colosseo s’il y est déjà.\n\nContinuer ?')) return { demandeSupprimee: false, annule: true };
+    const ids = actives.flatMap(l => [l.id, l.ligne_couplee_id]).filter(Boolean);
+    const { error } = await sb.from('lignes_vendues').update({ statut: 'annule' }).in('id', ids);
+    if (error) throw new Error(`Suppression impossible : ${error.message}`);
   }
   if (lignes?.length) {
     const ids = lignes.map(l => l.id);
@@ -400,6 +409,7 @@ export async function confirmerSuppressionProduit({ demandeId, produitId, produi
     + (seul ? 'la demande et ses fichiers disparaissent de l’outil.' : 'ce produit et ses fichiers disparaissent de la demande.'))) return false;
   try {
     const r = await supprimerProduitDemande(demandeId, produitId);
+    if (r.annule) return false;
     notifier(r.demandeSupprimee ? 'Demande supprimée' : `${produitNom} supprimé de la demande`);
     return true;
   } catch (err) { notifier(err.message, 'erreur'); return false; }
