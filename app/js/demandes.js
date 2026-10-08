@@ -378,7 +378,9 @@ function blocRegie(d) {
 // Barre d'actions en bas de la fenêtre (toujours visible)
 function piedRegie(d) {
   if (d.statut === 'traitee') {
+    // « Supprimer » aussi ici (08.10.2026, Léa : demande marquée traitée par erreur, impossible à supprimer)
     return `<span class="indication">Demande traitée. Rouvrir ne supprime pas ce qui a été programmé.</span>
+            <button class="btn btn-discret btn-danger" id="btn-supprimer-demande" title="Erreur ou demande qui ne se fera pas">Supprimer la demande…</button>
             <button class="btn" data-statut="en_cours">Rouvrir</button>`;
   }
   return `<span class="indication">Ajoutez chaque produit ci-dessus (ou sur sa fiche, c’est la même chose) ; la demande passe en « Traitée » quand tout est fait.</span>

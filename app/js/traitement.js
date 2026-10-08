@@ -357,8 +357,20 @@ async function effacerFichiers(chemins) {
 }
 
 export async function supprimerDemande(demandeId) {
-  const { count } = await sb.from('lignes_vendues').select('id', { count: 'exact', head: true }).eq('demande_id', demandeId);
-  if (count) throw new Error('Cette demande a déjà été ajoutée à un produit : retirez plutôt le sponsor sur la fiche produit.');
+  const { data: lignes } = await sb.from('lignes_vendues').select('id, statut, date_fin').eq('demande_id', demandeId);
+  // diffusion créée par erreur puis retirée (08.10.2026) : la demande peut partir ; la diffusion reste dans
+  // l'historique, détachée de la demande. Une diffusion encore active : on la retire d'abord sur la fiche produit.
+  const aujourdhui = new Date().toISOString().slice(0, 10);
+  const retiree = (l) => ['annule', 'termine'].includes(l.statut) || (l.date_fin && l.date_fin < aujourdhui);
+  if ((lignes || []).some(l => !retiree(l))) {
+    throw new Error('Cette demande a déjà été ajoutée à un produit : retirez d’abord le sponsor sur la fiche produit, puis supprimez la demande.');
+  }
+  if (lignes?.length) {
+    const ids = lignes.map(l => l.id);
+    const { error: e1 } = await sb.from('assets').update({ demande_id: null }).eq('demande_id', demandeId);
+    const { error: e2 } = e1 ? { error: e1 } : await sb.from('lignes_vendues').update({ demande_id: null }).in('id', ids);
+    if (e2) throw new Error(`Suppression impossible : ${e2.message}`);
+  }
   await effacerFichiers(await fichiersDe(`demandes/${demandeId}`));
   const { error } = await sb.from('demandes').delete().eq('id', demandeId);
   if (error) throw new Error(`Suppression impossible : ${error.message}`);
