@@ -93,7 +93,12 @@ export function alertesFichier(p, f) {
   const formats = (p.formats || []).map(x => String(x).toLowerCase());
   if (ext && formats.length && !formats.includes(ext)) alertes.push(`fichier .${ext} : attendu ${formatsLisibles(p.formats)}`);
   const att = dimensionsAttendues(p);
-  if (att && f.largeur && (f.largeur !== att.l || f.hauteur !== att.h)) alertes.push(`${f.largeur} × ${f.hauteur} px : attendu ${att.l} × ${att.h} px`);
+  // Vidéo : le navigateur lit parfois la taille codée (arrondie à 8 / 16 px), pas la taille réelle
+  // (08.10.2026, Léa : anneau LED 12512 × 80 lu « 12512 × 88 ») → jusqu'à 16 px d'écart toléré
+  const video = f.duree != null || /^(mp4|mov|m4v|webm)$/.test(ext);
+  const marge = video ? 16 : 0;
+  const ecart = (lu, voulu) => lu < voulu || lu - voulu > marge;
+  if (att && f.largeur && (ecart(f.largeur, att.l) || ecart(f.hauteur, att.h))) alertes.push(`${f.largeur} × ${f.hauteur} px : attendu ${att.l} × ${att.h} px`);
   if (p.duree_max_s && f.duree && f.duree > p.duree_max_s + 0.5) alertes.push(`${Math.round(f.duree)} s : maximum ${p.duree_max_s} s`);
   return alertes;
 }
