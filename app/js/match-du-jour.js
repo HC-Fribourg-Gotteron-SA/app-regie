@@ -239,10 +239,15 @@ const trier = (a, b) => a.ordre - b.ordre || a.produit.localeCompare(b.produit)
 //   2. Ventes au match (anciennement « Spécial de ce match », nom refusé par Léa) : ce qui est vendu pour un match précis (Sponsor du match, action scene…) est déjà
 //      dans l'outil ; il reste à l'ajouter dans Colosseo ce soir, et à enlever le spécial du match précédent → « Fait ».
 //   Les changements à la saison faits sur une fiche (retrait, case À l'écran) ne sont pas listés : on fait
-//   Colosseo au moment où on les fait dans l'outil.
+//   Colosseo au moment où on les fait dans l'outil. Pareil pour une demande « au match » traitée LE JOUR du match
+//   (08.10.2026) ; traitée un autre jour, elle reste à ajouter ici (elle n'entre dans Colosseo que le jour du match).
 function afficher() {
   // spécial = diffusions vendues « au match » (l'anneau de la pause tiers suit sa Pub pause tiers)
   const auMatch = (inf) => inf.l?.type_vente === 'match';
+  const traiteeCeJour = (i) => {
+    const t = etat.traitees.get(i.ligne_id) || (i.pubId && etat.traitees.get(i.pubId));
+    return !!t && jourLocal(t.traite_le) === jourLocal(etat.match.date_heure);
+  };
   let changements = etat.changements;
   if (!etat.precedent) {        // pas de match précédent : tout le spécial de ce soir est à ajouter
     changements = etat.passagesCe.filter(p => PASSE.has(p.statut))
@@ -253,7 +258,9 @@ function afficher() {
     ? changementDeVersion(etat.assets.get(c.asset_id), etat.assets.get(c.ancien_asset_id)) : null;
   const tous = changements.map(c => ({ ...c, ...infos(c.ligne_id), fait: etat.fait.get(`${c.ligne_id}|${c.action}`),
                                        ...(version(c) ? { raison: version(c).raison, version: version(c).consigne } : {}) }))
-    .filter(i => auMatch(i) || i.version);
+    .filter(i => auMatch(i) || i.version)
+    // demande traitée le jour du match : mise dans Colosseo en la traitant, pas de doublon ici (08.10.2026, Léa)
+    .filter(i => !(i.action === 'ajouter' && traiteeCeJour(i)));
   // anneau ajouté / enlevé en même temps que sa Pub pause tiers : une seule ligne (« avec anneau LED »)
   const pubs = new Set(tous.filter(i => !i.anneau).map(i => `${i.ligne_id}|${i.action}`));
   const items = tous.filter(i => !(i.anneau && i.action !== 'visuel' && pubs.has(`${i.pubId}|${i.action}`)))
