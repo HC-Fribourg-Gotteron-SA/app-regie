@@ -20,7 +20,7 @@ export function changerDeBase() {
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Date de la version, affichée en bas du menu : à changer à chaque mise en ligne (pour vérifier que Netlify a publié)
-const VERSION = '09.10.2026 c';
+const VERSION = '09.10.2026 d';
 
 // ---------------------------------------------------------------------
 // Libellés affichés
