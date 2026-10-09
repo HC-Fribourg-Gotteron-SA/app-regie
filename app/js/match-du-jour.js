@@ -161,7 +161,12 @@ async function chargerMatch() {
   const pourCeMatch = (a) => a.type_vente === 'match' ? (a.dates_matchs || []).includes(jourMatch) : !estChl(m);
   etat.demandesMatch = etat.attente.filter(pourCeMatch);
   // déjà traitées pour ce match : affichées grisées sous les demandes à traiter (demandé par Léa)
-  etat.demandesFaites = (traitees || []).filter(pourCeMatch);
+  // … sauf celles traitées avant le match précédent dont la diffusion passait déjà à ce match-là : rien à faire
+  // ce soir (09.10.2026, Léa : Art on Ice, pris pour 3 matchs, revenait grisé à chaque match)
+  const passaitAvant = new Set(passagesAvant.filter(p => PASSE.has(p.statut)).map(p => p.ligne_id));
+  const debutPrecedent = etat.precedent ? new Date(etat.precedent.date_heure) : null;
+  const dejaEnPlace = (t) => debutPrecedent && new Date(t.traite_le) < debutPrecedent && passaitAvant.has(t.ligne_id);
+  etat.demandesFaites = (traitees || []).filter(pourCeMatch).filter(t => !dejaEnPlace(t));
   await chargerFichiersDemandes(etat.demandesMatch);
 
   afficher();
