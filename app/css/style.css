@@ -453,16 +453,13 @@ button.onglet-produit { font: inherit; font-size: .98rem; font-weight: 600; curs
 .ordre-cellule > .doux { min-width: 1.4rem; }
 .ordre-cellule .btn { padding: .2rem .4rem; }
 .ordre-cellule .btn:disabled { opacity: .25; }
-/* Détail d'une diffusion : un match sur deux (2 cas repliés) */
-.choix-alternance { border: 1px solid var(--bordure); border-radius: var(--rayon-petit); padding: .5rem .7rem; background: var(--surface); }
-.choix-alternance + .choix-alternance { margin-top: .5rem; }
-.choix-alternance summary { cursor: pointer; }
-.choix-alternance[open] summary { margin-bottom: .5rem; }
-/* Détail d'une diffusion : langue un match sur deux */
-.grille-langue { display: grid; grid-template-columns: 7rem 1fr; gap: .4rem .6rem; align-items: end; }
-.grille-langue label { display: grid; gap: .15rem; margin: 0; font-size: .82rem; font-weight: 600; }
-.grille-langue label:last-child { grid-column: 1 / -1; max-width: 16rem; }
-.grille-langue input, .grille-langue select { padding: .35rem .5rem; }
+/* Détail d'une diffusion : « Passe » / « Langue » un match sur deux (petit formulaire sous la liste) */
+.mini-form { margin-top: .4rem; padding: .5rem .6rem; border: 1px solid var(--bordure); border-radius: var(--rayon-petit);
+  background: var(--surface-2); display: grid; gap: .35rem; }
+.mini-form label { display: flex; gap: .35rem; align-items: center; margin: 0; font-weight: 500; }
+.grille-langue label { display: grid; gap: .15rem; font-size: .8rem; font-weight: 600; }
+.grille-langue input, .grille-langue select { padding: .3rem .45rem; }
+.mini-form .btn { justify-self: start; }
 /* Détail d'une diffusion : son / durée modifiables (Régie) */
 .fenetre dd .champ-court { width: auto; min-width: 6rem; max-width: 9rem; padding: .3rem .5rem; display: inline-block; }
 /* Fichier de travail de la Régie : PSD des LED, Canva des slides (fichiers-travail.js) */

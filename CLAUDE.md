@@ -224,7 +224,9 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    **« Fusionner un doublon… »** (garde ce dossier, absorbe le doublon choisi, irréversible).
 0-sexdecies. **Un match sur deux réglable par la Régie (09.10.2026 ; migration 49 à exécuter sur les deux bases, pas
    encore testé)**. Airtable le notait en remarque (Villars « 1 MATCH SUR 2 ») : l'import ne l'a pas compris.
-   Détail d'une diffusion (Régie / admin) → bloc « Un match sur deux » : **présence** (RPC `un_match_sur_deux`,
+   Détail d'une diffusion (Régie / admin), colonne « Diffusion » : deux listes comme le Son (Léa : un bloc sur chaque
+   diffusion était « hyper confus ») — **« Passe » : à chaque match / un match sur deux** et **« Langue » : toujours
+   la même / change un match sur deux** ; le petit formulaire n'apparaît qu'en changeant le choix. **Présence** (RPC `un_match_sur_deux`,
    `un_match_sur = 2` + `un_match_sur_depart` = 1er match où il passe ; `matchs_de_ligne` compte les matchs de SAISON
    depuis ce départ, CHL / amicaux ignorés) — **Villars : ne passe PAS au prochain match (17.10)** ; et **langue**
    (RPC `langue_un_match_sur_deux` : vidéo ou anneau LED, nom de chaque ligne Colosseo + langue, langue du prochain
