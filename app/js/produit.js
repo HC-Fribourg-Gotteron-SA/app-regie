@@ -314,10 +314,8 @@ function rangeeLigne(l, rang, cols, emplUnique = null) {
   };
   const cellules = {
     'N°': `<span class="ordre-cellule"><span class="doux" title="Ordre de diffusion">${rang + 1}</span>${fleches ? `
-      <span class="ordre-fleches">
-        <button type="button" class="btn-ordre" data-deplacer="${l.id}" data-pas="-1" title="Monter" ${voisin(-1) ? '' : 'disabled'}>▲</button>
-        <button type="button" class="btn-ordre" data-deplacer="${l.id}" data-pas="1" title="Descendre" ${voisin(1) ? '' : 'disabled'}>▼</button>
-      </span>` : ''}</span>`,
+      <button type="button" class="btn btn-discret petit" data-deplacer="${l.id}" data-pas="-1" aria-label="Monter" title="Monter" ${voisin(-1) ? '' : 'disabled'}>↑</button><button
+        type="button" class="btn btn-discret petit" data-deplacer="${l.id}" data-pas="1" aria-label="Descendre" title="Descendre" ${voisin(1) ? '' : 'disabled'}>↓</button>` : ''}</span>`,
     'État': celluleEtat(l),
     'Sponsor': `<strong>${echapper(l.contrat?.sponsor?.nom || '—')}</strong>${l.produit_id !== etat.p.id
       ? ` <a class="badge" href="produit.html?id=${l.produit_id}" title="Vendu comme ${echapper(l.produit?.nom || '')}">${echapper(l.produit?.nom || '')}</a>` : ''}`,

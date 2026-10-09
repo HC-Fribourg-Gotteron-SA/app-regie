@@ -405,7 +405,7 @@ Autres règles décidées :
   les « au match » de la Pub pause tiers gardent leur place dans la feuille, les anneaux couplés passent après la
   feuille LED match) ; tout ce qui est ajouté hors import va **en bas**, dans l'ordre d'ajout (trigger `lignes_priorite`).
   **Jamais trier les sponsors par ordre alphabétique** dans les listes d'un produit (erreur corrigée le 26.09.2026).
-  **Flèches ▲ ▼** (09.10.2026, choix de Léa) dans la colonne N° de la fiche produit (Régie / admin, pas les LED) :
+  **Flèches ↑ ↓** (09.10.2026, choix de Léa ; même style que le run of show) dans la colonne N° de la fiche produit (Régie / admin, pas les LED) :
   échange avec la voisine **dans le même groupe** (Pub pause tiers : les 4 groupes son / anneau restent), puis toute la
   liste est renumérotée `priorite` = 10, 20, 30… Match du jour suit cet ordre. Détail d'une diffusion : son et durée
   modifiables par la Régie (même jour).

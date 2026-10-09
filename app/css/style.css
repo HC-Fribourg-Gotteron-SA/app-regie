@@ -448,12 +448,11 @@ button.onglet-produit { font: inherit; font-size: .98rem; font-weight: 600; curs
 .cadre-format legend { font-weight: 600; padding: 0; margin-bottom: .4rem; }
 @media (max-width: 600px) { .form-produit .grille-2 { grid-template-columns: 1fr; } }
 /* Ordre de diffusion : flèches ▲ ▼ dans la colonne N° (Régie) */
-.ordre-cellule { display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; }
-.ordre-fleches { display: inline-flex; flex-direction: column; gap: 1px; }
-.btn-ordre { font-size: .62rem; line-height: 1; padding: .12rem .3rem; border: 1px solid var(--bordure-forte);
-  border-radius: 4px; background: #fff; color: var(--texte); cursor: pointer; }
-.btn-ordre:hover:not(:disabled) { background: var(--noir); color: #fff; border-color: var(--noir); }
-.btn-ordre:disabled { opacity: .25; cursor: default; }
+/* (comme le run of show en mode Modifier : ↑ ↓ côte à côte) */
+.ordre-cellule { display: inline-flex; align-items: center; gap: .15rem; white-space: nowrap; }
+.ordre-cellule > .doux { min-width: 1.4rem; }
+.ordre-cellule .btn { padding: .2rem .4rem; }
+.ordre-cellule .btn:disabled { opacity: .25; }
 /* Détail d'une diffusion : son / durée modifiables (Régie) */
 .fenetre dd .champ-court { width: auto; min-width: 6rem; max-width: 9rem; padding: .3rem .5rem; display: inline-block; }
 /* Fichier de travail de la Régie : PSD des LED, Canva des slides (fichiers-travail.js) */
