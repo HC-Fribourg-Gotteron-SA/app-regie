@@ -475,7 +475,7 @@ function carteChangement(i) {
         ${details.length ? `<div class="petit">${details.join(' · ')}</div>` : ''}
         ${visuel ? `<div class="petit">${visuel}${sansFichier}</div>` : ''}
         ${fichiersDossier}
-        ${i.action === 'enlever' ? '<div class="petit">Dans l’outil : enlevé automatiquement · <strong>Dans Colosseo : à enlever à la main</strong>, puis cocher « Fait »</div>' : ''}
+        ${i.action === 'enlever' ? '<div class="petit">Dans l’outil : enlevé automatiquement · <strong>Dans Colosseo : à enlever</strong>, puis cocher « Fait »</div>' : ''}
         ${i.l?.consignes && i.action !== 'enlever' ? `<div class="petit doux">Remarque : ${echapper(i.l.consignes)}</div>` : ''}
         ${fait ? `<div class="petit doux">Fait dans Colosseo par ${echapper(etat.personnes.get(fait.fait_par) || '—')} à ${heure(fait.fait_le)}</div>` : ''}
       </div>
@@ -593,7 +593,7 @@ function ouvrirChangement(cleItem) {
                 <div>
                   <div class="titre-bloc">Pourquoi ce changement</div>
                   <div class="bloc-texte petit">${echapper(i.raison || '—')}${l.motif_suspension ? `<br>${echapper(l.motif_suspension)}` : ''}${i.action === 'enlever'
-                    ? '<br>Dans l’outil : enlevé automatiquement. Dans Colosseo : à enlever à la main.' : ''}</div>
+                    ? '<br>Dans l’outil : enlevé automatiquement. Dans Colosseo : à enlever.' : ''}</div>
                 </div>
               </div>
             </div>
