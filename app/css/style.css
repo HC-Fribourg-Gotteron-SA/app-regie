@@ -586,7 +586,14 @@ body:has(.bandeau-test) { box-shadow: inset 0 4px 0 #e0a100; }
 .tableau-diffusions .col-num, .tableau-diffusions .col-etat, .tableau-diffusions .col-court { width: 1%; white-space: nowrap; }
 .tableau-diffusions .col-etat .motif-etat { max-width: 9.5rem; }
 .tableau-diffusions .col-remarques { width: 30%; min-width: 16rem; }
-.tableau-diffusions .remarque-ligne { width: 100%; min-width: 0; field-sizing: content; min-height: 2rem; max-height: 9rem; }
+.tableau-diffusions .remarque-ligne { width: 100%; min-width: 0; field-sizing: content; min-height: 2rem; max-height: 4.2rem; }
+.tableau-diffusions .remarque-ligne:focus { max-height: none; background: #fff; }
+/* bulle avec la remarque entière, au survol (produit.js) */
+.bulle-remarque { position: fixed; z-index: 60; max-width: min(30rem, calc(100vw - 16px)); max-height: 60vh; overflow: auto;
+  padding: .7rem .85rem; background: #fff; color: var(--texte); border: 1px solid var(--bordure-forte);
+  border-radius: var(--rayon-petit); box-shadow: var(--ombre-forte); font-size: .9rem; line-height: 1.45;
+  white-space: pre-wrap; pointer-events: none; }
+.bulle-remarque[hidden] { display: none; }
 td .etat-attente { display: inline-block; }
 .tableau-diffusions tr.rangee-slides td { background: var(--info-fond); }
 .tableau-diffusions tr.rangee-slides td:first-child { box-shadow: inset 4px 0 0 var(--info); }

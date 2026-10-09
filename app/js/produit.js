@@ -551,6 +551,26 @@ document.addEventListener('change', async (e) => {
   }
 });
 
+// Remarques du tableau : bulle avec tout le texte au survol (09.10.2026, Léa : « on arrive pas à lire »)
+const bulle = Object.assign(document.createElement('div'), { className: 'bulle-remarque', hidden: true });
+document.body.append(bulle);
+const cacherBulle = () => { bulle.hidden = true; };
+['lignes', 'lignes-passes'].forEach(zone => {
+  $(zone).addEventListener('mouseover', (e) => {
+    const t = e.target.closest('[data-remarque-ligne]');
+    if (!t || document.activeElement === t || !t.value.trim()) return cacherBulle();
+    bulle.textContent = t.value;
+    bulle.hidden = false;
+    const r = t.getBoundingClientRect();
+    const larg = bulle.offsetWidth, haut = bulle.offsetHeight;
+    bulle.style.left = `${Math.max(8, Math.min(r.right - larg, innerWidth - larg - 8))}px`;
+    bulle.style.top = `${r.bottom + 6 + haut > innerHeight ? Math.max(8, r.top - haut - 6) : r.bottom + 6}px`;
+  });
+  $(zone).addEventListener('mouseout', (e) => { if (e.target.closest('[data-remarque-ligne]')) cacherBulle(); });
+  $(zone).addEventListener('focusin', cacherBulle);
+});
+addEventListener('scroll', cacherBulle, true);
+
 $('lignes').addEventListener('click', async (e) => {
   // valider un visuel resté « à valider » (ex. arrivé plus tard)
   const b = e.target.closest('[data-valider]');
