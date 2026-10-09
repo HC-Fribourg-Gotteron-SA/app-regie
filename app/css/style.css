@@ -456,7 +456,7 @@ button.onglet-produit { font: inherit; font-size: .98rem; font-weight: 600; curs
 /* Détail d'une diffusion : langue un match sur deux */
 .grille-langue { display: grid; grid-template-columns: 7rem 1fr; gap: .4rem .6rem; align-items: end; }
 .grille-langue label { display: grid; gap: .15rem; margin: 0; font-size: .82rem; font-weight: 600; }
-.grille-langue label:first-child, .grille-langue label:last-child { grid-column: 1 / -1; max-width: 16rem; }
+.grille-langue label:last-child { grid-column: 1 / -1; max-width: 16rem; }
 .grille-langue input, .grille-langue select { padding: .35rem .5rem; }
 /* Détail d'une diffusion : son / durée modifiables (Régie) */
 .fenetre dd .champ-court { width: auto; min-width: 6rem; max-width: 9rem; padding: .3rem .5rem; display: inline-block; }

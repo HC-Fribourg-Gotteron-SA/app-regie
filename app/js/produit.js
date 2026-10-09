@@ -758,8 +758,6 @@ function blocAlternance(l) {
       ${alterneDeja ? '' : `
         <p class="aide" style="margin:0 0 .4rem">Une ligne par langue dans Colosseo, activée selon le match : Match du jour dira laquelle activer.</p>
         <div class="grille-langue">
-          <label>Ce qui change <select data-langue-cible>
-            <option value="video">la vidéo</option>${couplee ? '<option value="anneau">l’anneau LED</option>' : ''}</select></label>
           <label>Langue 1 <input type="text" data-langue-v1 value="VF" class="champ-court"></label>
           <label>Nom dans Colosseo <input type="text" data-langue-n1 value="${echapper(nomActuel)}"></label>
           <label>Langue 2 <input type="text" data-langue-v2 value="DE" class="champ-court"></label>
@@ -816,12 +814,6 @@ document.addEventListener('click', async (e) => {
 });
 
 // Un match sur deux : boutons du bloc (migration 49)
-$('d-corps').addEventListener('change', (e) => {
-  const sel = e.target.closest('[data-langue-cible]');
-  if (!sel) return;
-  const bloc = sel.closest('[data-alternance]');
-  bloc.querySelector('[data-langue-n1]').value = sel.value === 'anneau' ? bloc.dataset.nomAnneau : bloc.dataset.nomVideo;
-});
 $('d-corps').addEventListener('click', async (e) => {
   const b = e.target.closest('[data-un-sur-deux], [data-langue-enregistrer], [data-langue-arreter]');
   if (!b) return;
@@ -840,7 +832,8 @@ $('d-corps').addEventListener('click', async (e) => {
                       { variante: val('[data-langue-v2]'), nom: val('[data-langue-n2]') }];
     if (versions.some(v => !v.variante || !v.nom)) return notifier('Indiquez les deux langues et le nom de chaque version dans Colosseo.', 'erreur');
     const premiere = versions[val('[data-langue-premiere]') === '2' ? 1 : 0].variante;
-    appel = sb.rpc('langue_un_match_sur_deux', { p_ligne: id, p_cible: val('[data-langue-cible]'), p_versions: versions, p_premiere: premiere });
+    // une ligne par langue dans Colosseo, activée / désactivée (Léa : pas besoin de dire vidéo ou anneau)
+    appel = sb.rpc('langue_un_match_sur_deux', { p_ligne: id, p_cible: 'video', p_versions: versions, p_premiere: premiere });
   }
   b.disabled = true;
   const { data, error } = await appel;
