@@ -59,6 +59,8 @@ const trouverLigne = (id) => etat.lignes.find(x => x.id === id) || etat.autres.f
 
 // Pub pause tiers : 1 avec son + anneau LED, 2 avec son sans anneau, 3 sans son + anneau, 4 sans son sans anneau
 const groupePauseTiers = (l) => (l.avec_son ? 0 : 2) + (l.ligne_couplee_id ? 0 : 1);
+// groupe d'une diffusion dans la liste du produit (Pub pause tiers : les 4 groupes ; autres produits : un seul)
+const groupeDe = (l) => etat.p?.lie_a_produit_id && /pause tiers/i.test(etat.p.nom) ? groupePauseTiers(l) : 0;
 
 // Vendu « au match » et tous ses matchs sont passés (avant aujourd'hui)
 function matchsTousPasses(l) {
@@ -87,7 +89,7 @@ async function charger() {
   // ordre de diffusion (priorite) ; sans rang : à la fin, dans l'ordre de création
   // Pub pause tiers : d'abord par groupe (décidé par Léa le 01.10.2026). Les autres produits avec anneau
   // (migration 35 : tout le vidéotron) gardent simplement l'ordre de diffusion.
-  const groupe = p?.lie_a_produit_id && /pause tiers/i.test(p.nom) ? groupePauseTiers : () => 0;
+  const groupe = groupeDe;
   const triees = (lignes || []).sort((a, b) => groupe(a) - groupe(b)
     || (a.priorite ?? 1e9) - (b.priorite ?? 1e9) || new Date(a.created_at) - new Date(b.created_at));
   // sponsors « au match » dont tous les matchs sont passés : rangés dans « Matchs passés » (historique)
@@ -304,8 +306,18 @@ function rangeeLigne(l, rang, cols, emplUnique = null) {
   const empl = emplUnique || (l.emplacements || []).map(e => e.emplacement).filter(Boolean)
     .map(e => `${e.anneau}-${e.zone}-${e.position}`).join(', ');
   const visuelEcran = celluleVisuel(l.assets, l);
+  // flèches ↑ ↓ (Régie, 09.10.2026) : seulement dans la liste principale, pas sur les LED (ordre = emplacements)
+  const fleches = estRegie && etat.p.famille !== 'emplacement' && etat.lignes[rang]?.id === l.id;
+  const voisin = (pas) => {
+    const v = etat.lignes[rang + pas];
+    return v && groupeDe(v) === groupeDe(l);
+  };
   const cellules = {
-    'N°': `<span class="doux" title="Ordre de diffusion">${rang + 1}</span>`,
+    'N°': `<span class="ordre-cellule"><span class="doux" title="Ordre de diffusion">${rang + 1}</span>${fleches ? `
+      <span class="ordre-fleches">
+        <button type="button" class="btn-ordre" data-deplacer="${l.id}" data-pas="-1" title="Monter" ${voisin(-1) ? '' : 'disabled'}>▲</button>
+        <button type="button" class="btn-ordre" data-deplacer="${l.id}" data-pas="1" title="Descendre" ${voisin(1) ? '' : 'disabled'}>▼</button>
+      </span>` : ''}</span>`,
     'État': celluleEtat(l),
     'Sponsor': `<strong>${echapper(l.contrat?.sponsor?.nom || '—')}</strong>${l.produit_id !== etat.p.id
       ? ` <a class="badge" href="produit.html?id=${l.produit_id}" title="Vendu comme ${echapper(l.produit?.nom || '')}">${echapper(l.produit?.nom || '')}</a>` : ''}`,
@@ -533,6 +545,23 @@ $('lignes').addEventListener('click', async (e) => {
     if (error) { b.disabled = false; return notifier(`Validation impossible : ${error.message}`, 'erreur'); }
     notifier('Visuel validé');
     await charger();
+    return;
+  }
+  // ▲ ▼ : échange avec la voisine, puis toute la liste est renumérotée (10, 20, 30…) pour un ordre net
+  const f = e.target.closest('[data-deplacer]');
+  if (f) {
+    const i = etat.lignes.findIndex(x => x.id === f.dataset.deplacer);
+    const j = i + Number(f.dataset.pas);
+    if (i < 0 || !etat.lignes[j]) return;
+    document.querySelectorAll('[data-deplacer]').forEach(x => { x.disabled = true; });
+    const ordre = etat.lignes.slice();
+    [ordre[i], ordre[j]] = [ordre[j], ordre[i]];
+    const maj = ordre.map((l, k) => ({ l, priorite: (k + 1) * 10 })).filter(x => x.l.priorite !== x.priorite);
+    const resultats = await Promise.all(maj.map(x => sb.from('lignes_vendues').update({ priorite: x.priorite }).eq('id', x.l.id)));
+    const erreur = resultats.find(r => r.error)?.error;
+    if (erreur) notifier(`Ordre non enregistré : ${erreur.message}`, 'erreur');
+    await charger();
+    document.querySelector(`tr[data-ligne="${f.dataset.deplacer}"]`)?.scrollIntoView({ block: 'nearest' });
     return;
   }
   // clic sur la ligne (hors champs modifiables) : détail

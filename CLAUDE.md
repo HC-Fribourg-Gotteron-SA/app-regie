@@ -391,6 +391,10 @@ Autres règles décidées :
   les « au match » de la Pub pause tiers gardent leur place dans la feuille, les anneaux couplés passent après la
   feuille LED match) ; tout ce qui est ajouté hors import va **en bas**, dans l'ordre d'ajout (trigger `lignes_priorite`).
   **Jamais trier les sponsors par ordre alphabétique** dans les listes d'un produit (erreur corrigée le 26.09.2026).
+  **Flèches ▲ ▼** (09.10.2026, choix de Léa) dans la colonne N° de la fiche produit (Régie / admin, pas les LED) :
+  échange avec la voisine **dans le même groupe** (Pub pause tiers : les 4 groupes son / anneau restent), puis toute la
+  liste est renumérotée `priorite` = 10, 20, 30… Match du jour suit cet ordre. Détail d'une diffusion : son et durée
+  modifiables par la Régie (même jour).
 - Plusieurs visuels par ligne avec `regle_rotation` (unique / alterner / equilibrer / par_match / par_langue).
 - Couplage vidéotron ↔ anneau selon le produit de base (`lie_a_produit_id`, `ligne_couplee_id`).
   **L'anneau de la Pub pause tiers ≠ le produit « Anneau LED »** (bandeaux pendant le match, feuille « LED match »).
