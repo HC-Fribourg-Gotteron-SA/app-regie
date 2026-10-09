@@ -212,6 +212,13 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    (`travail-calcul.js`, testable dans Node : ➕ ajout, ➖ retrait → Banner HCFG, 🔄 nouveau logo ; emplacement A12…),
    Télécharger par logo + « Tout télécharger » (.zip, JSZip). Table `fichiers_travail` (cle = 'led' ou id du produit).
    Poids réel du PSD inconnu (Léa).
+0-quindecies. **Doublons de sponsors (09.10.2026)** : migration 45 = RPC `fusionner_sponsors(garder, absorbe)` (contrats,
+   demandes, documents, alias ; puis suppression) + Verbier → Téléverbier ; migration 46 = recherche sans accents
+   (`sans_accent`) ; migration 47 = Restaurant l'Agy → **« Fritennis (Restaurant l'Agy) »** : Pub pause tiers à la saison
+   **jusqu'au 27.10.2026 compris** (contrat attendu), matchs de janvier décochés « À l'écran » (en attente du contrat),
+   11 s avec son, tâche « Pour ce soir » au 1er match après. « Centre Tennis Agy » (slides Honorary) : ne pas toucher
+   (Léa ne sait pas). Dossier sponsor (Régie / admin) : boutons **« ✏️ Renommer »** (ancien nom → alias) et
+   **« Fusionner un doublon… »** (garde ce dossier, absorbe le doublon choisi, irréversible).
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
@@ -316,7 +323,10 @@ outil-regie/
 │   ├── 41_fichiers_notes_match.sql ← notes_match.fichiers : fichiers joints aux tâches / infos « Pour ce soir »
 │   ├── 42_ajouter_sans_demande.sql ← RPC ajouter_diffusion : la Régie ajoute un sponsor sur un produit sans demande
 │   ├── 43_run_of_show_chl_gd5.sql ← modèle CHL remplacé par le bon rundown (Game Day 5, HK Nitra)
-│   └── 44_fichiers_travail.sql ← table fichiers_travail : PSD des LED, liens Canva des slides (versions, « à jour »)
+│   ├── 44_fichiers_travail.sql ← table fichiers_travail : PSD des LED, liens Canva des slides (versions, « à jour »)
+│   ├── 45_fusionner_sponsors.sql ← RPC fusionner_sponsors + Verbier fusionné dans Téléverbier
+│   ├── 46_recherche_sans_accents.sql ← sans_accent() ; rechercher_sponsors ignore accents et majuscules
+│   └── 47_fritennis.sql ← Restaurant l'Agy → « Fritennis (Restaurant l'Agy) », Pub pause tiers jusqu'au 27.10
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
