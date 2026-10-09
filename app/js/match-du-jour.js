@@ -2,7 +2,7 @@
 // puis toute la playlist pour vérifier. Les playlists Colosseo restent d'un match à l'autre.
 import { sb, exigerConnexion, echapper, dateCourte, notifier, toutesLesLignes, libelleFichier, taille, devinerVersion,
          nomFichierSur } from './app.js';
-import { calculerChangements, consigne, PASSE, changementDeVersion } from './changements.js';
+import { calculerChangements, consigne, PASSE, changementDeVersion, versionDuSoir } from './changements.js';
 import { confirmerSuppressionProduit, boutonSupprimerFichier, confirmerSuppressionFichier } from './traitement.js';
 
 const { profil } = await exigerConnexion({ roles: ['regie', 'admin'] });
@@ -45,7 +45,7 @@ async function charger() {
         .order('date_heure').range(de, a)),
       toutesLesLignes((de, a) => sb.from('lignes_vendues')
         .select(`id, produit_id, type_vente, avec_son, duree_s, consignes, suspendue, motif_suspension, validee, statut,
-                 date_fin, priorite, created_at, ligne_couplee_id, un_match_sur,
+                 date_fin, priorite, created_at, ligne_couplee_id, un_match_sur, regle_rotation,
                  produit:produits(id, nom, categorie, ordre, famille, support, actif, lie_a_produit_id),
                  contrat:contrats(sponsor_id, sponsor:sponsors(nom)), demande_id,
                  matchs:lignes_matchs(match:matchs(date_heure, adversaire)),
@@ -123,6 +123,7 @@ async function chargerMatch() {
   } catch (err) { notifier(`Chargement impossible : ${err.message}`, 'erreur'); return; }
   etat.passagesCe = passages.filter(p => p.match_id === m.id);
   const passagesAvant = passages.filter(p => p.match_id === etat.precedent?.id);
+  etat.passagesAvant = passagesAvant;
 
   etat.changements = etat.precedent
     ? calculerChangements({ passagesAvant, passagesCe: etat.passagesCe, lignes: etat.lignes }) : [];
@@ -259,9 +260,18 @@ function afficher() {
     changements = etat.passagesCe.filter(p => PASSE.has(p.statut))
       .map(p => ({ action: 'ajouter', ligne_id: p.ligne_id, asset_id: p.asset_id, raison: 'vendu pour ce match' }));
   }
-  // + langue du soir (FR / DE un match sur deux), même pour une diffusion à la saison
-  const version = (c) => c.action === 'visuel'
-    ? changementDeVersion(etat.assets.get(c.asset_id), etat.assets.get(c.ancien_asset_id)) : null;
+  // + version du soir des diffusions qui alternent (langue, plusieurs vidéos) : toujours dite, même sans changement
+  // détecté (version du match précédent inconnue). Pas pour une diffusion qu'on ajoute ce soir (déjà décrite).
+  const avant = new Map((etat.passagesAvant || []).map(p => [p.ligne_id, p]));
+  const dejaListee = new Set(changements.map(c => c.ligne_id));
+  const alternees = etat.passagesCe
+    .filter(p => PASSE.has(p.statut) && etat.lignes.get(p.ligne_id)?.regle_rotation === 'alterner' && !dejaListee.has(p.ligne_id))
+    .map(p => ({ action: 'visuel', ligne_id: p.ligne_id, asset_id: p.asset_id, ancien_asset_id: avant.get(p.ligne_id)?.asset_id || null, raison: '' }));
+  changements = [...changements, ...alternees];
+  const version = (c) => c.action !== 'visuel' ? null
+    : etat.lignes.get(c.ligne_id)?.regle_rotation === 'alterner'
+      ? versionDuSoir(etat.assets.get(c.asset_id), etat.assets.get(c.ancien_asset_id))
+      : changementDeVersion(etat.assets.get(c.asset_id), etat.assets.get(c.ancien_asset_id));
   const tous = changements.map(c => ({ ...c, ...infos(c.ligne_id), fait: etat.fait.get(`${c.ligne_id}|${c.action}`),
                                        ...(version(c) ? { raison: version(c).raison, version: version(c).consigne } : {}) }))
     .filter(i => auMatch(i) || i.version)
@@ -450,7 +460,8 @@ function carteChangement(i) {
     details.push('sans anneau LED');
   }
   const visuel = i.action === 'visuel'
-    ? `Nouveau : <strong>${echapper(nomVisuel(i.asset_id) || '—')}</strong>${i.ancien_asset_id ? ` <span class="doux">· à la place de « ${echapper(nomVisuel(i.ancien_asset_id))} »</span>` : ''}`
+    ? `${i.version ? 'À mettre ce soir' : 'Nouveau'} : <strong>${echapper(nomVisuel(i.asset_id) || '—')}</strong>${
+        i.ancien_asset_id && i.ancien_asset_id !== i.asset_id ? ` <span class="doux">· à la place de « ${echapper(nomVisuel(i.ancien_asset_id))} »</span>` : ''}`
     : nomVisuel(i.asset_id) ? `Visuel : ${echapper(nomVisuel(i.asset_id))}` : '';
   // visuel connu seulement par son nom (import Airtable, démo) : pas de fichier à télécharger
   // pas de fichier sur la diffusion : on propose les fichiers du dossier du sponsor (ceux de ce produit d'abord)

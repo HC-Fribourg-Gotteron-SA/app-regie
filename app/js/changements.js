@@ -56,6 +56,17 @@ export function changementDeVersion(nouveau, ancien) {
            raison: `ce soir : ${nouveau.variante} (les versions passent à tour de rôle)` };
 }
 
+// Diffusion qui alterne ses versions (langue, ou 4 vidéos comme l'ECAB) : on dit TOUJOURS laquelle mettre ce soir
+// (09.10.2026, Léa), même si la version du match précédent n'est pas connue (alternance réglée après coup).
+export function versionDuSoir(nouveau, ancien) {
+  if (!nouveau?.variante) return null;
+  const precedente = ancien?.variante && ancien.variante !== nouveau.variante ? ancien.variante : null;
+  return {
+    consigne: precedente ? `Activer ${nouveau.variante} · désactiver ${precedente}` : `Ce soir : ${nouveau.variante}`,
+    raison: precedente || !ancien?.variante ? `version à mettre ce soir (à tour de rôle)` : 'même version qu’au match précédent',
+  };
+}
+
 // Ce que la Régie fait concrètement, selon le type de produit (le produit est en titre du groupe)
 // « Ajouter à <produit> » / « Enlever de <produit> » (demandé par Léa le 01.10.2026 : ex. « Ajouter à Sponsor du match ») ;
 // LED 3M / 6M : on parle du logo et du Banner HCFG
