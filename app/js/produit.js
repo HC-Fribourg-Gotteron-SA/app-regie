@@ -740,6 +740,9 @@ function blocAlternance(l) {
   return `
     <section class="detail-section encart" data-alternance="${l.id}" data-nom-video="${echapper(nomActuel)}" data-nom-anneau="${echapper(nomAnneau)}">
       <h3>Un match sur deux</h3>
+      <details class="choix-alternance"${l.un_match_sur > 1 ? ' open' : ''}>
+        <summary><strong>Il ne passe qu’un match sur deux</strong> <span class="doux petit">(ex. Villars)</span>${
+          l.un_match_sur > 1 ? ' <span class="badge">actif</span>' : ''}</summary>
       ${l.type_vente !== 'saison' ? '<p class="doux petit">Vendu pour certains matchs : ce sont ses matchs cochés qui comptent.</p>'
         : l.un_match_sur > 1 ? `
         <div class="champ-ligne petit"><span>Passe <strong>un match sur deux</strong> (Match du jour dit quand l’ajouter / l’enlever).</span>
@@ -751,9 +754,12 @@ function blocAlternance(l) {
           <button type="button" class="btn petit" data-un-sur-deux="on">Passer un match sur deux</button>
         </div>
         <p class="aide" style="margin:.2rem 0 0">Puis il alterne : ${m2 ? `au ${libMatch(m2)}, l’inverse` : 'un match sur deux'}. Les matchs CHL ne comptent pas.</p>`}
+      </details>
 
-      <h4 style="margin:1rem 0 .3rem">Langue un match sur deux</h4>
-      ${etatLangue('Vidéo', l.regle_rotation, l.assets, 'video')}
+      <details class="choix-alternance"${alterneDeja ? ' open' : ''}>
+        <summary><strong>Il passe à chaque match, seule la langue change</strong> <span class="doux petit">(ex. la Mobilière)</span>${
+          alterneDeja ? ' <span class="badge">actif</span>' : ''}</summary>
+      ${etatLangue('Langue', l.regle_rotation, l.assets, 'video')}
       ${couplee ? etatLangue('Anneau LED', couplee.regle_rotation, couplee.assets, 'anneau') : ''}
       ${alterneDeja ? '' : `
         <p class="aide" style="margin:0 0 .4rem">Une ligne par langue dans Colosseo, activée selon le match : Match du jour dira laquelle activer.</p>
@@ -765,6 +771,7 @@ function blocAlternance(l) {
           <label>Au prochain match <select data-langue-premiere><option value="1">langue 1</option><option value="2">langue 2</option></select></label>
         </div>
         <button type="button" class="btn petit" data-langue-enregistrer style="margin-top:.5rem">Enregistrer l’alternance de langue</button>`}
+      </details>
     </section>`;
 }
 

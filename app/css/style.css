@@ -453,6 +453,11 @@ button.onglet-produit { font: inherit; font-size: .98rem; font-weight: 600; curs
 .ordre-cellule > .doux { min-width: 1.4rem; }
 .ordre-cellule .btn { padding: .2rem .4rem; }
 .ordre-cellule .btn:disabled { opacity: .25; }
+/* Détail d'une diffusion : un match sur deux (2 cas repliés) */
+.choix-alternance { border: 1px solid var(--bordure); border-radius: var(--rayon-petit); padding: .5rem .7rem; background: var(--surface); }
+.choix-alternance + .choix-alternance { margin-top: .5rem; }
+.choix-alternance summary { cursor: pointer; }
+.choix-alternance[open] summary { margin-bottom: .5rem; }
 /* Détail d'une diffusion : langue un match sur deux */
 .grille-langue { display: grid; grid-template-columns: 7rem 1fr; gap: .4rem .6rem; align-items: end; }
 .grille-langue label { display: grid; gap: .15rem; margin: 0; font-size: .82rem; font-weight: 600; }
