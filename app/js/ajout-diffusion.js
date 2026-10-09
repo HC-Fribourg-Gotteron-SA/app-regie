@@ -47,7 +47,11 @@ export async function ouvrirAjoutDiffusion(p, apres = () => {}) {
       <div class="champ">
         <label for="ad-sponsor">Sponsor</label>
         <input type="text" id="ad-sponsor" name="sponsor" list="ad-sponsors" autocomplete="off" placeholder="Nom du sponsor">
-        <datalist id="ad-sponsors">${sponsors.map(s => `<option value="${echapper(s.nom)}"></option>`).join('')}</datalist>
+        <datalist id="ad-sponsors">${sponsors.map(s => {
+          // le navigateur compare aussi le libellé : nom sans accents (« televerbier » trouve « Téléverbier »)
+          const simple = s.nom.normalize('NFD').replace(/[̀-ͯ]/g, '');
+          return `<option value="${echapper(s.nom)}"${simple !== s.nom ? ` label="${echapper(simple)}"` : ''}></option>`;
+        }).join('')}</datalist>
         <div class="aide" id="ad-sponsor-aide"></div>
       </div>
 
