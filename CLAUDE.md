@@ -216,7 +216,10 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    demandes, documents, alias ; puis suppression) + Verbier → Téléverbier ; migration 46 = recherche sans accents
    (`sans_accent`) ; migration 47 = Restaurant l'Agy → **« Fritennis (Restaurant l'Agy) »** : Pub pause tiers à la saison
    **jusqu'au 27.10.2026 compris** (contrat attendu), matchs de janvier décochés « À l'écran » (en attente du contrat),
-   11 s avec son, tâche « Pour ce soir » au 1er match après. « Centre Tennis Agy » (slides Honorary) : ne pas toucher
+   11 s avec son, tâche « Pour ce soir » au 1er match après. **Migration 48** (même jour, Léa : « il n'est justement
+   pas toute la saison ») : la ligne saison devient **au match, chaque match de saison jusqu'au 27.10 compris** (visible
+   dans Par match, ➖ automatique dans Match du jour), la ligne de janvier ne garde que ses matchs après le 27.10,
+   tâche manuelle retirée. « Centre Tennis Agy » (slides Honorary) : ne pas toucher
    (Léa ne sait pas). Dossier sponsor (Régie / admin) : boutons **« ✏️ Renommer »** (ancien nom → alias) et
    **« Fusionner un doublon… »** (garde ce dossier, absorbe le doublon choisi, irréversible).
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
@@ -326,7 +329,8 @@ outil-regie/
 │   ├── 44_fichiers_travail.sql ← table fichiers_travail : PSD des LED, liens Canva des slides (versions, « à jour »)
 │   ├── 45_fusionner_sponsors.sql ← RPC fusionner_sponsors + Verbier fusionné dans Téléverbier
 │   ├── 46_recherche_sans_accents.sql ← sans_accent() ; rechercher_sponsors ignore accents et majuscules
-│   └── 47_fritennis.sql ← Restaurant l'Agy → « Fritennis (Restaurant l'Agy) », Pub pause tiers jusqu'au 27.10
+│   ├── 47_fritennis.sql ← Restaurant l'Agy → « Fritennis (Restaurant l'Agy) », Pub pause tiers jusqu'au 27.10
+│   └── 48_fritennis_au_match.sql ← Fritennis : Pub pause tiers au match, chaque match jusqu'au 27.10 compris
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
