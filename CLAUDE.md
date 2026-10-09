@@ -342,7 +342,8 @@ outil-regie/
 │   ├── 46_recherche_sans_accents.sql ← sans_accent() ; rechercher_sponsors ignore accents et majuscules
 │   ├── 47_fritennis.sql ← Restaurant l'Agy → « Fritennis (Restaurant l'Agy) », Pub pause tiers jusqu'au 27.10
 │   ├── 48_fritennis_au_match.sql ← Fritennis : Pub pause tiers au match, chaque match jusqu'au 27.10 compris
-│   └── 49_un_match_sur_deux.sql ← un match sur deux (présence + départ, langue FR / DE) réglable par la Régie
+│   ├── 49_un_match_sur_deux.sql ← un match sur deux (présence + départ, langue FR / DE) réglable par la Régie
+│   └── 50_langue_prochain_match.sql ← RPC langue_au_prochain_match : la Régie choisit la langue du prochain match
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)

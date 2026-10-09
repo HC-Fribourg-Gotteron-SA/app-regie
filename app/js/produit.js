@@ -42,12 +42,14 @@ const etat = {
   slides: [],              // vidéos des slides diffusées dans ce produit (Pub pause tiers), calculées
   ouverte: null,           // diffusion affichée dans la fenêtre de détail
   prochains: [],           // prochains matchs de saison (un match sur deux)
+  matchsSaison: [],        // tous les matchs de saison, dans l'ordre (langue du prochain match)
 };
 
 // ---------------------------------------------------------------------
 // Chargement
 // ---------------------------------------------------------------------
 const CHAMPS_LIGNE = `id, produit_id, type_vente, statut, avec_son, duree_s, occurrences, consignes, date_fin, created_at, ligne_couplee_id, regle_rotation, un_match_sur,
+  ordre_variantes, alternance_depart,
   priorite, validee, validee_le, validee_par, suspendue, motif_suspension, visuel_attendu, demande_id, created_by,
   produit:produits(nom), contrat:contrats(sponsor:sponsors(id, nom)),
   matchs:lignes_matchs(match:matchs(date_heure, adversaire)),
@@ -77,7 +79,7 @@ async function charger() {
     sb.from('demandes_produits').select(CHAMPS_A_TRAITER)
       .eq('produit_id', idProduit).is('traite_le', null).neq('demande.statut', 'traitee'),
     sb.from('lignes_vendues').select(CHAMPS_LIGNE).eq('produit_id', idProduit).not('statut', 'in', '(annule,termine)'),
-    sb.from('matchs').select('date_heure, adversaire, type'),
+    sb.from('matchs').select('id, date_heure, adversaire, type'),
   ]);
   if (!etat.personnes.size) {
     const { data: personnes } = await sb.from('profiles').select('id, nom, email');
@@ -99,8 +101,9 @@ async function charger() {
   etat.adversaires = new Map((matchs || []).map(m => [jourLocal(m.date_heure), m.adversaire]));
   // prochains matchs de saison (un match sur deux : les matchs CHL / amicaux ne comptent pas)
   const debutJour = new Date(); debutJour.setHours(0, 0, 0, 0);
-  etat.prochains = (matchs || []).filter(m => m.type === 'saison' && new Date(m.date_heure) >= debutJour)
+  etat.matchsSaison = (matchs || []).filter(m => m.type === 'saison')
     .sort((a, b) => new Date(a.date_heure) - new Date(b.date_heure));
+  etat.prochains = etat.matchsSaison.filter(m => new Date(m.date_heure) >= debutJour);
   if (p.lie_a_produit_id) {
     const { data } = await sb.from('produits').select('*').eq('id', p.lie_a_produit_id).maybeSingle();
     etat.anneau = data;
@@ -751,6 +754,20 @@ function champPasse(l) {
   </div>`;
 }
 
+// Langue prévue au prochain match de saison (même calcul que choisir_asset, pour une diffusion à la saison
+// sans « un match sur deux » : rang du match parmi les matchs de saison depuis le match de départ)
+function langueProchainMatch(l) {
+  const ordre = l.ordre_variantes || [];
+  const prochain = etat.prochains[0];
+  if (ordre.length < 2 || !prochain) return null;
+  const rang = (id) => etat.matchsSaison.findIndex(m => m.id === id);
+  const depart = l.alternance_depart ? rang(l.alternance_depart) : -1;
+  if (depart < 0) return ordre[0];
+  const pas = l.type_vente === 'saison' && l.un_match_sur > 1 ? l.un_match_sur : 1;
+  const ecart = Math.round((rang(prochain.id) - depart) / pas);
+  return ordre[((ecart % ordre.length) + ordre.length) % ordre.length];
+}
+
 // « Langue » : toujours la même / change un match sur deux (une ligne par langue dans Colosseo)
 function champLangue(l) {
   const alterne = l.regle_rotation === 'alterner';
@@ -760,7 +777,11 @@ function champLangue(l) {
       <option value="une" ${alterne ? '' : 'selected'}>toujours la même</option>
       <option value="alterne" ${alterne ? 'selected' : ''}>change un match sur deux</option>
     </select>
-    ${alterne && versions.length ? `<div class="petit">${versions.map(echapper).join(' / ')}</div>` : ''}
+    ${alterne && (l.ordre_variantes || []).length >= 2 ? `
+      <div class="petit" style="margin-top:.3rem">Au ${libProchain(etat.prochains[0])} :
+        <select class="champ-court" data-langue-prochain>${l.ordre_variantes.map(v =>
+          `<option ${v === langueProchainMatch(l) ? 'selected' : ''}>${echapper(v)}</option>`).join('')}</select></div>`
+      : alterne && versions.length ? `<div class="petit">${versions.map(echapper).join(' / ')}</div>` : ''}
     <div class="mini-form grille-langue" data-form-langue hidden>
       <label>Langue 1 <input type="text" data-langue-v1 value="VF"></label>
       <label>Nom dans Colosseo <input type="text" data-langue-n1 value="${echapper(visuelActuel(l.assets)?.nom_visuel || '')}"></label>
@@ -855,11 +876,17 @@ async function apresAlternance(id, { data, error }) {
 
 // Listes « Passe » / « Langue » : choisir l'alternance ouvre le petit formulaire ; revenir au choix simple l'arrête
 $('d-corps').addEventListener('change', async (e) => {
-  const sel = e.target.closest('[data-choix-passe], [data-choix-langue]');
+  const sel = e.target.closest('[data-choix-passe], [data-choix-langue], [data-langue-prochain]');
   if (!sel) return;
   const bloc = sel.closest('[data-alternance]');
   const id = bloc.dataset.alternance;
   const l = trouverLigne(id);
+  // langue du prochain match corrigée (migration 50)
+  if (sel.hasAttribute('data-langue-prochain')) {
+    const r = await sb.rpc('langue_au_prochain_match', { p_ligne: id, p_variante: sel.value });
+    if (r.error && /langue_au_prochain_match/.test(r.error.message)) r.error.message = 'Exécutez d’abord la migration 50 dans Supabase.';
+    return apresAlternance(id, r);
+  }
   if (sel.hasAttribute('data-choix-passe')) {
     const actif = l?.un_match_sur > 1;
     bloc.querySelector('[data-form-passe]').hidden = !(sel.value === 'deux' && !actif);
