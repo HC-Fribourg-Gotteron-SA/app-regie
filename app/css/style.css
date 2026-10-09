@@ -566,6 +566,11 @@ body:has(.bandeau-test) { box-shadow: inset 0 4px 0 #e0a100; }
 .etat-desactive { background: var(--erreur-fond); color: var(--erreur); }
 .etat-attente { background: var(--alerte-fond); color: var(--alerte); }
 .cellule-etat + .etat { margin-top: .3rem; }
+/* raison « pas à l'écran » dans le tableau : sous l'état, 2 lignes maximum (texte complet au survol) */
+.motif-etat { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  max-width: 13rem; margin-top: .25rem; font-size: .78rem; line-height: 1.3; color: var(--texte-doux); white-space: normal; }
+.tableau-diffusions td { vertical-align: top; }
+.tableau-diffusions td .cellule-etat { white-space: nowrap; }
 td .etat-attente { display: inline-block; }
 .tableau-diffusions tr.rangee-slides td { background: var(--info-fond); }
 .tableau-diffusions tr.rangee-slides td:first-child { box-shadow: inset 4px 0 0 var(--info); }

@@ -439,11 +439,15 @@ const classeEtat = (l) => aLEcran(l) ? '' : 'non-validee';
 const libelleEtat = (l) => aLEcran(l) ? (etatAuMatch(l) || '<span class="etat etat-ecran">À l’écran</span>')
   : `<span class="etat etat-non">Pas à l’écran</span>${l.motif_suspension ? ` <span class="doux petit">· ${echapper(l.motif_suspension)}</span>` : ''}`;
 
+// Dans le tableau : la raison « pas à l'écran » sous l'état, en petit (09.10.2026, Léa : la colonne État prenait
+// toute la place quand la raison était longue) ; texte complet au survol
 function celluleEtat(l) {
+  const motif = !aLEcran(l) && l.motif_suspension;
   return `<label class="cellule-etat">
       <input type="checkbox" class="case-validee" data-validee="${l.id}" ${aLEcran(l) ? 'checked' : ''}
              ${estRegie ? '' : 'disabled'} aria-label="À l’écran">
-      ${libelleEtat(l)}</label>
+      ${aLEcran(l) ? libelleEtat(l) : '<span class="etat etat-non">Pas à l’écran</span>'}</label>
+    ${motif ? `<span class="motif-etat" title="${echapper(motif)}">${echapper(motif)}</span>` : ''}
     ${l.visuel_attendu ? '<span class="etat etat-attente" title="Nouveau visuel attendu (l’ancien passe en attendant)">⏳ visuel attendu</span>' : ''}`;
 }
 
