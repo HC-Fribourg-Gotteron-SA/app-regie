@@ -463,6 +463,8 @@ button.onglet-produit { font: inherit; font-size: .98rem; font-weight: 600; curs
 .ligne-version { display: grid; grid-template-columns: 5.5rem 1fr; gap: .4rem; margin-bottom: .3rem; }
 /* Détail d'une diffusion : son / durée modifiables (Régie) */
 .fenetre dd .champ-court { width: auto; min-width: 6rem; max-width: 9rem; padding: .3rem .5rem; display: inline-block; }
+/* listes de la colonne « Diffusion » (Son, Passe, Langue / version) : toute la largeur, texte jamais coupé */
+.fenetre dd select.champ-court { width: 100%; max-width: 100%; }
 /* Fichier de travail de la Régie : PSD des LED, Canva des slides (fichiers-travail.js) */
 .bloc-travail { margin-bottom: 1.75rem; }
 .travail-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
