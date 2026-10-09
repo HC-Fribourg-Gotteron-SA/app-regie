@@ -53,7 +53,7 @@ function raisonRetrait(l) {
 export function changementDeVersion(nouveau, ancien) {
   if (!nouveau?.variante || !ancien?.variante || nouveau.variante === ancien.variante) return null;
   return { consigne: `Activer ${nouveau.variante} · désactiver ${ancien.variante}`,
-           raison: `ce soir en ${nouveau.variante}, un match sur deux` };
+           raison: `ce soir : ${nouveau.variante} (les versions passent à tour de rôle)` };
 }
 
 // Ce que la Régie fait concrètement, selon le type de produit (le produit est en titre du groupe)

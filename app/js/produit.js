@@ -471,7 +471,7 @@ function celluleVisuel(assets, ligne) {
   const versions = [...new Set((assets || []).filter(x => x.statut === 'valide' && x.variante).map(x => x.variante))];
   const alterne = ligne?.regle_rotation === 'alterner' && versions.length >= 2;
   return `<span class="petit">${echapper(a.nom_visuel)}</span>${alterne
-    ? ` <span class="badge">${versions.map(echapper).join(' / ')} · 1 match sur 2</span>` : ''}${a.statut === 'a_valider'
+    ? ` <span class="badge">${versions.map(echapper).join(' / ')} · ${versions.length > 2 ? 'à tour de rôle' : '1 match sur 2'}</span>` : ''}${a.statut === 'a_valider'
     ? ` <span class="etat etat-attente">à valider</span>${estRegie ? ` <button type="button" class="btn btn-discret petit" data-valider="${a.id}">Valider</button>` : ''}` : ''}`;
 }
 
@@ -715,7 +715,7 @@ function ouvrirDetail(id) {
             ${p.famille !== 'emplacement' && l.type_vente === 'saison'
               ? info('Passe', estRegie ? champPasse(l) : l.un_match_sur > 1 ? 'un match sur deux' : 'à chaque match') : ''}
             ${p.famille !== 'emplacement'
-              ? info('Langue', estRegie ? champLangue(l) : l.regle_rotation === 'alterner' ? 'change un match sur deux' : 'toujours la même') : ''}
+              ? info('Langue / version', estRegie ? champLangue(l) : l.regle_rotation === 'alterner' ? 'change à chaque match (à tour de rôle)' : 'toujours la même') : ''}
             ${p.famille === 'emplacement' ? info('Emplacement', empl.length ? empl.join(', ') : '<span class="badge badge-a-venir">à placer</span>') : ''}
             ${info('Origine', l.demande_id ? `<a href="demandes.html?id=${l.demande_id}">voir la demande</a>` : l.created_by ? `ajouté par ${echapper(etat.personnes.get(l.created_by) || 'la Régie')}, sans demande` : 'import Airtable')}
             ${info('Créée le', dateCourte(l.created_at))}
@@ -768,14 +768,21 @@ function langueProchainMatch(l) {
   return ordre[((ecart % ordre.length) + ordre.length) % ordre.length];
 }
 
-// « Langue » : toujours la même / change un match sur deux (une ligne par langue dans Colosseo)
+// Une version (langue ou vidéo) dans le petit formulaire : nom court (VF, DE, V3…) + nom de la ligne dans Colosseo
+const ligneVersion = (n, court, nom) => `
+  <div class="ligne-version" data-version>
+    <label>Version ${n} <input type="text" data-version-court value="${echapper(court)}" placeholder="V${n}"></label>
+    <label>Nom dans Colosseo <input type="text" data-version-nom value="${echapper(nom)}"></label>
+  </div>`;
+
+// « Langue / version » : toujours la même / change à chaque match, à tour de rôle (2 langues, ou plus rarement 4 vidéos)
 function champLangue(l) {
   const alterne = l.regle_rotation === 'alterner';
   const versions = [...new Set((l.assets || []).filter(a => a.statut === 'valide' && a.variante).map(a => a.variante))];
   return `<div data-alternance="${l.id}">
     <select class="champ-court" data-choix-langue>
       <option value="une" ${alterne ? '' : 'selected'}>toujours la même</option>
-      <option value="alterne" ${alterne ? 'selected' : ''}>change un match sur deux</option>
+      <option value="alterne" ${alterne ? 'selected' : ''}>change à chaque match (à tour de rôle)</option>
     </select>
     ${alterne && (l.ordre_variantes || []).length >= 2 ? `
       <div class="petit" style="margin-top:.3rem">Au ${libProchain(etat.prochains[0])} :
@@ -783,11 +790,14 @@ function champLangue(l) {
           `<option ${v === langueProchainMatch(l) ? 'selected' : ''}>${echapper(v)}</option>`).join('')}</select></div>`
       : alterne && versions.length ? `<div class="petit">${versions.map(echapper).join(' / ')}</div>` : ''}
     <div class="mini-form grille-langue" data-form-langue hidden>
-      <label>Langue 1 <input type="text" data-langue-v1 value="VF"></label>
-      <label>Nom dans Colosseo <input type="text" data-langue-n1 value="${echapper(visuelActuel(l.assets)?.nom_visuel || '')}"></label>
-      <label>Langue 2 <input type="text" data-langue-v2 value="DE"></label>
-      <label>Nom dans Colosseo <input type="text" data-langue-n2 placeholder="version allemande"></label>
-      <label>Au ${libProchain(etat.prochains[0])} <select data-langue-premiere><option value="1">langue 1</option><option value="2">langue 2</option></select></label>
+      <div class="aide">Une ligne par version dans Colosseo (ex. VF / DE, ou 4 vidéos) : elles passent à tour de rôle, une par match.</div>
+      <div data-versions>
+        ${ligneVersion(1, 'VF', visuelActuel(l.assets)?.nom_visuel || '')}
+        ${ligneVersion(2, 'DE', '')}
+      </div>
+      <button type="button" class="btn btn-discret petit" data-ajouter-version>+ Ajouter une version</button>
+      <label>Au ${libProchain(etat.prochains[0])} <select data-langue-premiere>
+        <option value="1">version 1</option><option value="2">version 2</option></select></label>
       <button type="button" class="btn petit" data-langue-enregistrer>Valider</button>
     </div>
   </div>`;
@@ -840,6 +850,17 @@ document.addEventListener('click', async (e) => {
 
 // Un match sur deux : boutons du bloc (migration 49)
 $('d-corps').addEventListener('click', async (e) => {
+  // + Ajouter une version (jusqu'à 6)
+  const plus = e.target.closest('[data-ajouter-version]');
+  if (plus) {
+    const zone = plus.closest('[data-form-langue]');
+    const n = zone.querySelectorAll('[data-version]').length + 1;
+    if (n > 6) return;
+    zone.querySelector('[data-versions]').insertAdjacentHTML('beforeend', ligneVersion(n, `V${n}`, ''));
+    zone.querySelector('[data-langue-premiere]').insertAdjacentHTML('beforeend', `<option value="${n}">version ${n}</option>`);
+    plus.hidden = n >= 6;
+    return;
+  }
   const b = e.target.closest('[data-un-sur-deux], [data-langue-enregistrer], [data-langue-arreter]');
   if (!b) return;
   const bloc = b.closest('[data-alternance]');
@@ -852,11 +873,16 @@ $('d-corps').addEventListener('click', async (e) => {
     if (!confirm('Arrêter l’alternance de langue ? La même version passera à chaque match.')) return;
     appel = sb.rpc('langue_un_match_sur_deux', { p_ligne: id, p_cible: b.dataset.langueArreter, p_versions: null, p_premiere: null });
   } else {
-    const val = (s) => bloc.querySelector(s).value.trim();
-    const versions = [{ variante: val('[data-langue-v1]'), nom: val('[data-langue-n1]') },
-                      { variante: val('[data-langue-v2]'), nom: val('[data-langue-n2]') }];
-    if (versions.some(v => !v.variante || !v.nom)) return notifier('Indiquez les deux langues et le nom de chaque version dans Colosseo.', 'erreur');
-    const premiere = versions[val('[data-langue-premiere]') === '2' ? 1 : 0].variante;
+    const versions = [...bloc.querySelectorAll('[data-version]')].map(x => ({
+      variante: x.querySelector('[data-version-court]').value.trim(), nom: x.querySelector('[data-version-nom]').value.trim() }))
+      .filter(v => v.variante || v.nom);
+    if (versions.length < 2 || versions.some(v => !v.variante || !v.nom)) {
+      return notifier('Indiquez au moins deux versions, chacune avec son nom court et son nom dans Colosseo.', 'erreur');
+    }
+    if (new Set(versions.map(v => v.variante.toUpperCase())).size !== versions.length) {
+      return notifier('Chaque version a besoin d’un nom court différent (ex. V1, V2, V3, V4).', 'erreur');
+    }
+    const premiere = (versions[Number(bloc.querySelector('[data-langue-premiere]').value) - 1] || versions[0]).variante;
     // une ligne par langue dans Colosseo, activée / désactivée (Léa : pas besoin de dire vidéo ou anneau)
     appel = sb.rpc('langue_un_match_sur_deux', { p_ligne: id, p_cible: 'video', p_versions: versions, p_premiere: premiere });
   }

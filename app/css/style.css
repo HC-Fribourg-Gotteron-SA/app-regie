@@ -460,6 +460,7 @@ button.onglet-produit { font: inherit; font-size: .98rem; font-weight: 600; curs
 .grille-langue label { display: grid; gap: .15rem; font-size: .8rem; font-weight: 600; }
 .grille-langue input, .grille-langue select { padding: .3rem .45rem; }
 .mini-form .btn { justify-self: start; }
+.ligne-version { display: grid; grid-template-columns: 5.5rem 1fr; gap: .4rem; margin-bottom: .3rem; }
 /* Détail d'une diffusion : son / durée modifiables (Régie) */
 .fenetre dd .champ-court { width: auto; min-width: 6rem; max-width: 9rem; padding: .3rem .5rem; display: inline-block; }
 /* Fichier de travail de la Régie : PSD des LED, Canva des slides (fichiers-travail.js) */
