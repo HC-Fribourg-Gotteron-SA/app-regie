@@ -222,6 +222,15 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    tâche manuelle retirée. « Centre Tennis Agy » (slides Honorary) : ne pas toucher
    (Léa ne sait pas). Dossier sponsor (Régie / admin) : boutons **« ✏️ Renommer »** (ancien nom → alias) et
    **« Fusionner un doublon… »** (garde ce dossier, absorbe le doublon choisi, irréversible).
+0-sexdecies. **Un match sur deux réglable par la Régie (09.10.2026 ; migration 49 à exécuter sur les deux bases, pas
+   encore testé)**. Airtable le notait en remarque (Villars « 1 MATCH SUR 2 ») : l'import ne l'a pas compris.
+   Détail d'une diffusion (Régie / admin) → bloc « Un match sur deux » : **présence** (RPC `un_match_sur_deux`,
+   `un_match_sur = 2` + `un_match_sur_depart` = 1er match où il passe ; `matchs_de_ligne` compte les matchs de SAISON
+   depuis ce départ, CHL / amicaux ignorés) — **Villars : ne passe PAS au prochain match (17.10)** ; et **langue**
+   (RPC `langue_un_match_sur_deux` : vidéo ou anneau LED, nom de chaque ligne Colosseo + langue, langue du prochain
+   match ; visuels sans fichier créés au besoin) — **Mobilière : VF au prochain match** ; Léa : dans Colosseo, une
+   ligne par langue qu'on active / désactive. Match du jour : ➕ / ➖ « un match sur deux : il passe / pas ce soir »
+   (bloc 2 inclut `un_match_sur > 1`) et « 🔁 Activer DE · désactiver VF ».
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
@@ -330,7 +339,8 @@ outil-regie/
 │   ├── 45_fusionner_sponsors.sql ← RPC fusionner_sponsors + Verbier fusionné dans Téléverbier
 │   ├── 46_recherche_sans_accents.sql ← sans_accent() ; rechercher_sponsors ignore accents et majuscules
 │   ├── 47_fritennis.sql ← Restaurant l'Agy → « Fritennis (Restaurant l'Agy) », Pub pause tiers jusqu'au 27.10
-│   └── 48_fritennis_au_match.sql ← Fritennis : Pub pause tiers au match, chaque match jusqu'au 27.10 compris
+│   ├── 48_fritennis_au_match.sql ← Fritennis : Pub pause tiers au match, chaque match jusqu'au 27.10 compris
+│   └── 49_un_match_sur_deux.sql ← un match sur deux (présence + départ, langue FR / DE) réglable par la Régie
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)

@@ -41,12 +41,13 @@ const etat = {
   couplees: new Map(),     // id ligne couplée (anneau de la pause tiers) -> { assets }
   slides: [],              // vidéos des slides diffusées dans ce produit (Pub pause tiers), calculées
   ouverte: null,           // diffusion affichée dans la fenêtre de détail
+  prochains: [],           // prochains matchs de saison (un match sur deux)
 };
 
 // ---------------------------------------------------------------------
 // Chargement
 // ---------------------------------------------------------------------
-const CHAMPS_LIGNE = `id, produit_id, type_vente, statut, avec_son, duree_s, occurrences, consignes, date_fin, created_at, ligne_couplee_id, regle_rotation,
+const CHAMPS_LIGNE = `id, produit_id, type_vente, statut, avec_son, duree_s, occurrences, consignes, date_fin, created_at, ligne_couplee_id, regle_rotation, un_match_sur,
   priorite, validee, validee_le, validee_par, suspendue, motif_suspension, visuel_attendu, demande_id, created_by,
   produit:produits(nom), contrat:contrats(sponsor:sponsors(id, nom)),
   matchs:lignes_matchs(match:matchs(date_heure, adversaire)),
@@ -76,7 +77,7 @@ async function charger() {
     sb.from('demandes_produits').select(CHAMPS_A_TRAITER)
       .eq('produit_id', idProduit).is('traite_le', null).neq('demande.statut', 'traitee'),
     sb.from('lignes_vendues').select(CHAMPS_LIGNE).eq('produit_id', idProduit).not('statut', 'in', '(annule,termine)'),
-    sb.from('matchs').select('date_heure, adversaire'),
+    sb.from('matchs').select('date_heure, adversaire, type'),
   ]);
   if (!etat.personnes.size) {
     const { data: personnes } = await sb.from('profiles').select('id, nom, email');
@@ -96,6 +97,10 @@ async function charger() {
   etat.passees = triees.filter(matchsTousPasses);
   etat.lignes = triees.filter(l => !matchsTousPasses(l));
   etat.adversaires = new Map((matchs || []).map(m => [jourLocal(m.date_heure), m.adversaire]));
+  // prochains matchs de saison (un match sur deux : les matchs CHL / amicaux ne comptent pas)
+  const debutJour = new Date(); debutJour.setHours(0, 0, 0, 0);
+  etat.prochains = (matchs || []).filter(m => m.type === 'saison' && new Date(m.date_heure) >= debutJour)
+    .sort((a, b) => new Date(a.date_heure) - new Date(b.date_heure));
   if (p.lie_a_produit_id) {
     const { data } = await sb.from('produits').select('*').eq('id', p.lie_a_produit_id).maybeSingle();
     etat.anneau = data;
@@ -685,6 +690,7 @@ function ouvrirDetail(id) {
                <p class="aide">Enregistré dès que vous cliquez ailleurs.</p>`
             : `<div class="bloc-texte">${echapper(l.consignes || '—')}</div>`}
         </section>
+        ${estRegie && p.famille !== 'emplacement' ? blocAlternance(l) : ''}
       </div>
 
       <aside class="detail-cote">
@@ -714,6 +720,54 @@ function ouvrirDetail(id) {
   $('fenetre').hidden = $('voile').hidden = false;
   document.body.classList.add('fenetre-ouverte');
   afficherDossierSponsor(l);
+}
+
+// ---------------------------------------------------------------------
+// Un match sur deux (09.10.2026, migration 49) : présence (Villars) et langue (la Mobilière : une ligne par langue
+// dans Colosseo, activée / désactivée selon le match). Régie / admin, dans le détail d'une diffusion.
+// ---------------------------------------------------------------------
+function blocAlternance(l) {
+  const m = etat.prochains[0], m2 = etat.prochains[1];
+  const libMatch = (x) => x ? `${dateCourte(x.date_heure)} · ${echapper(x.adversaire)}` : '—';
+  const couplee = l.ligne_couplee_id ? etat.couplees.get(l.ligne_couplee_id) : null;
+  const versions = (assets) => [...new Set((assets || []).filter(a => a.statut === 'valide' && a.variante).map(a => a.variante))];
+  const etatLangue = (nom, regle, assets, cible) => regle === 'alterner'
+    ? `<div class="champ-ligne petit"><span><strong>${nom}</strong> : ${versions(assets).map(echapper).join(' / ')} · un match sur deux</span>
+         <button type="button" class="btn btn-discret petit" data-langue-arreter="${cible}">Arrêter</button></div>` : '';
+  const alterneDeja = l.regle_rotation === 'alterner' || couplee?.regle_rotation === 'alterner';
+  const nomActuel = visuelActuel(l.assets)?.nom_visuel || '';
+  const nomAnneau = visuelActuel(couplee?.assets)?.nom_visuel || '';
+  return `
+    <section class="detail-section encart" data-alternance="${l.id}" data-nom-video="${echapper(nomActuel)}" data-nom-anneau="${echapper(nomAnneau)}">
+      <h3>Un match sur deux</h3>
+      ${l.type_vente !== 'saison' ? '<p class="doux petit">Vendu pour certains matchs : ce sont ses matchs cochés qui comptent.</p>'
+        : l.un_match_sur > 1 ? `
+        <div class="champ-ligne petit"><span>Passe <strong>un match sur deux</strong> (Match du jour dit quand l’ajouter / l’enlever).</span>
+          <button type="button" class="btn btn-discret petit" data-un-sur-deux="off">Repasser à chaque match</button></div>` : `
+        <div class="champ-ligne petit">
+          <span>Au prochain match (${libMatch(m)}) :</span>
+          <label><input type="radio" name="uns-${l.id}" value="oui"> il passe</label>
+          <label><input type="radio" name="uns-${l.id}" value="non" checked> il ne passe pas</label>
+          <button type="button" class="btn petit" data-un-sur-deux="on">Passer un match sur deux</button>
+        </div>
+        <p class="aide" style="margin:.2rem 0 0">Puis il alterne : ${m2 ? `au ${libMatch(m2)}, l’inverse` : 'un match sur deux'}. Les matchs CHL ne comptent pas.</p>`}
+
+      <h4 style="margin:1rem 0 .3rem">Langue un match sur deux</h4>
+      ${etatLangue('Vidéo', l.regle_rotation, l.assets, 'video')}
+      ${couplee ? etatLangue('Anneau LED', couplee.regle_rotation, couplee.assets, 'anneau') : ''}
+      ${alterneDeja ? '' : `
+        <p class="aide" style="margin:0 0 .4rem">Une ligne par langue dans Colosseo, activée selon le match : Match du jour dira laquelle activer.</p>
+        <div class="grille-langue">
+          <label>Ce qui change <select data-langue-cible>
+            <option value="video">la vidéo</option>${couplee ? '<option value="anneau">l’anneau LED</option>' : ''}</select></label>
+          <label>Langue 1 <input type="text" data-langue-v1 value="VF" class="champ-court"></label>
+          <label>Nom dans Colosseo <input type="text" data-langue-n1 value="${echapper(nomActuel)}"></label>
+          <label>Langue 2 <input type="text" data-langue-v2 value="DE" class="champ-court"></label>
+          <label>Nom dans Colosseo <input type="text" data-langue-n2 placeholder="ex. nom de la version allemande"></label>
+          <label>Au prochain match <select data-langue-premiere><option value="1">langue 1</option><option value="2">langue 2</option></select></label>
+        </div>
+        <button type="button" class="btn petit" data-langue-enregistrer style="margin-top:.5rem">Enregistrer l’alternance de langue</button>`}
+    </section>`;
 }
 
 // Fichiers reçus pour ce sponsor (dossier sponsor), à télécharger : utile quand la diffusion n'a pas de fichier
@@ -759,6 +813,45 @@ document.addEventListener('click', async (e) => {
   const { data, error } = await sb.storage.from('assets').createSignedUrl(b.dataset.telechargerVisuel, 600, { download: true });
   if (error) return notifier(`Téléchargement impossible : ${error.message}`, 'erreur');
   location.href = data.signedUrl;
+});
+
+// Un match sur deux : boutons du bloc (migration 49)
+$('d-corps').addEventListener('change', (e) => {
+  const sel = e.target.closest('[data-langue-cible]');
+  if (!sel) return;
+  const bloc = sel.closest('[data-alternance]');
+  bloc.querySelector('[data-langue-n1]').value = sel.value === 'anneau' ? bloc.dataset.nomAnneau : bloc.dataset.nomVideo;
+});
+$('d-corps').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-un-sur-deux], [data-langue-enregistrer], [data-langue-arreter]');
+  if (!b) return;
+  const bloc = b.closest('[data-alternance]');
+  const id = bloc.dataset.alternance;
+  let appel;
+  if (b.dataset.unSurDeux) {
+    const passe = bloc.querySelector(`input[name="uns-${id}"]:checked`)?.value === 'oui';
+    appel = sb.rpc('un_match_sur_deux', { p_ligne: id, p_actif: b.dataset.unSurDeux === 'on', p_passe_au_prochain: passe });
+  } else if (b.hasAttribute('data-langue-arreter')) {
+    if (!confirm('Arrêter l’alternance de langue ? La même version passera à chaque match.')) return;
+    appel = sb.rpc('langue_un_match_sur_deux', { p_ligne: id, p_cible: b.dataset.langueArreter, p_versions: null, p_premiere: null });
+  } else {
+    const val = (s) => bloc.querySelector(s).value.trim();
+    const versions = [{ variante: val('[data-langue-v1]'), nom: val('[data-langue-n1]') },
+                      { variante: val('[data-langue-v2]'), nom: val('[data-langue-n2]') }];
+    if (versions.some(v => !v.variante || !v.nom)) return notifier('Indiquez les deux langues et le nom de chaque version dans Colosseo.', 'erreur');
+    const premiere = versions[val('[data-langue-premiere]') === '2' ? 1 : 0].variante;
+    appel = sb.rpc('langue_un_match_sur_deux', { p_ligne: id, p_cible: val('[data-langue-cible]'), p_versions: versions, p_premiere: premiere });
+  }
+  b.disabled = true;
+  const { data, error } = await appel;
+  b.disabled = false;
+  if (error) {
+    return notifier(/un_match_sur_deux|langue_un_match/.test(error.message) && /function|fonction/i.test(error.message)
+      ? 'Exécutez d’abord la migration 49 dans Supabase.' : error.message, 'erreur');
+  }
+  notifier(data || 'Enregistré');
+  await charger();
+  if (trouverLigne(id)) ouvrirDetail(id);
 });
 
 // Supprimer un fichier qui n'est pas le bon, depuis le détail d'une diffusion (les cartes « À ajouter » gèrent les leurs)

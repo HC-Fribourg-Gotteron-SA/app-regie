@@ -45,7 +45,7 @@ async function charger() {
         .order('date_heure').range(de, a)),
       toutesLesLignes((de, a) => sb.from('lignes_vendues')
         .select(`id, produit_id, type_vente, avec_son, duree_s, consignes, suspendue, motif_suspension, validee, statut,
-                 date_fin, priorite, created_at, ligne_couplee_id,
+                 date_fin, priorite, created_at, ligne_couplee_id, un_match_sur,
                  produit:produits(id, nom, categorie, ordre, famille, support, actif, lie_a_produit_id),
                  contrat:contrats(sponsor_id, sponsor:sponsors(nom)), demande_id,
                  matchs:lignes_matchs(match:matchs(date_heure, adversaire)),
@@ -248,7 +248,8 @@ const trier = (a, b) => a.ordre - b.ordre || a.produit.localeCompare(b.produit)
 //   (08.10.2026) ; traitée un autre jour, elle reste à ajouter ici (elle n'entre dans Colosseo que le jour du match).
 function afficher() {
   // spécial = diffusions vendues « au match » (l'anneau de la pause tiers suit sa Pub pause tiers)
-  const auMatch = (inf) => inf.l?.type_vente === 'match';
+  // + « un match sur deux » (09.10.2026, Villars) : il entre / sort de la playlist d'un match à l'autre
+  const auMatch = (inf) => inf.l?.type_vente === 'match' || inf.l?.un_match_sur > 1;
   const traiteeCeJour = (i) => {
     const t = etat.traitees.get(i.ligne_id) || (i.pubId && etat.traitees.get(i.pubId));
     return !!t && jourLocal(t.traite_le) === jourLocal(etat.match.date_heure);
