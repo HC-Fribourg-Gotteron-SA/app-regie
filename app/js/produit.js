@@ -226,7 +226,7 @@ function afficherLignes() {
     ['Emplacement', p.famille === 'emplacement'], [p.lie_a_produit_id ? 'Visuel écran' : 'Visuel', true],
     ['Anneau LED', !!p.lie_a_produit_id], ['Remarques', true],
   ].filter(([, v]) => v).map(([t]) => t);
-  $('entete-lignes').innerHTML = `<tr>${cols.map(t => `<th${t === 'Remarques' ? ' class="col-optionnelle"' : ''}>${t}</th>`).join('')}</tr>`;
+  $('entete-lignes').innerHTML = `<tr>${cols.map(t => `<th class="${classeCol(t)}">${t}</th>`).join('')}</tr>`;
 
   const sponsors = new Set(etat.lignes.map(l => l.contrat?.sponsor?.id));
   $('nb-sponsors').textContent = `· ${sponsors.size} sponsor${sponsors.size > 1 ? 's' : ''}`;
@@ -298,6 +298,11 @@ $('recherche').addEventListener('input', () => { filtrer(); chercherAilleursPlus
 const qDepart = new URLSearchParams(location.search).get('q');
 if (qDepart) { $('recherche').value = qDepart; chercherAilleursPlusTard(); }
 
+// Classe d'une colonne (largeurs dans style.css, 09.10.2026 : petites colonnes au minimum, Remarques lisibles)
+const COLS_CLASSES = { 'N°': 'col-num', 'État': 'col-etat', 'Quand': 'col-court', 'Son': 'col-court', 'Anneau LED': 'col-court',
+                       'Emplacement': 'col-court', 'Remarques': 'col-optionnelle col-remarques' };
+const classeCol = (t) => COLS_CLASSES[t] || '';
+
 // Une diffusion (rang = position dans la liste ; empl = un seul emplacement à afficher, pour les LED 6M)
 function rangeeLigne(l, rang, cols, emplUnique = null) {
   const dates = (l.matchs || []).map(m => m.match).filter(Boolean).sort((a, b) => new Date(a.date_heure) - new Date(b.date_heure));
@@ -331,7 +336,7 @@ function rangeeLigne(l, rang, cols, emplUnique = null) {
       : `<span class="petit doux">${echapper((l.consignes || '').slice(0, 120))}${(l.consignes || '').length > 120 ? '…' : ''}</span>`,
   };
   return `<tr data-ligne="${l.id}" class="${classeEtat(l)}" data-sponsor="${echapper(normaliser(l.contrat?.sponsor?.nom))}">
-    ${cols.map(t => `<td${t === 'Remarques' ? ' class="col-optionnelle"' : ''}>${cellules[t]}</td>`).join('')}</tr>`;
+    ${cols.map(t => `<td class="${classeCol(t)}">${cellules[t]}</td>`).join('')}</tr>`;
 }
 
 // ---------------------------------------------------------------------
@@ -348,7 +353,7 @@ function rangeesEmplacements(cols) {
     .sort((a, b) => a.anneau.localeCompare(b.anneau) || a.position - b.position);
   const parId = new Map([...etat.lignes, ...etat.autres].map(l => [l.id, l]));
   const montrees = new Set();
-  const cellule = (t) => `<td${t === 'Remarques' ? ' class="col-optionnelle"' : ''}>`;
+  const cellule = (t) => `<td class="${classeCol(t)}">`;
   const vide = (contenu) => cols.map(t => `${cellule(t)}${contenu[t] ?? ''}</td>`).join('');
   let rang = 0, libres = 0;
 
@@ -422,7 +427,7 @@ function rangeesSlides(cols, depart) {
       'Remarques': '<span class="petit doux">Calculé depuis la fiche des slides</span>',
     };
     return `<tr class="rangee-slides" data-slide="${s.id}" data-sponsor="${echapper(normaliser(`slides ${s.nom}`))}" title="Ouvrir la fiche ${echapper(s.nom)}">
-      ${cols.map(t => `<td${t === 'Remarques' ? ' class="col-optionnelle"' : ''}>${cellules[t] ?? ''}</td>`).join('')}</tr>`;
+      ${cols.map(t => `<td class="${classeCol(t)}">${cellules[t] ?? ''}</td>`).join('')}</tr>`;
   }).join('');
 }
 

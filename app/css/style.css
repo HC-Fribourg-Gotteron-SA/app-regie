@@ -570,6 +570,13 @@ body:has(.bandeau-test) { box-shadow: inset 0 4px 0 #e0a100; }
   max-width: 13rem; margin-top: .25rem; font-size: .78rem; line-height: 1.3; color: var(--texte-doux); white-space: normal; }
 .tableau-diffusions td { vertical-align: top; }
 .tableau-diffusions td .cellule-etat { white-space: nowrap; }
+/* Largeurs des colonnes (09.10.2026, Léa : État trop large, Remarques illisibles) : petites colonnes au strict
+   minimum, Remarques larges, le champ s'agrandit pour montrer tout le texte */
+.tableau-diffusions th, .tableau-diffusions td { padding: .6rem .65rem; }
+.tableau-diffusions .col-num, .tableau-diffusions .col-etat, .tableau-diffusions .col-court { width: 1%; white-space: nowrap; }
+.tableau-diffusions .col-etat .motif-etat { max-width: 9.5rem; }
+.tableau-diffusions .col-remarques { width: 30%; min-width: 16rem; }
+.tableau-diffusions .remarque-ligne { width: 100%; min-width: 0; field-sizing: content; min-height: 2rem; max-height: 9rem; }
 td .etat-attente { display: inline-block; }
 .tableau-diffusions tr.rangee-slides td { background: var(--info-fond); }
 .tableau-diffusions tr.rangee-slides td:first-child { box-shadow: inset 4px 0 0 var(--info); }
