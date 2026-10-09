@@ -505,6 +505,22 @@ document.addEventListener('change', async (e) => {
     if (await modifierLigne(t.dataset.remarqueLigne, { consignes: texte }, 'Remarque enregistrée')) {
       document.querySelectorAll(`[data-remarque-ligne="${t.dataset.remarqueLigne}"]`).forEach(x => { if (x !== t) x.value = texte || ''; });
     }
+  } else if (t.dataset.sonLigne) {
+    // son corrigé à la main (09.10.2026, Léa : vidéo trop lourde pour la demande, son pas détecté)
+    const id = t.dataset.sonLigne;
+    // tableau rechargé : colonne Son et ordre de la Pub pause tiers (son d'abord) changent
+    if (await modifierLigne(id, { avec_son: t.value === 'oui' }, t.value === 'oui' ? 'Avec son' : 'Sans son')) { await charger(); ouvrirDetail(id); }
+  } else if (t.dataset.dureeLigne) {
+    const id = t.dataset.dureeLigne;
+    const n = parseInt(t.value, 10);
+    const duree = Number.isFinite(n) && n > 0 ? n : null;
+    const l = trouverLigne(id);
+    if (await modifierLigne(id, { duree_s: duree }, 'Durée enregistrée')) {
+      // l'anneau couplé dure comme sa vidéo
+      if (l?.ligne_couplee_id) await sb.from('lignes_vendues').update({ duree_s: duree }).eq('id', l.ligne_couplee_id);
+      await charger();
+      ouvrirDetail(id);
+    }
   }
 });
 
@@ -642,9 +658,15 @@ function ouvrirDetail(id) {
             ${info('Quand', l.type_vente === 'saison' ? 'Toute la saison'
               : `${dates.length} match${dates.length > 1 ? 's' : ''}<div class="petit">${dates.map(m => `${dateCourte(m.date_heure)} · ${echapper(m.adversaire)}`).join('<br>')}</div>`)}
             ${info('Jusqu’au', l.date_fin ? dateCourte(l.date_fin + 'T12:00') : '')}
-            ${info('Durée', l.duree_s ? `${l.duree_s} s` : '')}
+            ${estRegie && p.famille === 'temps'
+              ? info('Durée', `<input type="number" min="1" class="champ-court" data-duree-ligne="${l.id}" value="${l.duree_s ?? ''}" placeholder="—"> s`)
+              : info('Durée', l.duree_s ? `${l.duree_s} s` : '')}
             ${info('Passages par match', l.occurrences > 1 ? l.occurrences : '')}
-            ${p.famille === 'temps' && p.support === 'Vidéotron' ? info('Son', l.avec_son ? 'avec son' : 'sans son') : ''}
+            ${p.famille === 'temps' && p.support === 'Vidéotron' ? info('Son', estRegie
+              ? `<select class="champ-court" data-son-ligne="${l.id}">
+                   <option value="oui" ${l.avec_son ? 'selected' : ''}>avec son</option>
+                   <option value="non" ${l.avec_son ? '' : 'selected'}>sans son</option></select>`
+              : l.avec_son ? 'avec son' : 'sans son') : ''}
             ${p.lie_a_produit_id ? info('Anneau LED', l.ligne_couplee_id ? 'oui (couplé)' : 'non') : ''}
             ${p.famille === 'emplacement' ? info('Emplacement', empl.length ? empl.join(', ') : '<span class="badge badge-a-venir">à placer</span>') : ''}
             ${info('Origine', l.demande_id ? `<a href="demandes.html?id=${l.demande_id}">voir la demande</a>` : l.created_by ? `ajouté par ${echapper(etat.personnes.get(l.created_by) || 'la Régie')}, sans demande` : 'import Airtable')}
