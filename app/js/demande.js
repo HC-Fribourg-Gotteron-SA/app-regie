@@ -139,6 +139,14 @@ function detailDe(id) {
                            rotation: { visuel: null, anneau: null }, premiere: { visuel: '', anneau: '' },
                            versions: new Map(),           // File -> 'FR'
                            fichiers: { visuel: [], anneau: [] } });
+    // changement de visuel / suppression d'un produit pris au match : ses matchs à venir déjà cochés
+    const deja = dejaPris(id);
+    if (deja && !deja.saison && deja.matchs.length) {
+      const d = etat.details.get(id);
+      d.quand = 'match';
+      const aVenir = new Set(etat.matchs.map(m => jourLocal(m.date_heure)));
+      deja.matchs.forEach(m => { const j = jourLocal(m.date_heure); if (aVenir.has(j)) d.dates.add(j); });
+    }
   }
   return etat.details.get(id);
 }
@@ -287,6 +295,24 @@ const choixOuiNon = (id, champ, valeur, oui, non) => `
     <label><input type="radio" name="${champ}-${id}" data-choix="${champ}" value="non" ${valeur === 'non' ? 'checked' : ''}> ${non}</label>
   </div>`;
 
+// « Actuellement : … » (changement de visuel / suppression) : ce que le sponsor a sur ce produit
+function blocDejaPris(id) {
+  const deja = dejaPris(id);
+  if (!deja) return '';
+  const debut = new Date(); debut.setHours(0, 0, 0, 0);
+  const aVenir = deja.matchs.filter(m => new Date(m.date_heure) >= debut);
+  const passes = deja.matchs.length - aVenir.length;
+  const quand = [
+    deja.saison ? `<strong>toute la saison ${echapper(etat.saison)}</strong>` : '',
+    aVenir.length ? `<strong>${aVenir.length} match${aVenir.length > 1 ? 's' : ''} à venir</strong> : ${aVenir.map(m =>
+      `${dateCourte(m.date_heure)} · ${echapper(m.adversaire)}`).join(', ')}` : '',
+    !deja.saison && !aVenir.length && passes ? 'seulement des matchs déjà passés' : '',
+  ].filter(Boolean).join(' + ');
+  return `<p class="message message-info petit" style="margin:.5rem 0">${echapper(etat.sponsor.nom)} a actuellement ce produit : ${quand}${
+    passes && (deja.saison || aVenir.length) ? ` <span class="doux">(+ ${passes} match${passes > 1 ? 's' : ''} passé${passes > 1 ? 's' : ''})</span>` : ''}${
+    aVenir.length && !deja.saison ? '<br>Ces matchs sont déjà cochés ci-dessous : décochez ceux qui ne changent pas.' : ''}</p>`;
+}
+
 function afficherDetails() {
   const ids = produitsCoches();
   $('bloc-details').hidden = ids.length === 0;
@@ -307,6 +333,7 @@ function afficherDetails() {
           <strong>${echapper(p.nom)}</strong>
           <span class="doux petit description">${echapper(descriptionProduit(p))}</span>
         </div>
+        ${blocDejaPris(id)}
         <div class="choix">
           <label><input type="radio" name="quand-${id}" value="saison" ${d.quand === 'saison' ? 'checked' : ''}>
             Toute la saison ${echapper(etat.saison)}</label>
@@ -462,20 +489,37 @@ $('btn-changer-sponsor').addEventListener('click', () => {
 // Changement de visuel / suppression : seulement les produits que le sponsor a déjà
 // ---------------------------------------------------------------------
 const TYPES_PRODUITS_DU_SPONSOR = ['changement_visuel', 'suppression'];
-const produitsDuSponsor = new Map();      // id sponsor -> Set(id produit)
+// id sponsor -> Map(id produit -> { saison: bool, matchs: [{ date_heure, adversaire }] }) : ce qu'il a aujourd'hui
+// (09.10.2026, Léa : « Sponsor du match » proposé sans dire pour quels matchs)
+const produitsDuSponsor = new Map();
+const typeDemande = () => document.querySelector('input[name=type]:checked')?.value;
+// Ce que le sponsor choisi a déjà sur ce produit (changement de visuel / suppression), sinon null
+function dejaPris(produitId) {
+  if (!TYPES_PRODUITS_DU_SPONSOR.includes(typeDemande()) || !etat.sponsor || etat.sponsor.nouveau) return null;
+  return produitsDuSponsor.get(etat.sponsor.id)?.get(produitId) || null;
+}
 
 async function filtrerProduitsDuSponsor() {
-  const type = document.querySelector('input[name=type]:checked')?.value;
-  const limiter = TYPES_PRODUITS_DU_SPONSOR.includes(type) && etat.sponsor && !etat.sponsor.nouveau;
+  const limiter = TYPES_PRODUITS_DU_SPONSOR.includes(typeDemande()) && etat.sponsor && !etat.sponsor.nouveau;
   let ids = null;
   if (limiter) {
     if (!produitsDuSponsor.has(etat.sponsor.id)) {
-      const { data } = await sb.from('lignes_vendues').select('produit_id, contrat:contrats!inner(sponsor_id)')
+      const { data } = await sb.from('lignes_vendues')
+        .select('produit_id, type_vente, date_fin, contrat:contrats!inner(sponsor_id), matchs:lignes_matchs(match:matchs(date_heure, adversaire))')
         .eq('contrat.sponsor_id', etat.sponsor.id).not('statut', 'in', '(annule,termine)');
-      produitsDuSponsor.set(etat.sponsor.id, new Set((data || []).map(l => l.produit_id)));
+      const parProduit = new Map();
+      for (const l of data || []) {
+        const x = parProduit.get(l.produit_id) || { saison: false, matchs: [] };
+        if (l.type_vente === 'saison') x.saison = true;
+        else x.matchs.push(...(l.matchs || []).map(m => m.match).filter(Boolean));
+        parProduit.set(l.produit_id, x);
+      }
+      parProduit.forEach(x => x.matchs.sort((a, b) => new Date(a.date_heure) - new Date(b.date_heure)));
+      produitsDuSponsor.set(etat.sponsor.id, parProduit);
     }
-    ids = produitsDuSponsor.get(etat.sponsor.id);
+    ids = new Set(produitsDuSponsor.get(etat.sponsor.id).keys());
   }
+  afficherDetails();
   document.querySelectorAll('#produits details').forEach(groupe => {
     let visibles = 0;
     groupe.querySelectorAll('input[name=produit]').forEach(c => {
