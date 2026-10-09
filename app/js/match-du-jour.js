@@ -45,7 +45,7 @@ async function charger() {
         .order('date_heure').range(de, a)),
       toutesLesLignes((de, a) => sb.from('lignes_vendues')
         .select(`id, produit_id, type_vente, avec_son, duree_s, consignes, suspendue, motif_suspension, validee, statut,
-                 date_fin, priorite, created_at, ligne_couplee_id, un_match_sur, regle_rotation,
+                 date_fin, priorite, created_at, ligne_couplee_id, un_match_sur, regle_rotation, ordre_variantes,
                  produit:produits(id, nom, categorie, ordre, famille, support, actif, lie_a_produit_id),
                  contrat:contrats(sponsor_id, sponsor:sponsors(nom)), demande_id,
                  matchs:lignes_matchs(match:matchs(date_heure, adversaire)),
@@ -270,7 +270,7 @@ function afficher() {
   changements = [...changements, ...alternees];
   const version = (c) => c.action !== 'visuel' ? null
     : etat.lignes.get(c.ligne_id)?.regle_rotation === 'alterner'
-      ? versionDuSoir(etat.assets.get(c.asset_id), etat.assets.get(c.ancien_asset_id))
+      ? versionDuSoir(etat.assets.get(c.asset_id), etat.assets.get(c.ancien_asset_id), etat.lignes.get(c.ligne_id)?.ordre_variantes || [])
       : changementDeVersion(etat.assets.get(c.asset_id), etat.assets.get(c.ancien_asset_id));
   const tous = changements.map(c => ({ ...c, ...infos(c.ligne_id), fait: etat.fait.get(`${c.ligne_id}|${c.action}`),
                                        ...(version(c) ? { raison: version(c).raison, version: version(c).consigne } : {}) }))

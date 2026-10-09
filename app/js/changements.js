@@ -58,9 +58,13 @@ export function changementDeVersion(nouveau, ancien) {
 
 // Diffusion qui alterne ses versions (langue, ou 4 vidéos comme l'ECAB) : on dit TOUJOURS laquelle mettre ce soir
 // (09.10.2026, Léa), même si la version du match précédent n'est pas connue (alternance réglée après coup).
-export function versionDuSoir(nouveau, ancien) {
+// ordre = ordre de rotation des versions (ordre_variantes) : si la version du match précédent n'est pas connue,
+// c'est celle d'avant dans la rotation (Léa, 09.10.2026 : Police cantonale, l'autre version passait au dernier match)
+export function versionDuSoir(nouveau, ancien, ordre = []) {
   if (!nouveau?.variante) return null;
-  const precedente = ancien?.variante && ancien.variante !== nouveau.variante ? ancien.variante : null;
+  const i = ordre.indexOf(nouveau.variante);
+  const deduite = !ancien?.variante && ordre.length >= 2 && i >= 0 ? ordre[(i - 1 + ordre.length) % ordre.length] : null;
+  const precedente = ancien?.variante && ancien.variante !== nouveau.variante ? ancien.variante : deduite;
   return {
     consigne: precedente ? `Activer ${nouveau.variante} · désactiver ${precedente}` : `Ce soir : ${nouveau.variante}`,
     raison: precedente || !ancien?.variante ? `version à mettre ce soir (à tour de rôle)` : 'même version qu’au match précédent',
