@@ -123,6 +123,10 @@ body.avec-menu main { margin-left: calc(var(--largeur-menu) + max(0px, (100vw - 
 /* logo sur fond blanc : un peu de marge pour que le triangle ne touche pas les bords */
 .marque-logo img { position: absolute; inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px);
                    object-fit: contain; background: #fff; }
+/* Logo détouré (12.10.2026, Léa : juste le triangle, pas de carré blanc) ; « HCFG » reste si l'image manque */
+.marque-logo:has(img) { background: none; color: transparent; border-radius: 0; overflow: visible; }
+.marque-logo:has(img) img { inset: 0; width: 100%; height: 100%; background: none;
+                            filter: drop-shadow(0 0 1.5px rgba(255,255,255,.55)); }
 .marque-texte { display: flex; flex-direction: column; line-height: 1.15; }
 .marque-texte strong { font-size: .98rem; letter-spacing: .01em; }
 .marque-texte small { font-size: .74rem; color: #aebbd0; letter-spacing: .04em; text-transform: uppercase; }

@@ -20,7 +20,7 @@ export function changerDeBase() {
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Date de la version, affichée en bas du menu : à changer à chaque mise en ligne (pour vérifier que Netlify a publié)
-const VERSION = '09.10.2026 r';
+const VERSION = '12.10.2026';
 
 // ---------------------------------------------------------------------
 // Libellés affichés
@@ -203,7 +203,7 @@ function afficherBlocage(titre, texte) {
 // Menu latéral (à gauche ; tiroir derrière ☰ sur téléphone)
 // ---------------------------------------------------------------------
 // Logo du club : app/img/logo.jpg (fond blanc) ; s'il manque, le monogramme « HCFG » s'affiche.
-export const LOGO = `<span class="marque-logo">HCFG<img src="img/logo.jpg" alt="HC Fribourg-Gottéron" onerror="this.remove()"></span>`;
+export const LOGO = `<span class="marque-logo">HCFG<img src="img/logo.png" alt="HC Fribourg-Gottéron" onerror="this.remove()"></span>`;
 
 const ICONES = {
   demandes:   '<path d="M4 4h16v12h-5l-3 3-3-3H4z"/>',
