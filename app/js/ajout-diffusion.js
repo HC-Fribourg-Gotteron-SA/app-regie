@@ -11,9 +11,10 @@ export async function ouvrirAjoutDiffusion(p, apres = () => {}) {
     toutesLesLignes((de, a) => sb.from('sponsors').select('id, nom').order('nom').range(de, a)),
     sb.from('saisons').select('id, libelle').eq('active', true).maybeSingle(),
   ]);
-  const { data: matchs } = saison
+  const { data: tousMatchs } = saison
     ? await sb.from('matchs').select('id, date_heure, adversaire, type').eq('saison_id', saison.id).order('date_heure')
     : { data: [] };
+  const matchs = (tousMatchs || []).filter(m => m.type !== 'ladies');   // matchs Ladies : pas de visuels (migration 52)
   const video = p.famille === 'temps' && p.support === 'Vidéotron';
   const anneau = !!p.lie_a_produit_id;
   const debutJour = new Date(); debutJour.setHours(0, 0, 0, 0);

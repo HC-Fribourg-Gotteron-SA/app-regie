@@ -240,6 +240,15 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    dans match-du-jour.js : ne charge que matchs + notes) : il voit toutes les notes du match (Régie comprise), en
    ajoute (info / tâche + fichiers), supprime les siennes pas encore faites, ne coche pas « fait ». Régie / admin :
    inchangé (tout). RLS 51 : notes_match + storage `notes/%` pour animation. Menu : Match du jour visible pour animation.
+0-octodecies. **Matchs Ladies (13.10.2026, validé par Léa ; migration 52 à exécuter sur les deux bases, pas encore
+   testé)** : la Régie fait aussi les matchs Ladies ; aucun visuel ne change, il faut surtout le run of show. Type de match
+   `ladies` (calendrier : import détecté « Ladies / Women / Frauen / Dames / SWHL », ou type choisi à la main).
+   **Menu Jour de match → UNE entrée « Ladies »** (Léa : pas deux entrées) → `match-du-jour.html?ladies=1` avec deux
+   onglets en haut (`ongletsLadies` dans app.js) : **Match du jour** (le match + « Pour ce soir », rien d'autre) et
+   **Run of show** (`run-of-show.html?ladies=1`). `modeLadies()` / `matchsDuMode()` : en mode Ladies seulement les
+   matchs Ladies, sinon **jamais** (Match du jour NL, Run of show NL, Par match, demandes, + Ajouter un sponsor).
+   Modèle « Ladies 26/27 » (38 éléments transcrits de la capture, FO 14:45 ; dans la feuille, le Shootout disait
+   « avant début overtime » : mis « avant début shootout »).
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
@@ -351,7 +360,8 @@ outil-regie/
 │   ├── 48_fritennis_au_match.sql ← Fritennis : Pub pause tiers au match, chaque match jusqu'au 27.10 compris
 │   ├── 49_un_match_sur_deux.sql ← un match sur deux (présence + départ, langue FR / DE) réglable par la Régie
 │   ├── 50_langue_prochain_match.sql ← RPC langue_au_prochain_match : la Régie choisit la langue du prochain match
-│   └── 51_animation_pour_le_match.sql ← « Pour ce soir » de Match du jour ouvert au rôle animation
+│   ├── 51_animation_pour_le_match.sql ← « Pour ce soir » de Match du jour ouvert au rôle animation
+│   └── 52_matchs_ladies.sql ← type de match « Ladies » + modèle de run of show « Ladies 26/27 »
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)

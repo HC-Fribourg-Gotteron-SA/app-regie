@@ -1,7 +1,7 @@
 // Match du jour : ce que la Régie doit changer dans Colosseo (depuis le match précédent),
 // puis toute la playlist pour vérifier. Les playlists Colosseo restent d'un match à l'autre.
 import { sb, exigerConnexion, echapper, dateCourte, notifier, toutesLesLignes, libelleFichier, taille, devinerVersion,
-         nomFichierSur } from './app.js';
+         nomFichierSur, modeLadies, matchsDuMode, ongletsLadies } from './app.js';
 import { calculerChangements, consigne, PASSE, changementDeVersion, versionDuSoir } from './changements.js';
 import { confirmerSuppressionProduit, boutonSupprimerFichier, confirmerSuppressionFichier } from './traitement.js';
 
@@ -9,6 +9,9 @@ const { profil } = await exigerConnexion({ roles: ['regie', 'admin', 'animation'
 const estRegie = ['regie', 'admin'].includes(profil.role);
 // animation (Stéphane, 13.10.2026, migration 51) : seulement le bloc « Pour ce soir » (voir, ajouter, supprimer les siennes)
 const estAnimation = profil.role === 'animation';
+// Ladies (13.10.2026, migration 52) : matchs Ladies seulement, pas de visuels → le match + « Pour ce soir »
+const ladies = modeLadies();
+const leger = estAnimation || ladies;          // seulement les matchs et « Pour ce soir »
 
 const $ = (id) => document.getElementById(id);
 const court = (nom) => (nom || '').replace(/^Action scene – /, 'Action scene · ');
@@ -41,12 +44,21 @@ const etat = {
 // Chargement
 // ---------------------------------------------------------------------
 async function charger() {
-  if (estAnimation) {          // il ne lit que les matchs et les notes
-    const { data, error } = await sb.from('matchs').select('id, saison_id, numero, date_heure, adversaire, type').order('date_heure');
+  if (leger) {          // animation, ou matchs Ladies : seulement les matchs et les notes
+    const [{ data, error }, { data: personnes }] = await Promise.all([
+      sb.from('matchs').select('id, saison_id, numero, date_heure, adversaire, type').order('date_heure'),
+      estAnimation ? Promise.resolve({ data: [profil] }) : sb.from('profiles').select('id, nom, email, role'),
+    ]);
     if (error) { $('m-titre').textContent = 'Chargement impossible'; return notifier(error.message, 'erreur'); }
-    etat.matchs = data || [];
-    etat.personnes = new Map([[profil.id, profil.nom || profil.email.split('@')[0]]]);
-    if (!etat.matchs.length) { $('m-titre').textContent = 'Aucun match au calendrier'; return; }
+    etat.matchs = matchsDuMode(data, ladies);
+    etat.personnes = new Map((personnes || []).map(x => [x.id, x.nom || x.email.split('@')[0]]));
+    etat.animation = new Set((personnes || []).filter(x => x.role === 'animation').map(x => x.id));
+    if (!etat.matchs.length) {
+      if (ladies) ongletsLadies('match');
+      $('m-titre').textContent = ladies ? 'Aucun match Ladies au calendrier' : 'Aucun match au calendrier';
+      if (ladies && estRegie) $('m-sous-titre').innerHTML = 'Importez-les dans <a href="calendrier.html">Calendrier des matchs</a> (type « Ladies »).';
+      return;
+    }
     remplirChoix();
     return chargerMatch();
   }
@@ -74,7 +86,7 @@ async function charger() {
         etat.dossiers.get(d.sponsor_id).push(d);
       }
     } catch { etat.dossiers = new Map(); }       // table pas encore créée (migration 19)
-    etat.matchs = matchs;
+    etat.matchs = matchsDuMode(matchs, false);       // jamais les matchs Ladies ici
     etat.lignes = new Map(lignes.map(l => [l.id, l]));
     // l'anneau LED de la Pub pause tiers fait partie de la Pub pause tiers (ligne couplée, produit technique inactif)
     etat.pubDeAnneau = new Map(lignes.filter(l => l.ligne_couplee_id && l.produit && !l.produit.actif)
@@ -126,8 +138,12 @@ async function chargerMatch() {
       + (etat.precedent.saison_id !== m.saison_id ? ' (dernier match de la saison précédente)' : '') : '');
   $('quand-playlist').textContent = aujourdhui ? 'ce soir' : `le ${dateCourte(m.date_heure)}`;
   document.title = `${aujourdhui ? 'Match du jour' : 'Match'} — ${m.adversaire}`;
-  if (estAnimation) {
+  if (leger) {
     $('m-sous-titre').textContent = `${aujourdhui ? jour(m.date_heure) + ' · ' : ''}${heure(m.date_heure)}`;
+    if (ladies) {
+      $('m-surtitre').textContent = `Ladies · ${$('m-surtitre').textContent}`;
+      ongletsLadies('match', m.id);
+    }
     const { data: notes, error } = await sb.from('notes_match').select('*').eq('match_id', m.id).order('cree_le');
     if (error) notifier(/policy|permission|row-level/i.test(error.message) ? 'Exécutez d’abord la migration 51 dans Supabase.' : error.message, 'erreur');
     etat.tableNotes = !error;
@@ -270,7 +286,7 @@ const trier = (a, b) => a.ordre - b.ordre || a.produit.localeCompare(b.produit)
 //   Colosseo au moment où on les fait dans l'outil. Pareil pour une demande « au match » traitée LE JOUR du match
 //   (08.10.2026) ; traitée un autre jour, elle reste à ajouter ici (elle n'entre dans Colosseo que le jour du match).
 function afficher() {
-  if (estAnimation) return afficherNotes();       // l'animation ne voit que « Pour ce soir »
+  if (leger) return afficherNotes();       // animation / matchs Ladies : seulement « Pour ce soir »
   // spécial = diffusions vendues « au match » (l'anneau de la pause tiers suit sa Pub pause tiers)
   // + « un match sur deux » (09.10.2026, Villars) : il entre / sort de la playlist d'un match à l'autre
   const auMatch = (inf) => inf.l?.type_vente === 'match' || inf.l?.un_match_sur > 1;
@@ -878,7 +894,7 @@ document.addEventListener('click', async (e) => {
 
 $('choix-match').addEventListener('change', async (e) => {
   etat.match = etat.matchs.find(m => m.id === e.target.value);
-  history.replaceState(null, '', `?match=${etat.match.id}`);
+  history.replaceState(null, '', `?${ladies ? 'ladies=1&' : ''}match=${etat.match.id}`);
   await chargerMatch();
 });
 

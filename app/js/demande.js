@@ -125,7 +125,7 @@ async function chargerSaisonEtMatchs() {
       .gte('date_heure', new Date().toISOString()).order('date_heure'),
   ]);
   etat.saison = saison?.libelle || '';
-  etat.matchs = matchs || [];
+  etat.matchs = (matchs || []).filter(m => m.type !== 'ladies');    // matchs Ladies : pas de visuels (migration 52)
 }
 
 function detailDe(id) {

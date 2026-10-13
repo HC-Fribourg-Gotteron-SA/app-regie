@@ -40,7 +40,7 @@ async function charger() {
   ]);
   if (error) { notifier(`Chargement impossible : ${error.message}`, 'erreur'); return; }
 
-  etat.matchs = matchs || [];
+  etat.matchs = (matchs || []).filter(m => m.type !== 'ladies');    // matchs Ladies : pas de visuels (migration 52)
   etat.ventes = new Map();
   for (const v of ventes || []) {
     if (v.ligne.produit?.actif === false) continue;   // anneau de la pause tiers : compris dans la Pub pause tiers

@@ -2,7 +2,7 @@
 // Avant le match : une HEURE par élément (le compte à rebours se calcule depuis le face-off) ;
 // pendant le match : un « quand » en texte libre (arrêt de jeu, 00:01:00, 0:18:00…). Sections, lignes importantes.
 // Régie / admin : créent et modifient ; Sponsoring et « Chrono & animation » : consultent, en direct le soir du match.
-import { sb, exigerConnexion, echapper, dateCourte, notifier, debounce } from './app.js';
+import { sb, exigerConnexion, echapper, dateCourte, notifier, debounce, modeLadies, matchsDuMode, ongletsLadies } from './app.js';
 import { lireHeure, lireDuree, formatHMS, secondesDuJour, colonnesTemps, ligneEnCours, heuresLignes,
          tempsCourt, heureCourteLigne, dureeSection, prochaineSection, sectionsDuMatch, estPause } from './ros-calcul.js';
 
@@ -11,6 +11,10 @@ const estRegie = ['regie', 'admin'].includes(profil.role);
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
+// Ladies (13.10.2026, migration 52) : run-of-show.html?ladies=1 ne montre que les matchs Ladies, sinon jamais
+const ladies = modeLadies();
+const lien = (q = '') => `run-of-show.html${ladies ? `?ladies=1${q ? `&${q}` : ''}` : q ? `?${q}` : ''}`;
+const estModeleLadies = (m) => /ladies/i.test(m?.nom || '');
 const heureCourte = (d) => d ? d.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
 const heureMin = (d) => d ? d.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' }) : '';
 const memeJour = (a, b) => a.toDateString() === b.toDateString();
@@ -34,12 +38,13 @@ const etat = {
 // ---------------------------------------------------------------------
 async function chargerListes() {
   const [{ data: matchs, error }, { data: modeles }] = await Promise.all([
-    sb.from('matchs').select('id, numero, date_heure, adversaire').order('date_heure'),
+    sb.from('matchs').select('id, numero, date_heure, adversaire, type').order('date_heure'),
     sb.from('ros_modeles').select('id, nom').order('nom'),
   ]);
   if (error) { $('r-titre').textContent = 'Chargement impossible'; notifier(error.message, 'erreur'); return false; }
-  etat.matchs = matchs || [];
-  etat.modeles = modeles || [];
+  etat.matchs = matchsDuMode(matchs, ladies);
+  // modèles Ladies en premier sur les pages Ladies, en dernier ailleurs
+  etat.modeles = (modeles || []).sort((a, b) => (estModeleLadies(b) - estModeleLadies(a)) * (ladies ? 1 : -1));
   const { error: eTable } = await sb.from('ros_lignes').select('id, quand, est_section').limit(1);
   etat.tablesOk = !eTable;
   return true;
@@ -84,7 +89,8 @@ function remplirChoix() {
 
 // Heure du face-off : calendrier (ou modifiée pour ce match) ; modèle : 19:45 d'exemple
 function faceOff() {
-  if (etat.modele) { const d = new Date(); d.setHours(19, 45, 0, 0); return d; }
+  // modèle : face-off d'exemple (19:45 ; modèle Ladies : 14:45, l'heure de son rundown)
+  if (etat.modele) { const d = new Date(); d.setHours(estModeleLadies(etat.modele) ? 14 : 19, 45, 0, 0); return d; }
   if (etat.ros?.face_off) return new Date(etat.ros.face_off);
   return etat.match ? new Date(etat.match.date_heure) : null;
 }
@@ -94,16 +100,17 @@ function faceOff() {
 // ---------------------------------------------------------------------
 function afficher() {
   const fo = faceOff();
+  if (ladies) ongletsLadies('ros', etat.modele ? null : etat.match?.id);
   if (etat.modele) {
     $('r-surtitre').textContent = 'Run of show · modèle';
     $('r-titre').textContent = etat.modele.nom;
-    $('r-sous-titre').textContent = 'Heures pour un face-off à 19:45 : dans un match, elles suivent l’heure du face-off.';
+    $('r-sous-titre').textContent = `Heures pour un face-off à ${estModeleLadies(etat.modele) ? '14:45' : '19:45'} : dans un match, elles suivent l’heure du face-off.`;
   } else if (etat.match) {
-    $('r-surtitre').textContent = 'Run of show';
+    $('r-surtitre').textContent = ladies ? 'Ladies · Run of show' : 'Run of show';
     $('r-titre').textContent = `${dateCourte(etat.match.date_heure)} · contre ${etat.match.adversaire}`;
     $('r-sous-titre').textContent = `Match n° ${etat.match.numero ?? ''}${etat.ros?.face_off ? ' · heure du face-off modifiée pour ce match' : ''}`;
   } else {
-    $('r-titre').textContent = 'Aucun match au calendrier';
+    $('r-titre').textContent = ladies ? 'Aucun match Ladies au calendrier' : 'Aucun match au calendrier';
     return;
   }
   document.title = `Run of show — ${$('r-titre').textContent}`;
@@ -507,7 +514,7 @@ $('btn-supprimer').addEventListener('click', async () => {
     : await sb.from('ros_matchs').delete().eq('id', etat.ros.id);
   if (error) return notifier(`Suppression impossible : ${error.message}`, 'erreur');
   notifier('Supprimé');
-  if (etat.modele) { location.href = 'run-of-show.html'; return; }
+  if (etat.modele) { location.href = lien(); return; }
   etat.edition = false;
   await chargerVue();
 });
@@ -516,7 +523,7 @@ $('btn-imprimer').addEventListener('click', () => window.print());
 
 // Choix d'un match / d'un modèle
 $('choix-match').addEventListener('change', (e) => {
-  location.href = e.target.value ? `run-of-show.html?match=${e.target.value}` : 'run-of-show.html';
+  location.href = e.target.value ? lien(`match=${e.target.value}`) : lien();
 });
 $('choix-modele').addEventListener('change', async (e) => {
   const v = e.target.value;
@@ -526,10 +533,10 @@ $('choix-modele').addEventListener('change', async (e) => {
     if (!nom?.trim()) { remplirChoix(); return; }
     const { data, error } = await sb.from('ros_modeles').insert({ nom: nom.trim() }).select('id').single();
     if (error) { remplirChoix(); return notifier(`Création impossible : ${error.message}`, 'erreur'); }
-    location.href = `run-of-show.html?modele=${data.id}&edition=1`;
+    location.href = lien(`modele=${data.id}&edition=1`);
     return;
   }
-  location.href = `run-of-show.html?modele=${v}`;
+  location.href = lien(`modele=${v}`);
 });
 
 // ---------------------------------------------------------------------

@@ -40,7 +40,8 @@ export const LIBELLES = {
     question: 'Question au Sponsoring',
     traitee: 'Traitée',
   },
-  type_match: { saison: 'Saison', playoffs: 'Playoffs', amical: 'Amical', champions_league: 'Champions League' },
+  // ladies (migration 52) : seulement dans Calendrier et Jour de match → Ladies (pas de visuels, jamais dans le Match du jour NL)
+  type_match: { saison: 'Saison', playoffs: 'Playoffs', amical: 'Amical', champions_league: 'Champions League', ladies: 'Ladies' },
 };
 
 export const MOMENTS = {
@@ -224,6 +225,10 @@ const MENU = [
     // animation : Match du jour réduit au bloc « Pour ce soir » (13.10.2026, migration 51)
     { href: 'match-du-jour.html', texte: 'Match du jour', icone: 'match', roles: ['regie', 'admin', 'animation'] },
     { href: 'run-of-show.html', texte: 'Run of show', icone: 'horaire', roles: ['regie', 'admin', 'sponsoring', 'animation'] },
+    // matchs Ladies (13.10.2026, migration 52) : UNE entrée (Léa : pas deux onglets dans le menu) ; la page a deux
+    // onglets en haut, Match du jour / Run of show (ongletsLadies), seulement pour les matchs Ladies
+    { href: 'match-du-jour.html?ladies=1', texte: 'Ladies', icone: 'match', roles: ['regie', 'admin', 'animation'],
+      aussi: ['run-of-show.html?ladies=1'], ladies: true },
   ] },
   { titre: 'Demandes', liens: [
     { href: 'demandes.html', texte: 'Toutes les demandes', icone: 'demandes', compteur: 'demandes' },
@@ -243,7 +248,8 @@ const MENU = [
 ];
 
 function construireMenu(profil) {
-  const page = pageCourante();
+  // pages Ladies = mêmes pages avec ?ladies=1 : le lien actif tient compte du paramètre
+  const page = pageCourante() + (modeLadies() ? '?ladies=1' : '');
   const accueil = pageAccueil(profil.role);
   // Chrono & animation : seulement les liens qui le nomment (run of show)
   const visible = (l) => profil.role === 'animation' ? l.roles?.includes('animation') : !l.roles || l.roles.includes(profil.role);
@@ -260,7 +266,7 @@ function construireMenu(profil) {
       <div class="menu-rubrique"${r.id ? ` id="${r.id}"` : ''}>
         <div class="menu-titre">${r.titre}</div>
         ${r.liens.map(l => `
-          <a href="${l.href}" class="${page === l.href || l.aussi?.includes(page) ? 'actif' : ''}">${icone(l.icone)}<span>${l.texte}</span>
+          <a href="${l.href}" class="${page === l.href || l.aussi?.includes(page) ? 'actif' : ''}${l.ladies ? ' lien-ladies' : ''}">${icone(l.icone)}<span>${l.texte}</span>
             ${l.compteur ? `<span class="menu-compteur" data-compteur="${l.compteur}" hidden></span>` : ''}</a>`).join('')}
       </div>`).join('')}
     </nav>
@@ -304,6 +310,23 @@ function construireMenu(profil) {
   if (profil.role === 'animation') return;
   compterDemandes(profil);
   menuProduits(profil);
+}
+
+// Pages Ladies (Match du jour, Run of show avec ?ladies=1) : seulement les matchs de type « ladies »
+export const modeLadies = () => new URLSearchParams(location.search).get('ladies') === '1';
+// Matchs qui concernent la page : en mode Ladies les matchs Ladies, sinon tous les autres (jamais de Ladies ailleurs)
+export const matchsDuMode = (matchs, ladies = modeLadies()) => (matchs || []).filter(m => (m.type === 'ladies') === ladies);
+// Onglets de la page Ladies, sous le titre : Match du jour / Run of show (actif = 'match' | 'ros')
+export function ongletsLadies(actif, matchId = null) {
+  const q = matchId ? `&match=${matchId}` : '';
+  const nav = document.createElement('nav');
+  nav.className = 'onglets-produits onglets-ladies';
+  nav.setAttribute('aria-label', 'Ladies');
+  nav.innerHTML = `
+    <a href="match-du-jour.html?ladies=1${q}" class="onglet-produit${actif === 'match' ? ' actif' : ''}">Match du jour</a>
+    <a href="run-of-show.html?ladies=1${q}" class="onglet-produit${actif === 'ros' ? ' actif' : ''}">Run of show</a>`;
+  document.querySelector('.onglets-ladies')?.remove();
+  document.querySelector('main .titre-page')?.after(nav);
 }
 
 // Nom de la page ouverte, toujours avec « .html » (Cloudflare Pages sert /run-of-show au lieu de /run-of-show.html)

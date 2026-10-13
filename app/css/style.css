@@ -67,6 +67,9 @@ body.avec-menu main { margin-left: calc(var(--largeur-menu) + max(0px, (100vw - 
 .menu-rubrique a + a { margin-top: .15rem; }
 .menu-rubrique a:hover { color: #fff; background: rgba(255,255,255,.07); }
 .menu-rubrique a.actif { color: var(--noir); background: #fff; }
+/* entrée Ladies (matchs Ladies) : séparée des liens NL par un petit écart */
+.menu-rubrique a:not(.lien-ladies) + a.lien-ladies { margin-top: .6rem; }
+.onglets-ladies { position: static; }
 .menu-rubrique a > span:first-of-type { flex: 1; }
 .menu-compteur {
   min-width: 1.4rem; height: 1.4rem; padding: 0 .4rem; border-radius: 999px;

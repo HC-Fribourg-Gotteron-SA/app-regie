@@ -69,7 +69,10 @@ const RE_JOUR = /(?:^|\s)(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|lu
 // Champions League (CHL) : testé en premier (la CHL a aussi des « playoffs »)
 const RE_CHL = /\b(champions\s+hockey\s+league|champions\s+league|chl)\b/gi;
 const RE_PLAYOFFS = /\b(play-?offs?|pr[ée]-?playoffs?|play-?in|quarts?|demi|finale?|viertelfinal|halbfinal)\b/gi;
-const typeDe = (t) => t.match(RE_CHL) ? 'champions_league' : t.match(RE_PLAYOFFS) ? 'playoffs' : t.match(RE_AMICAL) ? 'amical' : 'saison';
+// Ladies (migration 52) : testé avant tout le reste (les Ladies ont aussi des playoffs)
+const RE_LADIES = /\b(ladies|women'?s?(\s+league)?|frauen|dames|f[ée]minines?|swhl[\s-]?[a-c]?)\b/gi;
+const typeDe = (t) => t.match(RE_LADIES) ? 'ladies' : t.match(RE_CHL) ? 'champions_league' : t.match(RE_PLAYOFFS) ? 'playoffs'
+  : t.match(RE_AMICAL) ? 'amical' : 'saison';
 const RE_AMICAL = /\b(amical|test|exhibition( games?)?|pr[ée]pa(ration)?|freundschaftsspiel)\b/gi;
 // mots du site de la ligue (sihf.ch) à ignorer
 const RE_BRUIT = /\b(national league|nl|regular season|qualification|fin|comme prévu|en cours|après (ot\d*|so|prol\.?)|reporté)\b/gi;
@@ -111,7 +114,7 @@ function icsVersLignes(texte) {
     }
     // le type (Champions League, amical, playoffs) peut n'être que dans la description ou les catégories
     const infos = `${valeur(bloc, 'DESCRIPTION')?.texte || ''} ${valeur(bloc, 'CATEGORIES')?.texte || ''}`;
-    const type = { champions_league: ' CHL', playoffs: ' playoffs', amical: ' amical', saison: '' }[typeDe(infos)];
+    const type = { ladies: ' Ladies', champions_league: ' CHL', playoffs: ' playoffs', amical: ' amical', saison: '' }[typeDe(infos)];
     return `${quand} ${resume}${type}`;
   });
 }
@@ -140,7 +143,7 @@ function analyserLigne(brute) {
   }
 
   ligne.type = typeDe(texte);
-  texte = texte.replace(RE_CHL, ' ').replace(RE_PLAYOFFS, ' ').replace(RE_AMICAL, ' ').replace(RE_BRUIT, ' ').replace(RE_JOUR, ' ')
+  texte = texte.replace(RE_LADIES, ' ').replace(RE_CHL, ' ').replace(RE_PLAYOFFS, ' ').replace(RE_AMICAL, ' ').replace(RE_BRUIT, ' ').replace(RE_JOUR, ' ')
                .replace(/\bvs\b\.?/gi, ' ');
 
   // L'équipe qui reçoit est écrite en premier : « Fribourg-Gottéron – SC Bern » = à domicile,
