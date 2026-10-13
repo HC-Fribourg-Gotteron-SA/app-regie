@@ -233,13 +233,13 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    match ; visuels sans fichier créés au besoin) — **Mobilière : VF au prochain match** ; Léa : dans Colosseo, une
    ligne par langue qu'on active / désactive. Match du jour : ➕ / ➖ « un match sur deux : il passe / pas ce soir »
    (bloc 2 inclut `un_match_sur > 1`) et « 🔁 Activer DE · désactiver VF ».
-0-septdecies. **« Pour le match » pour l'animation (13.10.2026, demandé par Léa ; migration 51 à exécuter sur les deux
+0-septdecies. **« Pour ce soir » ouvert à l'animation (13.10.2026, demandé par Léa ; migration 51 à exécuter sur les deux
    bases, pas encore testé)** : Stéphane (rôle `animation`) glisse des fichiers pour les matchs (visuels d'anniversaire,
-   vidéos ; images et vidéos, 3-4 max, à tout moment ; pas de compteur, pas de liste d'anniversaires). Menu Jour de
-   match → « Pour le match » (`pour-le-match.html`, rôle animation seulement) : choix du match, message facultatif,
-   fichiers / dossier glissés (≤ 50 Mo) → **tâche « Animation : … » dans « Pour ce soir » de Match du jour** avec les
-   fichiers (`notes/<match>/<note>/…`), que la Régie coche. Il ne voit que ses envois (en attente / fait), peut supprimer
-   un envoi pas encore fait. RLS : notes_match + storage `notes/%` pour animation (ses propres lignes seulement).
+   vidéos ; 3-4 max, à tout moment ; pas de compteur). Une page à part a été faite puis retirée (Léa : « juste il met
+   dans Pour ce soir »). **Match du jour pour le rôle animation = seulement le bloc « Pour ce soir »** (`estAnimation`
+   dans match-du-jour.js : ne charge que matchs + notes) : il voit toutes les notes du match (Régie comprise), en
+   ajoute (info / tâche + fichiers), supprime les siennes pas encore faites, ne coche pas « fait ». Régie / admin :
+   inchangé (tout). RLS 51 : notes_match + storage `notes/%` pour animation. Menu : Match du jour visible pour animation.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
@@ -351,7 +351,7 @@ outil-regie/
 │   ├── 48_fritennis_au_match.sql ← Fritennis : Pub pause tiers au match, chaque match jusqu'au 27.10 compris
 │   ├── 49_un_match_sur_deux.sql ← un match sur deux (présence + départ, langue FR / DE) réglable par la Régie
 │   ├── 50_langue_prochain_match.sql ← RPC langue_au_prochain_match : la Régie choisit la langue du prochain match
-│   └── 51_animation_pour_le_match.sql ← le rôle animation envoie fichiers / messages dans « Pour ce soir »
+│   └── 51_animation_pour_le_match.sql ← « Pour ce soir » de Match du jour ouvert au rôle animation
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
@@ -365,7 +365,6 @@ outil-regie/
     ├── categorie.html / js/categorie.js    ← une catégorie sur une page (?c=Action%20scenes) : toutes les scènes + sponsor
     ├── match-du-jour.html / js/match-du-jour.js ← « Match du jour » : à faire dans Colosseo + playlist (accueil Régie)
     ├── run-of-show.html / js/run-of-show.js ← run of show d'un match ou d'un modèle (Régie modifie, tous consultent)
-    ├── pour-le-match.html / js/pour-le-match.js ← animation : fichiers et messages pour un match (« Pour ce soir »)
     ├── js/ros-calcul.js   ← calcul pur des heures du run of show (testable dans Node)
     ├── js/changements.js  ← calcul pur des changements entre 2 matchs (testable dans Node)
     ├── js/son-video.js    ← son d'une vidéo (piste son MP4 / MOV, muette ou non), lu dans le navigateur

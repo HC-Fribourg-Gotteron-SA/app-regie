@@ -5,8 +5,10 @@ import { sb, exigerConnexion, echapper, dateCourte, notifier, toutesLesLignes, l
 import { calculerChangements, consigne, PASSE, changementDeVersion, versionDuSoir } from './changements.js';
 import { confirmerSuppressionProduit, boutonSupprimerFichier, confirmerSuppressionFichier } from './traitement.js';
 
-const { profil } = await exigerConnexion({ roles: ['regie', 'admin'] });
+const { profil } = await exigerConnexion({ roles: ['regie', 'admin', 'animation'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
+// animation (Stéphane, 13.10.2026, migration 51) : seulement le bloc « Pour ce soir » (voir, ajouter, supprimer les siennes)
+const estAnimation = profil.role === 'animation';
 
 const $ = (id) => document.getElementById(id);
 const court = (nom) => (nom || '').replace(/^Action scene – /, 'Action scene · ');
@@ -39,6 +41,15 @@ const etat = {
 // Chargement
 // ---------------------------------------------------------------------
 async function charger() {
+  if (estAnimation) {          // il ne lit que les matchs et les notes
+    const { data, error } = await sb.from('matchs').select('id, saison_id, numero, date_heure, adversaire, type').order('date_heure');
+    if (error) { $('m-titre').textContent = 'Chargement impossible'; return notifier(error.message, 'erreur'); }
+    etat.matchs = data || [];
+    etat.personnes = new Map([[profil.id, profil.nom || profil.email.split('@')[0]]]);
+    if (!etat.matchs.length) { $('m-titre').textContent = 'Aucun match au calendrier'; return; }
+    remplirChoix();
+    return chargerMatch();
+  }
   try {
     const [matchs, lignes, assets, { data: personnes }] = await Promise.all([
       toutesLesLignes((de, a) => sb.from('matchs').select('id, saison_id, numero, date_heure, adversaire, type')
@@ -114,6 +125,16 @@ async function chargerMatch() {
       + (etat.precedent.saison_id !== m.saison_id ? ' (dernier match de la saison précédente)' : '') : '');
   $('quand-playlist').textContent = aujourdhui ? 'ce soir' : `le ${dateCourte(m.date_heure)}`;
   document.title = `${aujourdhui ? 'Match du jour' : 'Match'} — ${m.adversaire}`;
+  if (estAnimation) {
+    $('m-sous-titre').textContent = `${aujourdhui ? jour(m.date_heure) + ' · ' : ''}${heure(m.date_heure)}`;
+    const { data: notes, error } = await sb.from('notes_match').select('*').eq('match_id', m.id).order('cree_le');
+    if (error) notifier(/policy|permission|row-level/i.test(error.message) ? 'Exécutez d’abord la migration 51 dans Supabase.' : error.message, 'erreur');
+    etat.tableNotes = !error;
+    etat.notes = notes || [];
+    ['bilan', 'demandes-attente', 'bloc-demandes', 'bloc-a-faire', 'bloc-playlist'].forEach(id => { $(id).hidden = true; });
+    afficherNotes();
+    return;
+  }
 
   const ids = [m.id, etat.precedent?.id].filter(Boolean);
   let passages;
@@ -248,6 +269,7 @@ const trier = (a, b) => a.ordre - b.ordre || a.produit.localeCompare(b.produit)
 //   Colosseo au moment où on les fait dans l'outil. Pareil pour une demande « au match » traitée LE JOUR du match
 //   (08.10.2026) ; traitée un autre jour, elle reste à ajouter ici (elle n'entre dans Colosseo que le jour du match).
 function afficher() {
+  if (estAnimation) return afficherNotes();       // l'animation ne voit que « Pour ce soir »
   // spécial = diffusions vendues « au match » (l'anneau de la pause tiers suit sa Pub pause tiers)
   // + « un match sur deux » (09.10.2026, Villars) : il entre / sort de la playlist d'un match à l'autre
   const auMatch = (inf) => inf.l?.type_vente === 'match' || inf.l?.un_match_sur > 1;
@@ -333,11 +355,14 @@ function afficher() {
 // « Pour ce soir » : infos d'abord, puis tâches à faire, puis tâches faites
 function afficherNotes() {
   const bloc = $('bloc-notes');
-  bloc.hidden = !etat.tableNotes || (!estRegie && !etat.notes.length);
+  const peutEcrire = estRegie || estAnimation;
+  bloc.hidden = !etat.tableNotes || (!peutEcrire && !etat.notes.length);
   if (bloc.hidden) return;
   const rang = (n) => n.type === 'info' ? 0 : n.fait ? 2 : 1;
   const notes = etat.notes.slice().sort((a, b) => rang(a) - rang(b) || new Date(a.cree_le) - new Date(b.cree_le));
-  const qui = (id) => echapper(etat.personnes.get(id) || '—');
+  const qui = (id) => echapper(etat.personnes.get(id) || (estAnimation ? 'Régie' : '—'));
+  // supprimer : la Régie tout ; l'animation ses notes pas encore faites
+  const peutSupprimer = (n) => estRegie || (estAnimation && n.cree_par === profil.id && !n.fait);
   $('notes').innerHTML = notes.map(n => `
     <li class="note note-${n.type}${n.fait ? ' est-fait' : ''}">
       ${n.type === 'tache'
@@ -348,10 +373,10 @@ function afficherNotes() {
         ${(n.fichiers || []).length ? `<span class="note-fichiers">${n.fichiers.map(f => `
           <button type="button" class="btn btn-discret petit" data-telecharger="${echapper(f.chemin)}"
             title="Télécharger${f.taille ? ` · ${taille(f.taille)}` : ''}">📎 ${echapper(f.nom)}</button>`).join('')}</span>` : ''}</span>
-      ${estRegie ? `<button type="button" class="btn btn-discret petit" data-suppr-note="${n.id}" aria-label="Supprimer">✕</button>` : ''}
+      ${peutSupprimer(n) ? `<button type="button" class="btn btn-discret petit" data-suppr-note="${n.id}" aria-label="Supprimer">✕</button>` : ''}
     </li>`).join('');
   $('notes-vide').hidden = notes.length > 0;
-  $('form-note').hidden = !estRegie;
+  $('form-note').hidden = !peutEcrire;
 }
 
 function grouper(items) {

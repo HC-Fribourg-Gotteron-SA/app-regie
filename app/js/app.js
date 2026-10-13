@@ -221,13 +221,9 @@ const icone = (nom) => `<svg viewBox="0 0 24 24" width="18" height="18" fill="no
 // Rubriques du menu : un titre, puis les onglets dessous
 const MENU = [
   { titre: 'Jour de match', liens: [
-    { href: 'match-du-jour.html', texte: 'Match du jour', icone: 'match', roles: ['regie', 'admin'] },
+    // animation : Match du jour réduit au bloc « Pour ce soir » (13.10.2026, migration 51)
+    { href: 'match-du-jour.html', texte: 'Match du jour', icone: 'match', roles: ['regie', 'admin', 'animation'] },
     { href: 'run-of-show.html', texte: 'Run of show', icone: 'horaire', roles: ['regie', 'admin', 'sponsoring', 'animation'] },
-  ] },
-  // animation (Stéphane) : fichiers et messages pour un match → « Pour ce soir » de Match du jour (migration 51) ;
-  // rubrique à part (Léa : pas logique dans « Jour de match » à côté du run of show)
-  { titre: 'Animation', liens: [
-    { href: 'pour-le-match.html', texte: 'Envoyer pour un match', icone: 'nouvelle', roles: ['animation'] },
   ] },
   { titre: 'Demandes', liens: [
     { href: 'demandes.html', texte: 'Toutes les demandes', icone: 'demandes', compteur: 'demandes' },
