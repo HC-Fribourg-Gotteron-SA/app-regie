@@ -320,6 +320,8 @@ function afficherDetails() {
   majResume();
   $('details-produits').innerHTML = ids.map(id => {
     const p = etat.produits.get(id), d = detailDe(id);
+    // suppression : pas de visuel à donner (13.10.2026, Léa) → ni fichiers, ni son, ni anneau, ni durée
+    const suppr = typeDemande() === 'suppression';
     const matchs = etat.matchs.length
       ? etat.matchs.map(m => {
           const jour = jourLocal(m.date_heure);
@@ -344,16 +346,17 @@ function afficherDetails() {
           <p class="aide">Cochez le ou les matchs :</p>
           <div class="choix choix-compact">${matchs}</div>
         </div>
+        ${suppr ? '' : `
         ${demandeSon(p) ? `
           <div class="champ-ligne"><span class="etiquette">Son</span> <span class="petit">${texteSon(d)}</span></div>` : ''}
         ${demandeAnneau(p) ? `
           <div class="champ-ligne"><span class="etiquette">Anneau LED</span>${choixOuiNon(id, 'anneau', d.anneau, 'Avec anneau LED', 'Sans anneau LED')}</div>` : ''}
         ${p.famille === 'temps' || d.duree ? `
           <div class="champ-ligne"><span class="etiquette">Durée du spot</span> <span class="petit">${texteDuree(d)}</span></div>` : ''}
-        ${rolesFichiers(p).map(r => zoneFichiers(d, r)).join('')}
+        ${rolesFichiers(p).map(r => zoneFichiers(d, r)).join('')}`}
         <label for="remarque-${id}" class="petit" style="margin-top:.6rem">Remarque Sponsoring</label>
         <textarea id="remarque-${id}" data-champ="remarque" rows="2" style="min-height:0"
-          placeholder="Ex. : remplace l'ancien logo ; version FR et DE…">${echapper(d.remarque)}</textarea>
+          placeholder="${suppr ? 'Ex. : à retirer dès le prochain match ; contrat terminé…' : 'Ex. : remplace l’ancien logo ; version FR et DE…'}">${echapper(d.remarque)}</textarea>
       </div>`;
   }).join('');
 }
@@ -570,6 +573,7 @@ $('form-demande').addEventListener('submit', async (e) => {
     if (d.quand === 'match' && !d.dates.size) {
       return erreur(`${p.nom} : cochez au moins un match, ou choisissez « Toute la saison ».`);
     }
+    if (type === 'suppression') continue;             // rien à fournir pour un retrait
     if (demandeAnneau(p) && !d.anneau) return erreur(`${p.nom} : indiquez si c'est avec ou sans anneau LED.`);
     for (const role of rolesAvecFichiers(d)) {
       const zone = role === 'anneau' ? ' (anneau LED)' : '';
@@ -600,6 +604,10 @@ $('form-demande').addEventListener('submit', async (e) => {
     if (produits.length) {
       const { error: e2 } = await sb.from('demandes_produits').insert(produits.map(produit_id => {
         const d = detailDe(produit_id), p = etat.produits.get(produit_id);
+        if (type === 'suppression') {
+          return { demande_id: demande.id, produit_id, type_vente: d.quand,
+                   dates_matchs: d.quand === 'match' ? [...d.dates].sort() : null, remarque_sponsoring: d.remarque.trim() || null };
+        }
         return {
           avec_son: demandeSon(p) && d.son ? d.son === 'oui' : null,      // lu dans la vidéo ; null = pas encore lu
           avec_anneau: demandeAnneau(p) ? d.anneau === 'oui' : null,
@@ -628,7 +636,7 @@ $('form-demande').addEventListener('submit', async (e) => {
 
     // fichiers des produits (pas de fichiers « hors produit » : tout est rangé par produit)
     const envois = [];
-    for (const id of produits) {
+    for (const id of type === 'suppression' ? [] : produits) {
       const d = detailDe(id);
       for (const role of ['visuel', 'anneau']) {
         if (role === 'anneau' && d.anneau !== 'oui') continue;
