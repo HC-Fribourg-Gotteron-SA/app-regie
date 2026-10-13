@@ -62,7 +62,7 @@ async function charger() {
                  matchs:lignes_matchs(match:matchs(date_heure, adversaire)),
                  emplacements:lignes_emplacements(emplacement:emplacements(anneau, zone, position))`).range(de, a)),
       toutesLesLignes((de, a) => sb.from('assets').select('id, nom_visuel, variante, match_id, storage_path').range(de, a)),
-      sb.from('profiles').select('id, nom, email'),
+      sb.from('profiles').select('id, nom, email, role'),
     ]);
     // dossiers sponsors (fichiers reçus) : proposés quand une diffusion n'a pas de fichier à elle
     try {
@@ -81,6 +81,7 @@ async function charger() {
       .map(l => [l.id, etat.lignes.get(l.ligne_couplee_id)]).filter(([, pub]) => pub));
     etat.assets = new Map(assets.map(a => [a.id, a]));
     etat.personnes = new Map((personnes || []).map(x => [x.id, x.nom || x.email.split('@')[0]]));
+    etat.animation = new Set((personnes || []).filter(x => x.role === 'animation').map(x => x.id));
   } catch (err) {
     $('m-titre').textContent = 'Chargement impossible';
     notifier(err.message, 'erreur');
@@ -363,12 +364,14 @@ function afficherNotes() {
   const qui = (id) => echapper(etat.personnes.get(id) || (estAnimation ? 'Régie' : '—'));
   // supprimer : la Régie tout ; l'animation ses notes pas encore faites
   const peutSupprimer = (n) => estRegie || (estAnimation && n.cree_par === profil.id && !n.fait);
+  // notes de l'animation (Stéphane) mises en avant : badge + liseré (13.10.2026, option A choisie par Léa)
+  const deAnimation = (n) => estAnimation ? n.cree_par === profil.id : etat.animation?.has(n.cree_par);
   $('notes').innerHTML = notes.map(n => `
-    <li class="note note-${n.type}${n.fait ? ' est-fait' : ''}">
+    <li class="note note-${n.type}${n.fait ? ' est-fait' : ''}${deAnimation(n) ? ' note-animation' : ''}">
       ${n.type === 'tache'
         ? `<input type="checkbox" data-note-fait="${n.id}" ${n.fait ? 'checked' : ''} ${estRegie ? '' : 'disabled'} aria-label="Fait">`
         : '<span class="note-icone" aria-hidden="true">📝</span>'}
-      <span class="note-texte">${echapper(n.texte)}
+      <span class="note-texte">${deAnimation(n) ? '<span class="badge badge-animation">🎬 Animation</span> ' : ''}${echapper(n.texte)}
         <span class="doux petit">· ${n.fait ? `fait par ${qui(n.fait_par)} à ${heure(n.fait_le)}` : `${qui(n.cree_par)}, ${dateCourte(n.cree_le)} ${heure(n.cree_le)}`}</span>
         ${(n.fichiers || []).length ? `<span class="note-fichiers">${n.fichiers.map(f => `
           <button type="button" class="btn btn-discret petit" data-telecharger="${echapper(f.chemin)}"
