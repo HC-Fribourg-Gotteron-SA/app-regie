@@ -249,6 +249,10 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    matchs Ladies, sinon **jamais** (Match du jour NL, Run of show NL, Par match, demandes, + Ajouter un sponsor).
    Modèle « Ladies 26/27 » (38 éléments transcrits de la capture, FO 14:45 ; dans la feuille, le Shootout disait
    « avant début overtime » : mis « avant début shootout »).
+   **Migration 53** (même jour, « statement timeout » à l'import des matchs Ladies) : `importer_matchs` ne met plus à
+   jour un match du même jour que s'il est de la même famille (avant : un match Ladies aurait REMPLACÉ le match NL du
+   même jour ; l'erreur a tout annulé) ; Ladies numérotés à part (1001… → affiché « L1 ») ; `tg_match_passages` :
+   renumérotation = seulement les diffusions qui dépendent encore du numéro, rien pour CHL / Ladies.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
@@ -361,7 +365,8 @@ outil-regie/
 │   ├── 49_un_match_sur_deux.sql ← un match sur deux (présence + départ, langue FR / DE) réglable par la Régie
 │   ├── 50_langue_prochain_match.sql ← RPC langue_au_prochain_match : la Régie choisit la langue du prochain match
 │   ├── 51_animation_pour_le_match.sql ← « Pour ce soir » de Match du jour ouvert au rôle animation
-│   └── 52_matchs_ladies.sql ← type de match « Ladies » + modèle de run of show « Ladies 26/27 »
+│   ├── 52_matchs_ladies.sql ← type de match « Ladies » + modèle de run of show « Ladies 26/27 »
+│   └── 53_import_ladies.sql ← import Ladies séparé des matchs NL (même jour), numéros Ladies à part, moins de recalcul
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)

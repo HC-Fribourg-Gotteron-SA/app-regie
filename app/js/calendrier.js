@@ -47,7 +47,7 @@ function afficher() {
   $('vide').hidden = etat.matchs.length > 0;
   $('lignes').innerHTML = etat.matchs.map(m => `
     <tr data-id="${m.id}" class="${new Date(m.date_heure) < maintenant ? 'passe' : ''}">
-      <td>${m.numero}</td>
+      <td>${m.type === 'ladies' && m.numero > 1000 ? `L${m.numero - 1000}` : m.numero}</td>
       <td>${jourSemaine(m.date_heure)} ${dateCourte(m.date_heure)}</td>
       <td>${heureLocale(m.date_heure)}</td>
       <td><strong>${echapper(m.adversaire)}</strong></td>
@@ -172,7 +172,9 @@ function analyserLigne(brute) {
   const s = etat.saison;
   if (ligne.jour < s.debut || ligne.jour > s.fin) ligne.remarques.push(`hors saison ${s.libelle}`);
 
-  const existant = etat.matchs.find(m => jourLocal(m.date_heure) === ligne.jour);
+  // même jour ET même famille (un match Ladies ne remplace jamais le match NL du même jour, migration 53)
+  const existant = etat.matchs.find(m => jourLocal(m.date_heure) === ligne.jour
+    && (m.type === 'ladies') === (ligne.type === 'ladies'));
   if (existant) {
     const identique = heureLocale(existant.date_heure) === ligne.heure
       && existant.adversaire === ligne.adversaire && existant.type === ligne.type;

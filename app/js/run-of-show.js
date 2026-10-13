@@ -108,7 +108,8 @@ function afficher() {
   } else if (etat.match) {
     $('r-surtitre').textContent = ladies ? 'Ladies · Run of show' : 'Run of show';
     $('r-titre').textContent = `${dateCourte(etat.match.date_heure)} · contre ${etat.match.adversaire}`;
-    $('r-sous-titre').textContent = `Match n° ${etat.match.numero ?? ''}${etat.ros?.face_off ? ' · heure du face-off modifiée pour ce match' : ''}`;
+    const numero = etat.match.type === 'ladies' && etat.match.numero > 1000 ? `L${etat.match.numero - 1000}` : etat.match.numero ?? '';
+    $('r-sous-titre').textContent = `Match n° ${numero}${etat.ros?.face_off ? ' · heure du face-off modifiée pour ce match' : ''}`;
   } else {
     $('r-titre').textContent = ladies ? 'Aucun match Ladies au calendrier' : 'Aucun match au calendrier';
     return;
