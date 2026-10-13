@@ -223,8 +223,11 @@ const MENU = [
   { titre: 'Jour de match', liens: [
     { href: 'match-du-jour.html', texte: 'Match du jour', icone: 'match', roles: ['regie', 'admin'] },
     { href: 'run-of-show.html', texte: 'Run of show', icone: 'horaire', roles: ['regie', 'admin', 'sponsoring', 'animation'] },
-    // animation (Stéphane) : fichiers et messages pour un match → « Pour ce soir » de Match du jour (migration 51)
-    { href: 'pour-le-match.html', texte: 'Pour le match', icone: 'nouvelle', roles: ['animation'] },
+  ] },
+  // animation (Stéphane) : fichiers et messages pour un match → « Pour ce soir » de Match du jour (migration 51) ;
+  // rubrique à part (Léa : pas logique dans « Jour de match » à côté du run of show)
+  { titre: 'Animation', liens: [
+    { href: 'pour-le-match.html', texte: 'Envoyer pour un match', icone: 'nouvelle', roles: ['animation'] },
   ] },
   { titre: 'Demandes', liens: [
     { href: 'demandes.html', texte: 'Toutes les demandes', icone: 'demandes', compteur: 'demandes' },
