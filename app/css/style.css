@@ -551,6 +551,10 @@ body:has(.bandeau-test) { box-shadow: inset 0 4px 0 #e0a100; }
 .changement-visuel .changement-verbe { color: var(--info); }
 .changement-demande { background: var(--info-fond); }
 .changement-demande .changement-verbe { color: var(--info); }
+/* retraits mis en avant (13.10.2026, Léa) : demande de suppression et « ➖ Enlever » en rouge, liseré à gauche */
+.changement-retrait { background: var(--erreur-fond); box-shadow: inset 4px 0 0 var(--erreur); }
+.changement-retrait .changement-verbe { color: var(--erreur); }
+.changement-enlever:not(.est-fait) { background: #fff5f5; box-shadow: inset 4px 0 0 var(--erreur); }
 .changement-actions { display: flex; align-items: center; gap: .5rem; flex: none; }
 .case-fait { display: flex; align-items: center; gap: .35rem; margin: 0; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .case-fait input { width: 20px; height: 20px; accent-color: var(--ok); }

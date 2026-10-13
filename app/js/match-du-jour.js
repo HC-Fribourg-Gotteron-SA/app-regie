@@ -435,8 +435,8 @@ function carteDemande(i) {
     a.duree_s ? `${a.duree_s} s` : '',
   ].filter(Boolean);
   return `
-    <div class="changement changement-demande">
-      <div class="changement-icone" aria-hidden="true">📨</div>
+    <div class="changement changement-demande${d.type === 'suppression' ? ' changement-retrait' : ''}">
+      <div class="changement-icone" aria-hidden="true">${d.type === 'suppression' ? '🗑️' : '📨'}</div>
       <div class="changement-texte">
         <div><span class="changement-verbe">${VERBE_DEMANDE[d.type] || 'Nouveau'}</span> · <strong>${echapper(i.sponsor)}</strong>
           <span class="doux petit">(demande reçue le ${dateCourte(d.created_at)})</span></div>
