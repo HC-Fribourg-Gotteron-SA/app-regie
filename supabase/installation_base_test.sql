@@ -1,7 +1,7 @@
 -- =====================================================================
 -- INSTALLATION COMPLÈTE d'une base neuve (base de TEST) — généré par outils/installation-base-test.mjs
 -- À exécuter UNE fois dans le SQL Editor du projet de test (jamais sur la vraie base).
--- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50.
+-- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51.
 -- Ensuite : créer son compte (Authentication > Users), se mettre admin (voir en bas),
 -- importer le calendrier dans l'outil (.ics), puis lancer supabase/demo_donnees_test.sql.
 -- =====================================================================
@@ -4185,6 +4185,48 @@ end $$;
 select 'Migration 50 OK : langue du prochain match réglable' as "Résultat";
 
 
+-- #####################################################################
+-- 51_animation_pour_le_match.sql
+-- #####################################################################
+-- =====================================================================
+-- 51 — « Pour le match » : le rôle animation (Stéphane) envoie fichiers et messages dans Match du jour
+-- À exécuter une fois dans Supabase > SQL Editor, APRÈS la 41, sur la base de TEST puis sur la vraie base.
+-- Peut être exécuté plusieurs fois.
+-- =====================================================================
+-- Léa (13.10.2026) : Stéphane (animation) glisse souvent des choses pour les matchs, dont les visuels des
+-- anniversaires (images et vidéos, 3-4 au plus, à tout moment). Page « Pour le match » : il choisit le match, glisse
+-- ses fichiers + un mot → une TÂCHE dans « Pour ce soir » de Match du jour (fichiers à télécharger), que la Régie
+-- coche quand c'est fait. Il ne voit que SES envois (et s'ils sont faits) ; il ne voit pas le reste de l'outil.
+
+-- notes_match : ses propres tâches seulement
+drop policy if exists notes_match_animation_lecture on notes_match;
+drop policy if exists notes_match_animation_ajout on notes_match;
+drop policy if exists notes_match_animation_maj on notes_match;
+drop policy if exists notes_match_animation_suppr on notes_match;
+create policy notes_match_animation_lecture on notes_match for select to authenticated
+  using (mon_role()::text = 'animation' and cree_par = auth.uid());
+create policy notes_match_animation_ajout on notes_match for insert to authenticated
+  with check (mon_role()::text = 'animation' and cree_par = auth.uid() and type = 'tache' and not fait);
+create policy notes_match_animation_maj on notes_match for update to authenticated          -- rattacher ses fichiers
+  using (mon_role()::text = 'animation' and cree_par = auth.uid() and not fait)
+  with check (mon_role()::text = 'animation' and cree_par = auth.uid() and not fait);
+create policy notes_match_animation_suppr on notes_match for delete to authenticated
+  using (mon_role()::text = 'animation' and cree_par = auth.uid() and not fait);
+
+-- fichiers : seulement sous notes/… (bucket assets)
+drop policy if exists assets_notes_animation_depot on storage.objects;
+drop policy if exists assets_notes_animation_lecture on storage.objects;
+drop policy if exists assets_notes_animation_suppr on storage.objects;
+create policy assets_notes_animation_depot on storage.objects for insert to authenticated
+  with check (bucket_id = 'assets' and name like 'notes/%' and mon_role()::text = 'animation');
+create policy assets_notes_animation_lecture on storage.objects for select to authenticated
+  using (bucket_id = 'assets' and name like 'notes/%' and mon_role()::text = 'animation' and owner = auth.uid());
+create policy assets_notes_animation_suppr on storage.objects for delete to authenticated
+  using (bucket_id = 'assets' and name like 'notes/%' and mon_role()::text = 'animation' and owner = auth.uid());
+
+select 'Migration 51 OK : le rôle animation peut envoyer des fichiers pour un match' as "Résultat";
+
+
 -- Après avoir créé ton compte dans Authentication > Users, lance ceci séparément :
 -- update profiles set role = 'admin', nom = 'Léa Talon' where email = 'lea.talon@fribourg-gotteron.ch';
-select 'Installation terminée : 48 fichiers.' as "Résultat";
+select 'Installation terminée : 49 fichiers.' as "Résultat";

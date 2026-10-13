@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pour le match — Sponsoring ↔ Régie</title>
+  <link rel="icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <div class="titre-page">
+      <div>
+        <div class="surtitre">Animation</div>
+        <h1>Pour le match</h1>
+        <p class="doux">Visuels d'anniversaire, vidéos, infos… : envoyez-les à la Régie, ils arrivent dans « Pour ce soir » du match.</p>
+      </div>
+    </div>
+
+    <section class="carte" style="margin-bottom:1.75rem">
+      <form id="form-envoi">
+        <div class="champ">
+          <label for="choix-match">Pour quel match ?</label>
+          <select id="choix-match" style="max-width:26rem"></select>
+        </div>
+        <div class="champ">
+          <label for="texte">Message <span class="doux petit">(facultatif)</span></label>
+          <input type="text" id="texte" maxlength="500" placeholder="Ex. : anniversaires · à passer pendant la 1re pause">
+        </div>
+        <div class="champ">
+          <div class="zone-depot" id="depot">
+            📎 Glissez les fichiers ou un dossier ici, ou <u>cliquez pour choisir</u>
+            <div class="petit doux">Images et vidéos, 50 Mo au maximum par fichier</div>
+            <input type="file" id="fichiers" multiple hidden>
+          </div>
+          <ul class="liste-fichiers" id="choisis" hidden></ul>
+        </div>
+        <button type="submit" class="btn btn-principal" id="btn-envoyer">Envoyer à la Régie</button>
+      </form>
+    </section>
+
+    <section>
+      <h3>Déjà envoyé pour ce match <span class="doux" id="nb-envois"></span></h3>
+      <ul class="notes-match" id="envois"></ul>
+      <p class="doux petit" id="envois-vide" hidden>Rien envoyé pour ce match pour l'instant.</p>
+    </section>
+  </main>
+  <script type="module" src="js/pour-le-match.js"></script>
+</body>
+</html>
