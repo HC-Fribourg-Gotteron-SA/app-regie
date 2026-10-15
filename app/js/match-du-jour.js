@@ -510,9 +510,12 @@ function carteChangement(i) {
   // visuel connu seulement par son nom (import Airtable, démo) : pas de fichier à télécharger
   // pas de fichier sur la diffusion : on propose les fichiers du dossier du sponsor (ceux de ce produit d'abord)
   const sponsorId = i.l?.contrat?.sponsor_id;
-  const dossier = i.action !== 'enlever' && !a?.storage_path && sponsorId ? (etat.dossiers.get(sponsorId) || [])
+  // langue / version du soir : les lignes sont déjà dans Colosseo, on les active / désactive → pas de fichiers
+  // (15.10.2026, Léa)
+  const sansFichiers = i.action === 'enlever' || !!i.version;
+  const dossier = !sansFichiers && !a?.storage_path && sponsorId ? (etat.dossiers.get(sponsorId) || [])
     .slice().sort((x, y) => (y.produit_id === i.l?.produit_id) - (x.produit_id === i.l?.produit_id)) : [];
-  const sansFichier = i.action !== 'enlever' && i.asset_id && !a?.storage_path && !dossier.length
+  const sansFichier = !sansFichiers && i.asset_id && !a?.storage_path && !dossier.length
     ? ' <span class="doux petit">· fichier pas dans l’outil</span>' : '';
   const fichiersDossier = dossier.length ? `
     <div class="petit" style="margin-top:.3rem">Dans le dossier du sponsor :</div>
@@ -536,7 +539,7 @@ function carteChangement(i) {
         ${fait ? `<div class="petit doux">Fait dans Colosseo par ${echapper(etat.personnes.get(fait.fait_par) || '—')} à ${heure(fait.fait_le)}</div>` : ''}
       </div>
       <div class="changement-actions">
-        ${a?.storage_path && i.action !== 'enlever' ? `<button type="button" class="btn btn-discret" data-telecharger="${echapper(a.storage_path)}">Télécharger</button>` : ''}
+        ${a?.storage_path && !sansFichiers ? `<button type="button" class="btn btn-discret" data-telecharger="${echapper(a.storage_path)}">Télécharger</button>` : ''}
         ${i.l ? `<button type="button" class="btn btn-discret" data-ouvrir="${i.ligne_id}|${i.action}"
           title="Fichiers, matchs, remarques…">Détails</button>` : ''}
         ${estRegie && i.l && i.action !== 'enlever' && !fait ? `<button type="button" class="btn btn-discret btn-danger"
