@@ -125,38 +125,39 @@ function vueProgramme() {
   const debut = new Date(); debut.setHours(0, 0, 0, 0);
   const aVenir = etat.matchs.filter(m => new Date(m.date_heure) >= debut);
   const passes = etat.matchs.filter(m => new Date(m.date_heure) < debut && parMatch.has(m.id)).reverse();
-  const blocMatch = (m) => {
+  // une carte par match (choix de Léa, 16.10.2026) : ses pubs dessous, compteur « N / 3 » bien visible
+  const carteMatch = (m) => {
     const liste = parMatch.get(m.id) || [];
     const actifs = liste.filter(el => el.statut === 'actif');
-    const pleines = actifs.filter(el => el.format === 'pleine').length;
+    const trop = actifs.length > MAX_PUBS_PROGRAMME;
+    const restent = actifs.filter(el => !el.fait?.programme).length;
     return `
-      <tr class="rangee-titre"><td colspan="5">
-        ${dateCourte(m.date_heure)} · ${echapper(m.adversaire)}
-        <span class="doux">· ${actifs.length} pub${actifs.length > 1 ? 's' : ''}${actifs.length ? ` (${pleines} page${pleines > 1 ? 's' : ''} pleine${pleines > 1 ? 's' : ''}, ${actifs.length - pleines} demi)` : ''}</span>
-        ${actifs.length > MAX_PUBS_PROGRAMME ? `<span class="badge badge-suppression">⚠ plus de ${MAX_PUBS_PROGRAMME} pubs</span>` : ''}
-      </td></tr>
-      ${liste.length ? liste.map(el => `
-        <tr class="${el.statut === 'retire' && el.fait?.retiree ? 'passe' : ''}">
-          <td>${sponsor(el)}${remarque(el)}</td>
-          <td>${el.format === 'pleine' ? 'Page pleine' : el.format === 'demi' ? 'Demi-page' : '—'}</td>
-          <td>${fichiers(el)}</td>
-          <td>${cases(el)}</td>
-          <td>${commentaire(el)}</td>
-        </tr>`).join('') : '<tr><td colspan="5" class="doux petit">Aucune pub</td></tr>'}`;
+      <section class="carte carte-programme${trop ? ' trop' : ''}">
+        <div class="programme-entete">
+          <strong>${dateCourte(m.date_heure)} · ${echapper(m.adversaire)}</strong>
+          ${restent ? `<span class="doux petit">${restent} à mettre</span>` : actifs.length ? '<span class="petit" style="color:var(--ok)">✓ tout est mis</span>' : ''}
+          <span class="espace"></span>
+          <span class="badge ${trop ? 'badge-suppression' : actifs.length === MAX_PUBS_PROGRAMME ? 'badge-a-venir' : ''}">
+            ${trop ? '⚠ ' : ''}${actifs.length} / ${MAX_PUBS_PROGRAMME} pubs</span>
+        </div>
+        ${liste.length ? liste.map(el => `
+          <div class="programme-pub${el.statut === 'retire' && el.fait?.retiree ? ' passe' : ''}">
+            <div class="programme-sponsor">${sponsor(el)}${remarque(el)}</div>
+            <span class="badge">${el.format === 'pleine' ? 'Page pleine' : el.format === 'demi' ? 'Demi-page' : 'format ?'}</span>
+            <div>${fichiers(el)}</div>
+            <div>${cases(el)}</div>
+            <div class="programme-commentaire">${commentaire(el)}</div>
+          </div>`).join('') : '<p class="doux petit" style="margin:.4rem 0 0">Aucune pub</p>'}
+      </section>`;
   };
   const nbAlertes = aVenir.filter(m => (parMatch.get(m.id) || []).filter(el => el.statut === 'actif').length > MAX_PUBS_PROGRAMME).length;
   $('resume').textContent = `${aVenir.length} match${aVenir.length > 1 ? 's' : ''} à venir`
     + (nbAlertes ? ` · ⚠ ${nbAlertes} avec plus de ${MAX_PUBS_PROGRAMME} pubs` : '');
   return `
-    <div class="carte" style="padding:0;overflow:hidden"><div class="tableau-conteneur">
-      <table class="tableau non-cliquable">
-        <thead><tr><th>Sponsor</th><th>Format</th><th>Fichier</th><th>C'est mis</th><th>Commentaire</th></tr></thead>
-        <tbody>${aVenir.map(blocMatch).join('') || '<tr><td colspan="5" class="vide">Aucun match à venir.</td></tr>'}</tbody>
-      </table>
-    </div></div>
+    ${aVenir.map(carteMatch).join('') || '<p class="vide">Aucun match à venir.</p>'}
     ${passes.length ? `
-      <details class="carte" style="margin-top:1rem"><summary><strong>Matchs passés</strong> <span class="doux">· ${passes.length}</span></summary>
-        <div class="tableau-conteneur"><table class="tableau non-cliquable"><tbody>${passes.map(blocMatch).join('')}</tbody></table></div>
+      <details style="margin-top:1rem"><summary><strong>Matchs passés</strong> <span class="doux">· ${passes.length}</span></summary>
+        ${passes.map(carteMatch).join('')}
       </details>` : ''}`;
 }
 

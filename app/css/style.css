@@ -610,6 +610,17 @@ body:has(.bandeau-test) { box-shadow: inset 0 4px 0 #e0a100; }
   white-space: pre-wrap; pointer-events: none; }
 .bulle-remarque[hidden] { display: none; }
 td .etat-attente { display: inline-block; }
+/* Digital · Programme de match : une carte par match (digital.js) */
+.carte-programme { margin-bottom: .9rem; padding: .9rem 1.1rem; }
+.carte-programme.trop { box-shadow: inset 5px 0 0 var(--erreur), var(--ombre); }
+.programme-entete { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; font-size: 1.05rem; }
+.programme-entete .espace { flex: 1; }
+.programme-entete .badge { font-size: .85rem; }
+.programme-pub { display: grid; grid-template-columns: minmax(12rem, 1.4fr) auto minmax(8rem, 1fr) auto minmax(12rem, 1.2fr);
+  gap: .5rem .9rem; align-items: center; padding: .6rem 0 0; margin-top: .6rem; border-top: 1px solid var(--bordure); }
+.programme-pub.passe { color: var(--texte-doux); }
+.programme-commentaire textarea { width: 100%; min-width: 0 !important; }
+@media (max-width: 860px) { .programme-pub { grid-template-columns: 1fr auto; } .programme-commentaire { grid-column: 1 / -1; } }
 .tableau-diffusions tr.rangee-slides td { background: var(--info-fond); }
 .tableau-diffusions tr.rangee-slides td:first-child { box-shadow: inset 4px 0 0 var(--info); }
 .ligne-desactivation { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-top: .8rem; }
