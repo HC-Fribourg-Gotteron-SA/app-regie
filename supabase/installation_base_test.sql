@@ -1,7 +1,7 @@
 -- =====================================================================
 -- INSTALLATION COMPLÈTE d'une base neuve (base de TEST) — généré par outils/installation-base-test.mjs
 -- À exécuter UNE fois dans le SQL Editor du projet de test (jamais sur la vraie base).
--- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55.
+-- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56.
 -- Ensuite : créer son compte (Authentication > Users), se mettre admin (voir en bas),
 -- importer le calendrier dans l'outil (.ics), puis lancer supabase/demo_donnees_test.sql.
 -- =====================================================================
@@ -4660,6 +4660,49 @@ select (select count(*) from produits where espace = 'digital') as "Produits Dig
        (select count(*) from profiles where 'digital' = any (espaces)) as "Comptes avec l'espace Digital";
 
 
+-- #####################################################################
+-- 56_parrainages_actuels.sql
+-- #####################################################################
+-- =====================================================================
+-- 56 — Parrainages joueurs actuels (capture d'Airtable envoyée par Léa le 16.10.2026)
+-- À exécuter APRÈS la 55, sur la base de TEST puis sur la vraie base. Peut être exécuté plusieurs fois.
+-- =====================================================================
+-- Sponsor repris s'il existe déjà (nom ou alias, sans accents ni majuscules), sinon créé.
+-- Cases « c'est mis » laissées vides : à cocher sur la page Parrainages joueurs.
+do $x$
+declare
+  r          record;
+  v_sponsor  uuid;
+  v_joueur   uuid;
+  v_produit  uuid := (select id from produits where nom = 'Parrainage joueur');
+begin
+  if v_produit is null then raise exception 'Exécutez d''abord la migration 55'; end if;
+  for r in select * from (values
+    ('Solsystems', 39), ('Kingnature', 37), ('Laiterie-Fromagerie d''Arconciel', 97),
+    ('Net26', 23), ('Marmy', 9), ('HKM', 93)
+  ) as v(sponsor, numero) loop
+    select id into v_sponsor from sponsors s
+    where lower(sans_accent(s.nom)) = lower(sans_accent(r.sponsor))
+       or exists (select 1 from unnest(s.alias) a where lower(sans_accent(a)) = lower(sans_accent(r.sponsor)))
+    order by s.created_at limit 1;
+    if v_sponsor is null then
+      insert into sponsors (nom) values (r.sponsor) returning id into v_sponsor;
+    end if;
+    select id into v_joueur from joueurs where numero = r.numero and actif;
+    if v_joueur is null then raise exception 'Joueur n° % introuvable', r.numero; end if;
+    insert into digital_elements (produit_id, sponsor_id, joueur_id, remarque)
+    select v_produit, v_sponsor, v_joueur, 'Repris d''Airtable'
+    where not exists (select 1 from digital_elements e
+                      where e.produit_id = v_produit and e.joueur_id = v_joueur and e.sponsor_id = v_sponsor);
+  end loop;
+end $x$;
+
+select j.numero as "N°", j.prenom || ' ' || j.nom as "Joueur", s.nom as "Parrain"
+from digital_elements e join joueurs j on j.id = e.joueur_id join sponsors s on s.id = e.sponsor_id
+where e.produit_id = (select id from produits where nom = 'Parrainage joueur') and e.statut = 'actif'
+order by j.numero;
+
+
 -- Après avoir créé ton compte dans Authentication > Users, lance ceci séparément :
 -- update profiles set role = 'admin', nom = 'Léa Talon' where email = 'lea.talon@fribourg-gotteron.ch';
-select 'Installation terminée : 53 fichiers.' as "Résultat";
+select 'Installation terminée : 54 fichiers.' as "Résultat";
