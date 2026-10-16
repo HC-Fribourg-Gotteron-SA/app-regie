@@ -253,6 +253,16 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    jour un match du même jour que s'il est de la même famille (avant : un match Ladies aurait REMPLACÉ le match NL du
    même jour ; l'erreur a tout annulé) ; Ladies numérotés à part (1001… → affiché « L1 ») ; `tg_match_passages` :
    renumérotation = seulement les diffusions qui dépendent encore du numéro, rien pour CHL / Ladies.
+0-novemdecies. **Espace Digital (16.10.2026, « vasy » de Léa ; migration 55 à exécuter sur les deux bases, pas encore
+   testé)**. Léa gère aussi le digital (avant : Airtable), toujours reçu du Sponsoring par **la même demande**. 3 produits
+   `espace = 'digital'` (catégorie Digital) : **Programme de match** (matchs cochés + page pleine / demi-page, alerte
+   au-delà de **3 pubs par programme**, quelle que soit la taille), **Bannière app** (du … au …), **Parrainage joueur**
+   (joueur choisi dans `joueurs` = contingent 26/27 du site, toute la saison ; cases Vidéotron / App / Site / Programme).
+   Ajouter = RPC `traiter_digital` → `digital_elements` (programme : un par match ; `fait` jsonb = cases « c'est mis » ;
+   retrait → `statut = retire` + case « Enlevé ») ; **aucune diffusion / passage**. Page `digital.html?vue=programme|app|parrainage`
+   (« À ajouter » = carte de traitement de traitement.js). Invisible pour la Régie : fiches, onglets, Match du jour, Par
+   match. Qui voit : `profiles.espaces` (admin + Sponsoring = `{regie,digital}`), menu « Digital » filtré. Pas de date
+   limite pour le programme (question restée sans réponse). **Plus tard** : tuiles d'accueil + choix de l'espace.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
@@ -366,7 +376,9 @@ outil-regie/
 │   ├── 50_langue_prochain_match.sql ← RPC langue_au_prochain_match : la Régie choisit la langue du prochain match
 │   ├── 51_animation_pour_le_match.sql ← « Pour ce soir » de Match du jour ouvert au rôle animation
 │   ├── 52_matchs_ladies.sql ← type de match « Ladies » + modèle de run of show « Ladies 26/27 »
-│   └── 53_import_ladies.sql ← import Ladies séparé des matchs NL (même jour), numéros Ladies à part, moins de recalcul
+│   ├── 53_import_ladies.sql ← import Ladies séparé des matchs NL (même jour), numéros Ladies à part, moins de recalcul
+│   ├── 54_leguriviera_spots.sql ← Leguriviera : versions « Spot chef » / « Spot normal »
+│   └── 55_espace_digital.sql ← espace Digital : produits.espace, joueurs, digital_elements, traiter_digital, profiles.espaces
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
@@ -379,6 +391,7 @@ outil-regie/
     ├── produit.html / js/produit.js        ← fiche d'UN produit (?id=…) : « À ajouter » + sponsors du produit
     ├── categorie.html / js/categorie.js    ← une catégorie sur une page (?c=Action%20scenes) : toutes les scènes + sponsor
     ├── match-du-jour.html / js/match-du-jour.js ← « Match du jour » : à faire dans Colosseo + playlist (accueil Régie)
+    ├── digital.html / js/digital.js        ← espace Digital (?vue=programme|app|parrainage), comptes avec l'espace Digital
     ├── run-of-show.html / js/run-of-show.js ← run of show d'un match ou d'un modèle (Régie modifie, tous consultent)
     ├── js/ros-calcul.js   ← calcul pur des heures du run of show (testable dans Node)
     ├── js/changements.js  ← calcul pur des changements entre 2 matchs (testable dans Node)

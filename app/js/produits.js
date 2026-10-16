@@ -9,14 +9,13 @@ const etat = { produits: [], sponsors: new Map(), aAjouter: new Map(), recherche
 
 async function charger() {
   const [{ data: produits, error }, { data: lignes }, { data: attente }] = await Promise.all([
-    sb.from('produits').select('id, nom, categorie, famille, support, moment_defaut, mode_vente, emplacements_requis')
-      .eq('actif', true).order('ordre').order('categorie').order('nom'),
+    sb.from('produits').select('*').eq('actif', true).order('ordre').order('categorie').order('nom'),
     sb.from('lignes_vendues').select('produit_id, contrat:contrats(sponsor_id)').not('statut', 'in', '(annule,termine)'),
     sb.from('demandes_produits').select('produit_id, demande:demandes!inner(statut)')
       .is('traite_le', null).neq('demande.statut', 'traitee'),
   ]);
   if (error) { notifier(`Chargement impossible : ${error.message}`, 'erreur'); return; }
-  etat.produits = produits;
+  etat.produits = produits.filter(p => p.espace !== 'digital');     // espace Digital : ses propres pages
 
   // nombre de sponsors différents par produit
   const parProduit = new Map();

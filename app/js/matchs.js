@@ -34,7 +34,7 @@ async function charger() {
         ligne:lignes_vendues!inner(id, statut, avec_son, type_vente, ligne_couplee_id, priorite,
           produit:produits(id, nom, ordre, actif), contrat:contrats(sponsor:sponsors(nom)))`)
       .eq('ligne.type_vente', 'match').not('ligne.statut', 'in', '(annule,termine)'),
-    sb.from('demandes_produits').select(`dates_matchs, produit:produits(id, nom, ordre),
+    sb.from('demandes_produits').select(`dates_matchs, produit:produits(*),
         demande:demandes!inner(id, statut, sponsor_nom_saisi, sponsor:sponsors(nom))`)
       .eq('type_vente', 'match').is('traite_le', null).neq('demande.statut', 'traitee'),
   ]);
@@ -49,6 +49,7 @@ async function charger() {
   }
   etat.attente = new Map();
   for (const a of attente || []) {
+    if (a.produit?.espace === 'digital') continue;      // espace Digital : pas la Régie (migration 55)
     for (const j of a.dates_matchs || []) {
       if (!etat.attente.has(j)) etat.attente.set(j, []);
       etat.attente.get(j).push(a);

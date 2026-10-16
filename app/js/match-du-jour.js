@@ -173,7 +173,7 @@ async function chargerMatch() {
     // produits de demandes pas encore ajoutés sur leur fiche (« * » : aussi les versions FR / DE des migrations 34 / 36)
     sb.from('demandes_produits')
       .select(`*,
-               produit:produits(id, nom, ordre, famille, support),
+               produit:produits(*),
                demande:demandes!inner(id, type, statut, created_at, sponsor_nom_saisi, sponsor:sponsors(nom))`)
       .is('traite_le', null).neq('demande.statut', 'traitee'),
     // demandes traitées : restent affichées, grisées (demandé par Léa). Celles traitées depuis le match précédent
@@ -182,7 +182,7 @@ async function chargerMatch() {
     sb.from('demandes_produits')
       .select(`demande_id, produit_id, type_vente, dates_matchs, avec_son, avec_anneau, duree_s, remarque_sponsoring,
                ligne_id, suite, traite_le, traite_par,
-               produit:produits(id, nom, ordre, famille, support),
+               produit:produits(*),
                demande:demandes!inner(id, type, statut, created_at, sponsor_nom_saisi, sponsor:sponsors(nom))`)
       .not('traite_le', 'is', null)
       .or(`and(traite_le.gte."${(etat.precedent ? new Date(etat.precedent.date_heure) : new Date(new Date(m.date_heure) - 7 * 864e5)).toISOString()}",`
@@ -197,7 +197,9 @@ async function chargerMatch() {
   const jourMatch = jourLocal(m.date_heure);
   etat.attente = attente || [];
   // Champions League = une autre playlist : les demandes « toute la saison » ne la concernent pas (Léa, 05.10.2026)
-  const pourCeMatch = (a) => a.type_vente === 'match' ? (a.dates_matchs || []).includes(jourMatch) : !estChl(m);
+  // espace Digital (programme, app, parrainage ; migration 55) : rien à faire dans Colosseo
+  const pourCeMatch = (a) => a.produit?.espace !== 'digital'
+    && (a.type_vente === 'match' ? (a.dates_matchs || []).includes(jourMatch) : !estChl(m));
   etat.demandesMatch = etat.attente.filter(pourCeMatch);
   // déjà traitées pour ce match : affichées grisées sous les demandes à traiter (demandé par Léa)
   // … sauf celles traitées avant le match précédent dont la diffusion passait déjà à ce match-là : rien à faire

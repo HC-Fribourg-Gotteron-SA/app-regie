@@ -1,5 +1,5 @@
 import { sb, exigerConnexion, LIBELLES, echapper, dateCourte, dateHeure, notifier, debounce, taille, libelleFichier,
-         depuis, initiales } from './app.js';
+         depuis, initiales, vueDigital } from './app.js';
 import { carteTraitement, CHAMPS_A_TRAITER, ajouterFichierDemande, boutonAjoutFichier, supprimerDemande,
          boutonSupprimerFichier, confirmerSuppressionFichier } from './traitement.js';
 
@@ -45,7 +45,7 @@ async function charger() {
   const [{ data, error }, { data: personnes }, { data: matchs }] = await Promise.all([
     sb.from('demandes')
       .select(`*, sponsor:sponsors(id, nom),
-               produits:demandes_produits(*, produit:produits(id, nom, famille, support)),
+               produits:demandes_produits(*, produit:produits(*)),
                match_effet:matchs(numero, date_heure, adversaire),
                saison:saisons(libelle)`)
       .order('created_at', { ascending: false }),
@@ -106,7 +106,7 @@ function blocProduits(d) {
         ${x.traite_le
           ? `✓ ${SUITES[x.suite] || 'Traité'} le ${dateHeure(x.traite_le)} par ${echapper(etat.personnes.get(x.traite_par) || '—')}`
           : x.a_corriger ? '⚠ Fichier à refaire' : `En attente de la Régie`}
-        <a href="produit.html?id=${x.produit?.id}">Ouvrir la fiche →</a>
+        <a href="${vueDigital(x.produit) ? `digital.html?vue=${vueDigital(x.produit)}` : `produit.html?id=${x.produit?.id}`}">Ouvrir la fiche →</a>
       </div>
       ${x.a_corriger && !x.traite_le ? `<p class="message message-erreur petit">⚠ <strong>La Régie ne peut pas utiliser le fichier</strong>${
         x.a_corriger_le ? ` (le ${dateCourte(x.a_corriger_le)})` : ''} : ${echapper(x.a_corriger)}<br>

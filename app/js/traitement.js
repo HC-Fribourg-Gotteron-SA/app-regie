@@ -2,7 +2,7 @@
 // La même carte partout (décidé par Léa le 01.10.2026) : fiche produit (« À ajouter »), détail d'une demande
 // (et donc depuis Match du jour, qui ouvre la demande). Fichiers, contrôle des dimensions, plan LED, remarques.
 import { sb, LIBELLES, echapper, dateCourte, notifier, taille, libelleFichier, depuis, dimensionsAttendues,
-         nomFichierSur, alertesFichier, specsProduit, devinerVersion } from './app.js';
+         nomFichierSur, alertesFichier, specsProduit, devinerVersion, vueDigital } from './app.js';
 import { analyserSon, LIBELLE_SON } from './son-video.js';
 
 // Colonnes d'un produit de demande à traiter (demandes_produits + sa demande)
@@ -15,6 +15,7 @@ const pad = (n) => String(n).padStart(2, '0');
 const jourLocal = (d) => { const x = new Date(d); return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`; };
 const normaliser = (t) => (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const nomSponsor = (d) => d.sponsor?.nom || d.sponsor_nom_saisi || '—';
+const nomJoueur = (j) => j ? `${j.numero ?? ''} · ${j.prenom} ${j.nom}`.replace(/^ · /, '') : 'Joueur ?';
 const STATUT_LIGNE = { fichiers_attendus: 'fichier attendu', a_valider: 'visuel à valider', valide: 'validé', programme: 'à l’écran', vendu: 'vendu' };
 
 // ---------------------------------------------------------------------
@@ -44,6 +45,15 @@ function contexte(produitId) {
     if (!adversaires) {
       const { data: matchs } = await sb.from('matchs').select('date_heure, adversaire');
       adversaires = new Map((matchs || []).map(m => [jourLocal(m.date_heure), m.adversaire]));
+    }
+    // espace Digital (migration 55) : joueurs (parrainage) et éléments en cours (au lieu des diffusions)
+    if (vueDigital(p)) {
+      const [{ data: joueurs }, { data: elements }] = await Promise.all([
+        sb.from('joueurs').select('id, numero, prenom, nom'),
+        sb.from('digital_elements').select('id, sponsor_id, match_id').eq('produit_id', produitId).eq('statut', 'actif'),
+      ]);
+      return { p, anneau, lignes: [], emplacements, couplees: new Map(),
+               joueurs: new Map((joueurs || []).map(j => [j.id, j])), elements: elements || [] };
     }
     // diffusions de l'anneau LED couplées (leur règle « un match sur deux » est à part)
     const idsCouplees = (lignes || []).map(l => l.ligne_couplee_id).filter(Boolean);
@@ -105,7 +115,7 @@ function dessiner(k) {
   el.innerHTML = `
     <div class="suivi-produit">
       ${a.ligne_id ? '📎 Nouveau fichier ajouté après coup : à mettre sur la diffusion' : d.type === 'suppression' ? 'Retrait à faire' : 'À ajouter'}
-      ${options.mode === 'demande' ? `<a href="produit.html?id=${p.id}">Ouvrir la fiche →</a>`
+      ${options.mode === 'demande' ? `<a href="${vueDigital(p) ? `digital.html?vue=${vueDigital(p)}` : `produit.html?id=${p.id}`}">Ouvrir la fiche →</a>`
                                    : `<a href="demandes.html?id=${d.id}">Voir la demande →</a>`}
     </div>
     <div class="detail-entete">
@@ -114,6 +124,9 @@ function dessiner(k) {
       ${a.avec_son === true ? '<span class="badge badge-son">Avec son</span>' : a.avec_son === false ? '<span class="badge">Sans son</span>' : ''}
       ${a.avec_anneau === true ? '<span class="badge badge-son">+ Anneau LED</span>' : a.avec_anneau === false ? '<span class="badge">Sans anneau LED</span>' : ''}
       ${a.duree_s ? `<span class="badge">${a.duree_s} s</span>` : ''}
+      ${a.format ? `<span class="badge badge-son">${a.format === 'pleine' ? 'Page pleine' : 'Demi-page'}</span>` : ''}
+      ${a.du || a.au ? `<span class="badge badge-son">du ${a.du ? dateCourte(a.du + 'T12:00') : '?'} au ${a.au ? dateCourte(a.au + 'T12:00') : '?'}</span>` : ''}
+      ${a.joueur_id ? `<span class="badge badge-son">${echapper(nomJoueur(ctx.joueurs?.get(a.joueur_id)))}</span>` : ''}
       ${options.mode === 'produit' ? `<span class="doux petit description">Reçue ${depuis(d.created_at)}${d.statut === 'question' ? ' · <strong>question en cours au Sponsoring</strong>' : ''}</span>` : ''}
     </div>
     ${a.a_corriger ? `<p class="message message-erreur petit">⚠ <strong>Fichier à refaire</strong>${a.a_corriger_le
@@ -157,7 +170,17 @@ function actions(c, existantes) {
       ${l.type_vente === 'saison' ? 'Saison' : 'Au match'} · ${STATUT_LIGNE[l.statut] || l.statut} · depuis le ${dateCourte(l.created_at)}</option>`).join('')}
     </select>` : '';
   let principal;
-  if (a.ligne_id) {
+  if (vueDigital(c.ctx.p)) {
+    // espace Digital : pas de diffusion, des éléments (programme : un par match)
+    const enCours = c.ctx.elements.filter(x => d.sponsor_id && x.sponsor_id === d.sponsor_id).length;
+    principal = d.type === 'suppression'
+      ? (enCours ? '<button type="button" class="btn btn-principal" data-suite="retire">Retirer</button>'
+                 : `<span class="petit doux">Ce sponsor n'a pas ce produit dans l'outil.</span>
+                    <button type="button" class="btn btn-principal" data-suite="ignore">Marquer comme fait</button>`)
+      : d.type === 'changement_visuel' && enCours
+        ? '<button type="button" class="btn btn-principal" data-suite="visuel">Mettre le nouveau visuel</button>'
+        : '<button type="button" class="btn btn-principal" data-suite="ajoute">Ajouter ✓</button>';
+  } else if (a.ligne_id) {
     principal = `<button type="button" class="btn btn-principal" data-suite="visuel">Mettre le nouveau visuel</button>`;
   } else if (d.type === 'suppression') {
     principal = existantes.length
@@ -380,6 +403,8 @@ export async function supprimerDemande(demandeId) {
     const { error: e2 } = e1 ? { error: e1 } : await sb.from('lignes_vendues').update({ demande_id: null }).in('id', ids);
     if (e2) throw new Error(`Suppression impossible : ${e2.message}`);
   }
+  // espace Digital (migration 55) : les éléments créés par la demande partent avec elle (leurs fichiers aussi)
+  await sb.from('digital_elements').delete().eq('demande_id', demandeId);
   await effacerFichiers(await fichiersDe(`demandes/${demandeId}`));
   const { error } = await sb.from('demandes').delete().eq('id', demandeId);
   if (error) throw new Error(`Suppression impossible : ${error.message}`);
@@ -638,6 +663,21 @@ async function traiter(k, suite, bouton) {
         + 'Un fichier sans la bonne version ne passera pas dans l’alternance. Continuer quand même ?')) return;
 
   bouton.disabled = true;
+  if (vueDigital(p)) {
+    const { data, error } = await sb.rpc('traiter_digital', {
+      p_demande: a.demande_id, p_produit: a.produit_id, p_suite: suite,
+      p_fichiers: ['ajoute', 'visuel'].includes(suite)
+        ? nouveaux.map(f => ({ chemin: f.storage_path, nom: f.nomCourt, taille: f.taille_octets })) : [],
+    });
+    bouton.disabled = false;
+    if (error) return notifier(`Impossible (rien n'a été modifié) : ${error.message}`, 'erreur');
+    notifier(`${{ ajoute: 'Ajouté', visuel: 'Nouveau visuel mis', retire: 'Retiré', ignore: 'Marqué comme fait' }[suite]} · ${p.nom}`
+      + (data?.demande_traitee ? ' · la demande est complète : marquée « Traitée »' : ''));
+    cartes.delete(k);
+    oublierContextes();
+    await options.apres?.(data);
+    return;
+  }
   // durée du spot et son lus dans la vidéo (plus de saisie à la main) : repris par la diffusion
   const videos = ['ajoute', 'visuel'].includes(suite) ? nouveaux.filter(f => f.role === 'visuel') : [];
   const durees = videos.map(f => f.duree_s).filter(Boolean);

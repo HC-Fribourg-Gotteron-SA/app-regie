@@ -1,8 +1,8 @@
 import { sb, exigerConnexion, LIBELLES, echapper, dateCourte, notifier, debounce, nomFichierSur, taille, libelleFichier,
-         descriptionProduit, specsProduit, dimensionsAttendues, alertesFichier, lireDimensions, devinerVersion } from './app.js';
+         descriptionProduit, specsProduit, dimensionsAttendues, alertesFichier, lireDimensions, devinerVersion, vueDigital } from './app.js';
 import { analyserSon, LIBELLE_SON } from './son-video.js';
 
-await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
+const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
 
 const $ = (id) => document.getElementById(id);
 const etat = {
@@ -24,10 +24,12 @@ $('types').innerHTML = Object.entries(LIBELLES.type_demande).map(([val, txt]) =>
 // Produits, groupés par catégorie
 // ---------------------------------------------------------------------
 async function chargerProduits() {
-  const { data, error } = await sb.from('produits')
+  const { data: tous, error } = await sb.from('produits')
     .select('*')
     .eq('actif', true).order('ordre').order('categorie').order('nom');
   if (error) { $('produits').innerHTML = `<p class="message message-erreur">${echapper(error.message)}</p>`; return; }
+  // produits Digital (migration 55) : seulement pour les comptes qui ont l'espace Digital
+  const data = tous.filter(p => p.espace !== 'digital' || (profil.espaces || []).includes('digital'));
   etat.produits = new Map(data.map(p => [p.id, p]));
   const idsAnneaux = [...new Set(data.map(p => p.lie_a_produit_id).filter(Boolean))];
   if (idsAnneaux.length) {
@@ -126,6 +128,65 @@ async function chargerSaisonEtMatchs() {
   ]);
   etat.saison = saison?.libelle || '';
   etat.matchs = (matchs || []).filter(m => m.type !== 'ladies');    // matchs Ladies : pas de visuels (migration 52)
+  // joueurs (parrainage joueur, espace Digital, migration 55) ; absent avant la migration → liste vide
+  const { data: joueurs } = await sb.from('joueurs').select('id, numero, prenom, nom').eq('actif', true).order('numero');
+  etat.joueurs = joueurs || [];
+}
+
+// ---------------------------------------------------------------------
+// Espace Digital (16.10.2026, migration 55) : questions propres à chaque produit
+//   Programme de match : matchs + page pleine / demi-page · Bannière app : du / au · Parrainage joueur : joueur
+// ---------------------------------------------------------------------
+const estDigital = (p) => p?.espace === 'digital';
+const typeDigital = vueDigital;
+
+function blocDigital(id, p, d, matchs, suppr) {
+  const t = typeDigital(p);
+  const remarque = `
+    <label for="remarque-${id}" class="petit" style="margin-top:.6rem">Remarque Sponsoring</label>
+    <textarea id="remarque-${id}" data-champ="remarque" rows="2" style="min-height:0">${echapper(d.remarque)}</textarea>`;
+  const quoi = t === 'programme' ? `
+      <div class="petit" style="margin-top:.4rem"><strong>Quel(s) match(s) ?</strong></div>
+      <div class="choix choix-compact">${matchs}</div>
+      ${suppr ? '' : `<div class="champ-ligne"><span class="etiquette">Format</span>${choixOuiNon(id, 'format', d.format, 'Page pleine', 'Demi-page', 'pleine', 'demi')}</div>`}`
+    : t === 'app' ? `
+      <div class="champ-ligne"><span class="etiquette">Affichée</span>
+        <label class="petit">du <input type="date" data-champ="du" value="${d.du || ''}" style="width:auto"></label>
+        <label class="petit">au <input type="date" data-champ="au" value="${d.au || ''}" style="width:auto"></label></div>`
+    : `
+      <div class="champ-ligne"><span class="etiquette">Joueur</span>
+        <select data-champ="joueur_id" style="width:auto;min-width:14rem">
+          <option value="">— Choisir le joueur —</option>
+          ${(etat.joueurs || []).map(j => `<option value="${j.id}" ${d.joueur_id === j.id ? 'selected' : ''}>${j.numero ?? ''} · ${echapper(`${j.prenom} ${j.nom}`)}</option>`).join('')}
+        </select></div>
+      <div class="aide">Toute la saison ${echapper(etat.saison)}.</div>`;
+  return `
+    <div class="detail-produit" data-id="${id}">
+      <div class="detail-entete">
+        <strong>${echapper(p.nom)}</strong>
+        <span class="doux petit description">${t === 'programme' ? 'Pub dans le programme de match' : t === 'app' ? 'Bannière dans l’app du club'
+          : 'Logo du parrain : vidéotron, app, site et programme'}</span>
+      </div>
+      ${blocDejaPris(id)}
+      ${suppr && t !== 'programme' ? '' : quoi}
+      ${suppr ? '' : rolesFichiers(p).map(r => zoneFichiers(d, r)).join('')}
+      ${remarque}
+    </div>`;
+}
+
+// Erreur à signaler pour un produit Digital (null = complet)
+function manqueDigital(p, d) {
+  const t = typeDigital(p);
+  if (t === 'programme') {
+    if (!d.dates.size) return `${p.nom} : cochez au moins un match.`;
+    if (!d.format) return `${p.nom} : page pleine ou demi-page ?`;
+  } else if (t === 'app') {
+    if (!d.du || !d.au) return `${p.nom} : indiquez du … au ….`;
+    if (d.au < d.du) return `${p.nom} : la date de fin est avant la date de début.`;
+  } else if (t === 'parrainage' && !d.joueur_id) {
+    return `${p.nom} : choisissez le joueur.`;
+  }
+  return null;
 }
 
 function detailDe(id) {
@@ -289,10 +350,10 @@ function ajouterFichiersProduit(id, role, liste) {
 const demandeSon = (p) => p.famille === 'temps' && p.support === 'Vidéotron';
 const demandeAnneau = (p) => !!p.lie_a_produit_id;
 
-const choixOuiNon = (id, champ, valeur, oui, non) => `
+const choixOuiNon = (id, champ, valeur, oui, non, vOui = 'oui', vNon = 'non') => `
   <div class="choix choix-compact">
-    <label><input type="radio" name="${champ}-${id}" data-choix="${champ}" value="oui" ${valeur === 'oui' ? 'checked' : ''}> ${oui}</label>
-    <label><input type="radio" name="${champ}-${id}" data-choix="${champ}" value="non" ${valeur === 'non' ? 'checked' : ''}> ${non}</label>
+    <label><input type="radio" name="${champ}-${id}" data-choix="${champ}" value="${vOui}" ${valeur === vOui ? 'checked' : ''}> ${oui}</label>
+    <label><input type="radio" name="${champ}-${id}" data-choix="${champ}" value="${vNon}" ${valeur === vNon ? 'checked' : ''}> ${non}</label>
   </div>`;
 
 // « Actuellement : … » (changement de visuel / suppression) : ce que le sponsor a sur ce produit
@@ -322,6 +383,7 @@ function afficherDetails() {
     const p = etat.produits.get(id), d = detailDe(id);
     // suppression : pas de visuel à donner (13.10.2026, Léa) → ni fichiers, ni son, ni anneau, ni durée
     const suppr = typeDemande() === 'suppression';
+    if (estDigital(p) && typeDigital(p) === 'programme') d.quand = 'match';
     const matchs = etat.matchs.length
       ? etat.matchs.map(m => {
           const jour = jourLocal(m.date_heure);
@@ -329,6 +391,7 @@ function afficherDetails() {
                     ${dateCourte(m.date_heure)} · ${echapper(m.adversaire)}${m.type !== 'saison' ? ` (${LIBELLES.type_match[m.type].toLowerCase()})` : ''}</label>`;
         }).join('')
       : '<p class="aide">Aucun match à venir dans le calendrier.</p>';
+    if (estDigital(p)) return blocDigital(id, p, d, matchs, suppr);
     return `
       <div class="detail-produit" data-id="${id}">
         <div class="detail-entete">
@@ -517,6 +580,14 @@ async function filtrerProduitsDuSponsor() {
         else x.matchs.push(...(l.matchs || []).map(m => m.match).filter(Boolean));
         parProduit.set(l.produit_id, x);
       }
+      // espace Digital (migration 55) : ses éléments en cours ; absent avant la migration → rien
+      const { data: digital } = await sb.from('digital_elements')
+        .select('produit_id, match:matchs(date_heure, adversaire)').eq('sponsor_id', etat.sponsor.id).eq('statut', 'actif');
+      for (const el of digital || []) {
+        const x = parProduit.get(el.produit_id) || { saison: false, matchs: [] };
+        if (el.match) x.matchs.push(el.match); else x.saison = true;
+        parProduit.set(el.produit_id, x);
+      }
       parProduit.forEach(x => x.matchs.sort((a, b) => new Date(a.date_heure) - new Date(b.date_heure)));
       produitsDuSponsor.set(etat.sponsor.id, parProduit);
     }
@@ -570,6 +641,12 @@ $('form-demande').addEventListener('submit', async (e) => {
   for (const id of produits) {
     const d = detailDe(id);
     const p = etat.produits.get(id);
+    if (estDigital(p)) {
+      const manque = type !== 'suppression' ? manqueDigital(p, d)
+        : typeDigital(p) === 'programme' && !d.dates.size ? `${p.nom} : cochez au moins un match.` : null;
+      if (manque) return erreur(manque);
+      continue;
+    }
     if (d.quand === 'match' && !d.dates.size) {
       return erreur(`${p.nom} : cochez au moins un match, ou choisissez « Toute la saison ».`);
     }
@@ -607,6 +684,15 @@ $('form-demande').addEventListener('submit', async (e) => {
         if (type === 'suppression') {
           return { demande_id: demande.id, produit_id, type_vente: d.quand,
                    dates_matchs: d.quand === 'match' ? [...d.dates].sort() : null, remarque_sponsoring: d.remarque.trim() || null };
+        }
+        if (estDigital(p)) {
+          const t = typeDigital(p);
+          return { demande_id: demande.id, produit_id, type_vente: t === 'programme' ? 'match' : 'saison',
+                   dates_matchs: t === 'programme' ? [...d.dates].sort() : null,
+                   format: t === 'programme' ? d.format : null,
+                   du: t === 'app' ? d.du : null, au: t === 'app' ? d.au : null,
+                   joueur_id: t === 'parrainage' ? d.joueur_id : null,
+                   remarque_sponsoring: d.remarque.trim() || null };
         }
         return {
           avec_son: demandeSon(p) && d.son ? d.son === 'oui' : null,      // lu dans la vidéo ; null = pas encore lu

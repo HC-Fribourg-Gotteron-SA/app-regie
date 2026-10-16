@@ -146,10 +146,16 @@ export function devinerVersion(nom) {
   return '';
 }
 
+// Espace Digital (migration 55) : 'programme' | 'app' | 'parrainage' (= ?vue= de digital.html), null hors Digital
+export const vueDigital = (p) => p?.espace !== 'digital' ? null
+  : /programme/i.test(p.nom) ? 'programme' : /banni/i.test(p.nom) ? 'app' : 'parrainage';
+
 // Nom du fichier attendu pour un produit (role = 'visuel' ou 'anneau')
 export function libelleFichier(p, role) {
   if (role === 'anneau') return 'Visuel anneau LED';
   if (!p) return 'Fichier';
+  // espace Digital (migration 55)
+  if (p.espace === 'digital') return /parrainage/i.test(p.nom) ? 'Logo' : /banni/i.test(p.nom) ? 'Visuel / logo' : 'Visuel';
   if (p.famille === 'slide') return 'Logo';
   if (p.famille === 'temps' && p.support === 'Vidéotron') return 'Vidéo vidéotron';
   if (p.famille === 'exclusif') return 'Visuel ou vidéo';
@@ -167,7 +173,7 @@ export async function exigerConnexion({ roles } = {}) {
   }
 
   const { data: profil, error } = await sb
-    .from('profiles').select('id, email, nom, role').eq('id', session.user.id).single();
+    .from('profiles').select('*').eq('id', session.user.id).single();   // * : aussi espaces (migration 55)
 
   if (error || !profil) {
     afficherBlocage('Profil introuvable', "Votre compte n'a pas de profil. Contactez un admin.");
@@ -230,6 +236,12 @@ const MENU = [
     { href: 'match-du-jour.html?ladies=1', texte: 'Ladies', icone: 'match', roles: ['regie', 'admin', 'animation'],
       aussi: ['run-of-show.html?ladies=1'], ladies: true },
   ] },
+  // espace Digital (16.10.2026, migration 55) : seulement les comptes qui ont l'espace « digital »
+  { titre: 'Digital', espace: 'digital', liens: [
+    { href: 'digital.html?vue=programme', texte: 'Programme de match', icone: 'onglets', espace: 'digital' },
+    { href: 'digital.html?vue=app', texte: 'Bannières app', icone: 'onglets', espace: 'digital' },
+    { href: 'digital.html?vue=parrainage', texte: 'Parrainages joueurs', icone: 'sponsors', espace: 'digital' },
+  ] },
   { titre: 'Demandes', liens: [
     { href: 'demandes.html', texte: 'Toutes les demandes', icone: 'demandes', compteur: 'demandes' },
     { href: 'demande.html', texte: 'Nouvelle demande', icone: 'nouvelle' },
@@ -249,10 +261,12 @@ const MENU = [
 
 function construireMenu(profil) {
   // pages Ladies = mêmes pages avec ?ladies=1 : le lien actif tient compte du paramètre
-  const page = pageCourante() + (modeLadies() ? '?ladies=1' : '');
+  const page = pageCourante() + (modeLadies() ? '?ladies=1' : '')
+    + (pageCourante() === 'digital.html' ? `?vue=${new URLSearchParams(location.search).get('vue') || 'programme'}` : '');
   const accueil = pageAccueil(profil.role);
   // Chrono & animation : seulement les liens qui le nomment (run of show)
-  const visible = (l) => profil.role === 'animation' ? l.roles?.includes('animation') : !l.roles || l.roles.includes(profil.role);
+  const visible = (l) => profil.role === 'animation' ? l.roles?.includes('animation')
+    : (!l.roles || l.roles.includes(profil.role)) && (!l.espace || (profil.espaces || []).includes(l.espace));
 
   const menu = document.createElement('aside');
   menu.className = 'menu-lateral';
@@ -351,11 +365,12 @@ export async function ongletsProduits(zone, actif = {}) {
   const { data: { session } } = await sb.auth.getSession();
   const { data: profil } = await sb.from('profiles').select('role').eq('id', session?.user?.id).maybeSingle();
   const regie = ['regie', 'admin'].includes(profil?.role);
-  const [{ data: produits }, attente] = await Promise.all([
-    sb.from('produits').select('id, nom, categorie').eq('actif', true).order('ordre').order('categorie').order('nom'),
+  const [{ data: tousProduits }, attente] = await Promise.all([
+    sb.from('produits').select('*').eq('actif', true).order('ordre').order('categorie').order('nom'),
     regie ? sb.from('demandes_produits').select('produit_id, demande:demandes!inner(statut)')
               .is('traite_le', null).neq('demande.statut', 'traitee') : Promise.resolve({ data: [] }),
   ]);
+  const produits = (tousProduits || []).filter(p => p.espace !== 'digital');   // le Digital a ses propres pages
   const aAjouter = new Map();
   for (const a of attente.data || []) aAjouter.set(a.produit_id, (aAjouter.get(a.produit_id) || 0) + 1);
   const compteur = (n) => n ? `<span class="menu-compteur">${n}</span>` : '';
@@ -390,13 +405,14 @@ export async function ongletsProduits(zone, actif = {}) {
 // Une page par produit dans le menu, rangée par catégorie (sous-menus dépliables)
 async function menuProduits(profil) {
   const regie = ['regie', 'admin'].includes(profil.role);
-  const [{ data: produits, error }, attente] = await Promise.all([
-    sb.from('produits').select('id, nom, categorie').eq('actif', true).order('ordre').order('categorie').order('nom'),
+  const [{ data: tousProduits, error }, attente] = await Promise.all([
+    sb.from('produits').select('*').eq('actif', true).order('ordre').order('categorie').order('nom'),
     regie ? sb.from('demandes_produits').select('produit_id, demande:demandes!inner(statut)')
               .is('traite_le', null).neq('demande.statut', 'traitee') : Promise.resolve({ data: [] }),
   ]);
   const zone = document.getElementById('menu-produits');
   if (error || !zone) return;
+  const produits = tousProduits.filter(p => p.espace !== 'digital');
 
   const aAjouter = new Map();
   for (const a of attente.data || []) aAjouter.set(a.produit_id, (aAjouter.get(a.produit_id) || 0) + 1);
