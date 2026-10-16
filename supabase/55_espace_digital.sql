@@ -17,7 +17,7 @@
 alter table produits add column if not exists espace text not null default 'regie' check (espace in ('regie', 'digital'));
 
 insert into produits (nom, categorie, famille, support, mode_vente, ordre, espace, formats)
-select v.nom, 'Digital', 'exclusif', v.support, v.mode, v.ordre, 'digital', v.formats::text[]
+select v.nom, 'Digital', 'exclusif', v.support, v.mode::mode_vente, v.ordre, 'digital', v.formats::text[]
 from (values
   ('Programme de match', 'Programme', 'match', 200, '{pdf,png,jpg,jpeg}'),
   ('Bannière app',       'App',       'saison', 201, '{png,jpg,jpeg,gif}'),
