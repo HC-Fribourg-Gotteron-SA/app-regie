@@ -270,6 +270,9 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    **Migration 56** : 6 parrainages actuels (capture Airtable : Solsystems 39, Kingnature 37, Laiterie-Fromagerie
    d'Arconciel 97, Net26 23, Marmy 9, HKM 93 ; lignes 1-5 de la capture pas reçues) + colonne `digital_elements.commentaire`
    (colonne « Commentaire » modifiable sur place, Régie / admin, à part de la remarque du Sponsoring).
+   **Migration 57** : pubs actuelles du Programme de match (capture Airtable : Balmat, Rouvinez, Arconciel sans format,
+   BSH, Bellarena « jusqu'au 7 nov » = chaque match de saison jusqu'au 07.11 ; « Ajouté » → case cochée ; visuels pas
+   repris). Date sans match au calendrier → erreur, rien importé. 56 et 57 exclues de `installation_base_test.sql`.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.

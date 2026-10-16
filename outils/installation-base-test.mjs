@@ -9,7 +9,8 @@ import { fileURLToPath } from 'node:url';
 
 const RACINE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DOSSIER = path.join(RACINE, 'supabase');
-const EXCLUES = new Set(['15', '23']);
+// 56 / 57 : données réelles reprises d'Airtable (parrainages, programme) ; la colonne commentaire de la 56 est aussi dans la 55
+const EXCLUES = new Set(['15', '23', '56', '57']);
 
 const fichiers = fs.readdirSync(DOSSIER)
   .filter(f => /^\d{2}_.*\.sql$/.test(f) && !EXCLUES.has(f.slice(0, 2)))

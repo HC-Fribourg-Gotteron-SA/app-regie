@@ -80,6 +80,8 @@ create table if not exists digital_elements (
   created_by   uuid references profiles (id) default auth.uid(),
   created_at   timestamptz not null default now()
 );
+-- commentaire libre (ajouté par la 56 sur les bases déjà installées ; ici pour une installation neuve)
+alter table digital_elements add column if not exists commentaire text;
 create index if not exists digital_elements_produit on digital_elements (produit_id);
 alter table digital_elements enable row level security;
 drop policy if exists digital_elements_lecture on digital_elements;
