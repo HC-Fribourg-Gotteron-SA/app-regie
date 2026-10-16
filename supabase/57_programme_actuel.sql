@@ -2,7 +2,7 @@
 -- 57 — Programme de match : pubs actuelles (capture d'Airtable envoyée par Léa le 16.10.2026)
 -- À exécuter APRÈS la 55 et la 56, sur la base de TEST puis sur la vraie base. Peut être exécuté plusieurs fois.
 -- =====================================================================
--- Une pub = un match du calendrier (même jour, pas Ladies). Date sans match → erreur, rien n'est importé.
+-- Une pub = un match du calendrier (même jour, pas Ladies). Date sans match → sautée, listée en haut du résultat.
 -- « Ajouté » coché dans Airtable → case « Mis dans le programme » cochée. Visuels : pas repris (restés dans Airtable).
 -- Bellarena « jusqu'au 7 nov » : tous les matchs de la saison jusqu'au 07.11.2026 compris.
 -- Laiterie-Fromagerie d'Arconciel : pas de format dans Airtable → format vide.
@@ -50,9 +50,7 @@ begin
     select mm.id into v_match from matchs mm
     where (mm.date_heure at time zone 'Europe/Zurich')::date = r.jour and mm.type::text <> 'ladies'
     limit 1;
-    if v_match is null then
-      raise exception 'Pas de match le % dans le calendrier (%) : rien n''a été importé', to_char(r.jour, 'DD.MM.YYYY'), r.sponsor;
-    end if;
+    if v_match is null then continue; end if;      -- pas de match ce jour-là : sauté (listé à la fin)
 
     insert into digital_elements (produit_id, sponsor_id, match_id, format, remarque, fait)
     select v_produit, v_sponsor, v_match, r.format, 'Repris d''Airtable',
@@ -63,9 +61,22 @@ begin
   end loop;
 end $x$;
 
-select to_char(mm.date_heure at time zone 'Europe/Zurich', 'DD.MM.YYYY') as "Match", mm.adversaire as "Contre",
-       s.nom as "Sponsor", coalesce(e.format, '—') as "Format",
-       case when e.fait ? 'programme' then 'oui' else '' end as "Mis"
-from digital_elements e join matchs mm on mm.id = e.match_id join sponsors s on s.id = e.sponsor_id
-where e.produit_id = (select id from produits where nom = 'Programme de match')
-order by mm.date_heure, s.nom;
+-- Résultat : ce qui est importé, puis les dates SANS match dans le calendrier (pas importées)
+select x.jour as "Match", x.contre as "Contre", x.sponsor as "Sponsor", x.format as "Format", x.mis as "Mis"
+from (
+  select mm.date_heure as tri, to_char(mm.date_heure at time zone 'Europe/Zurich', 'DD.MM.YYYY') as jour, mm.adversaire as contre,
+         s.nom as sponsor, coalesce(e.format, '—') as format, case when e.fait ? 'programme' then 'oui' else '' end as mis
+  from digital_elements e join matchs mm on mm.id = e.match_id join sponsors s on s.id = e.sponsor_id
+  where e.produit_id = (select id from produits where nom = 'Programme de match')
+  union all
+  select null, to_char(v.jour, 'DD.MM.YYYY'), '⚠ PAS DE MATCH CE JOUR : pas importé', v.sponsor, '', ''
+  from (values ('Balmat Immobilier SA', date '2026-10-03'), ('Balmat Immobilier SA', date '2026-11-24'),
+               ('Balmat Immobilier SA', date '2027-02-04'), ('Rouvinez', date '2026-09-18'), ('Rouvinez', date '2026-09-26'),
+               ('Rouvinez', date '2026-09-29'), ('Laiterie-Fromagerie d''Arconciel', date '2026-10-03'),
+               ('Laiterie-Fromagerie d''Arconciel', date '2026-10-08'), ('Laiterie-Fromagerie d''Arconciel', date '2026-10-17'),
+               ('BSH Electroménager', date '2026-10-30'), ('BSH Electroménager', date '2026-12-18'),
+               ('BSH Electroménager', date '2027-01-29'), ('BSH Electroménager', date '2027-02-20')) as v(sponsor, jour)
+  where not exists (select 1 from matchs mm where (mm.date_heure at time zone 'Europe/Zurich')::date = v.jour
+                                              and mm.type::text <> 'ladies')
+) x
+order by x.tri nulls first, x.sponsor;
