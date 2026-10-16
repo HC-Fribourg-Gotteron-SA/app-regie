@@ -3,6 +3,7 @@
 // des « éléments » (digital_elements) avec des cases « c'est mis » (programme, app, site, vidéotron).
 import { sb, exigerConnexion, echapper, dateCourte, notifier, vueDigital } from './app.js';
 import { carteTraitement, CHAMPS_A_TRAITER } from './traitement.js';
+import { ouvrirAjoutDigital } from './ajout-digital.js';
 
 const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
@@ -47,6 +48,7 @@ async function charger() {
   if (error) return erreur(/espace/.test(error.message) ? 'Exécutez d’abord la migration 55 dans Supabase.' : error.message);
   etat.produit = (produits || []).find(p => vueDigital(p) === vue);
   if (!etat.produit) return erreur('Produit introuvable : exécutez la migration 55 dans Supabase.');
+  $('btn-ajouter').hidden = !estRegie;      // ajouter sans demande (Léa, 16.10.2026 : « pour aller plus vite »)
 
   const [{ data: elements, error: e1 }, { data: attente }, { data: joueurs }, { data: matchs }] = await Promise.all([
     sb.from('digital_elements')
@@ -237,6 +239,8 @@ $('contenu').addEventListener('change', async (e) => {
   el.fait = fait;
   afficher();
 });
+
+$('btn-ajouter').addEventListener('click', () => ouvrirAjoutDigital(etat.produit, charger));
 
 $('contenu').addEventListener('click', async (e) => {
   const b = e.target.closest('[data-fichier]');

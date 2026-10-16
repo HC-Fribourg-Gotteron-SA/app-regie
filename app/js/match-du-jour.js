@@ -148,7 +148,7 @@ async function chargerMatch() {
     if (error) notifier(/policy|permission|row-level/i.test(error.message) ? 'Exécutez d’abord la migration 51 dans Supabase.' : error.message, 'erreur');
     etat.tableNotes = !error;
     etat.notes = notes || [];
-    ['bilan', 'demandes-attente', 'bloc-demandes', 'bloc-a-faire', 'bloc-playlist'].forEach(id => { $(id).hidden = true; });
+    ['bilan', 'bloc-demandes', 'bloc-a-faire', 'bloc-playlist'].forEach(id => { $(id).hidden = true; });
     afficherNotes();
     return;
   }
@@ -211,7 +211,6 @@ async function chargerMatch() {
   await chargerFichiersDemandes(etat.demandesMatch);
 
   afficher();
-  if (estRegie) compterDemandes();
 }
 
 // Fichiers joints à chaque produit de demande (vidéo, visuel anneau LED, logo…) : à télécharger ici,
@@ -226,17 +225,6 @@ async function chargerFichiersDemandes(liste) {
                storage_path: `${dossier}/${f.name}`, taille: f.metadata?.size || 0 };
     });
   }));
-}
-
-// Les autres demandes en cours (pas pour ce match, questions, sans produit…) : un simple lien
-async function compterDemandes() {
-  const { data } = await sb.from('demandes').select('id').in('statut', ['nouvelle', 'en_cours', 'question']);
-  const ici = new Set(etat.demandesMatch.map(a => a.demande_id));
-  const autres = (data || []).filter(d => !ici.has(d.id)).length;
-  const lien = $('demandes-attente');
-  lien.hidden = !autres;
-  if (autres) lien.innerHTML = `📨 <strong>${autres} autre${autres > 1 ? 's' : ''} demande${autres > 1 ? 's' : ''} en cours</strong>
-    <span class="doux">— pas pour ce match (ou en attente d’une réponse) →</span>`;
 }
 
 // ---------------------------------------------------------------------

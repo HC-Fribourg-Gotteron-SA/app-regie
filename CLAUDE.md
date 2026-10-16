@@ -263,6 +263,10 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    (« À ajouter » = carte de traitement de traitement.js). Invisible pour la Régie : fiches, onglets, Match du jour, Par
    match. Qui voit : `profiles.espaces` (admin + Sponsoring = `{regie,digital}`), menu « Digital » filtré. Pas de date
    limite pour le programme (question restée sans réponse). **Plus tard** : tuiles d'accueil + choix de l'espace.
+   **« + Ajouter » sans demande** (même jour, Léa : « pour aller plus vite ») : bouton en haut de chaque page Digital
+   (Régie / admin) → `js/ajout-digital.js` : sponsor (liste ou nouveau), questions du produit, fichiers
+   (`digital/<groupe>/…`, aussi dans le dossier du sponsor), remarque ; insère directement dans `digital_elements`.
+   Match du jour : lien « N autres demandes en cours » **retiré** (Léa, 16.10.2026 : pas besoin).
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
