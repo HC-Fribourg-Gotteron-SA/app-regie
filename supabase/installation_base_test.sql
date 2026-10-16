@@ -4664,9 +4664,13 @@ select (select count(*) from produits where espace = 'digital') as "Produits Dig
 -- 56_parrainages_actuels.sql
 -- #####################################################################
 -- =====================================================================
--- 56 — Parrainages joueurs actuels (capture d'Airtable envoyée par Léa le 16.10.2026)
+-- 56 — Parrainages joueurs actuels (capture d'Airtable envoyée par Léa le 16.10.2026) + commentaire
 -- À exécuter APRÈS la 55, sur la base de TEST puis sur la vraie base. Peut être exécuté plusieurs fois.
 -- =====================================================================
+-- + Commentaire libre sur chaque élément Digital (Léa : « au cas où je dois préciser qqch pour moi »),
+--   à part de la remarque du Sponsoring ; modifiable sur place sur les pages Digital.
+alter table digital_elements add column if not exists commentaire text;
+
 -- Sponsor repris s'il existe déjà (nom ou alias, sans accents ni majuscules), sinon créé.
 -- Cases « c'est mis » laissées vides : à cocher sur la page Parrainages joueurs.
 do $x$

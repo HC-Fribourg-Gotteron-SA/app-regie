@@ -267,6 +267,9 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    (Régie / admin) → `js/ajout-digital.js` : sponsor (liste ou nouveau), questions du produit, fichiers
    (`digital/<groupe>/…`, aussi dans le dossier du sponsor), remarque ; insère directement dans `digital_elements`.
    Match du jour : lien « N autres demandes en cours » **retiré** (Léa, 16.10.2026 : pas besoin).
+   **Migration 56** : 6 parrainages actuels (capture Airtable : Solsystems 39, Kingnature 37, Laiterie-Fromagerie
+   d'Arconciel 97, Net26 23, Marmy 9, HKM 93 ; lignes 1-5 de la capture pas reçues) + colonne `digital_elements.commentaire`
+   (colonne « Commentaire » modifiable sur place, Régie / admin, à part de la remarque du Sponsoring).
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.

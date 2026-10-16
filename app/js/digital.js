@@ -102,7 +102,12 @@ function cases(el) {
   }).join('');
 }
 
-const remarque = (el) => el.remarque ? `<div class="doux petit" style="white-space:pre-line">${echapper(el.remarque)}</div>` : '';
+// Commentaire libre de Léa / la Régie (migration 56), modifiable sur place ; la remarque du Sponsoring reste à part
+const commentaire = (el) => estRegie
+  ? `<textarea class="petit" data-commentaire="${el.id}" rows="1" placeholder="Commentaire…"
+       style="min-height:0;min-width:12rem;field-sizing:content">${echapper(el.commentaire || '')}</textarea>`
+  : `<span class="petit" style="white-space:pre-line">${echapper(el.commentaire || '')}</span>`;
+const remarque = (el) => el.remarque ?`<div class="doux petit" style="white-space:pre-line">${echapper(el.remarque)}</div>` : '';
 const sponsor = (el) => `<strong>${echapper(el.sponsor?.nom || '—')}</strong>${
   el.statut === 'retire' ? ' <span class="badge badge-suppression">retiré : à enlever</span>' : ''}${
   el.demande?.id ? ` <a class="petit" href="demandes.html?id=${el.demande.id}">demande →</a>` : ''}`;
@@ -125,7 +130,7 @@ function vueProgramme() {
     const actifs = liste.filter(el => el.statut === 'actif');
     const pleines = actifs.filter(el => el.format === 'pleine').length;
     return `
-      <tr class="rangee-titre"><td colspan="4">
+      <tr class="rangee-titre"><td colspan="5">
         ${dateCourte(m.date_heure)} · ${echapper(m.adversaire)}
         <span class="doux">· ${actifs.length} pub${actifs.length > 1 ? 's' : ''}${actifs.length ? ` (${pleines} page${pleines > 1 ? 's' : ''} pleine${pleines > 1 ? 's' : ''}, ${actifs.length - pleines} demi)` : ''}</span>
         ${actifs.length > MAX_PUBS_PROGRAMME ? `<span class="badge badge-suppression">⚠ plus de ${MAX_PUBS_PROGRAMME} pubs</span>` : ''}
@@ -136,7 +141,8 @@ function vueProgramme() {
           <td>${el.format === 'pleine' ? 'Page pleine' : el.format === 'demi' ? 'Demi-page' : '—'}</td>
           <td>${fichiers(el)}</td>
           <td>${cases(el)}</td>
-        </tr>`).join('') : '<tr><td colspan="4" class="doux petit">Aucune pub</td></tr>'}`;
+          <td>${commentaire(el)}</td>
+        </tr>`).join('') : '<tr><td colspan="5" class="doux petit">Aucune pub</td></tr>'}`;
   };
   const nbAlertes = aVenir.filter(m => (parMatch.get(m.id) || []).filter(el => el.statut === 'actif').length > MAX_PUBS_PROGRAMME).length;
   $('resume').textContent = `${aVenir.length} match${aVenir.length > 1 ? 's' : ''} à venir`
@@ -144,8 +150,8 @@ function vueProgramme() {
   return `
     <div class="carte" style="padding:0;overflow:hidden"><div class="tableau-conteneur">
       <table class="tableau non-cliquable">
-        <thead><tr><th>Sponsor</th><th>Format</th><th>Fichier</th><th>C'est mis</th></tr></thead>
-        <tbody>${aVenir.map(blocMatch).join('') || '<tr><td colspan="4" class="vide">Aucun match à venir.</td></tr>'}</tbody>
+        <thead><tr><th>Sponsor</th><th>Format</th><th>Fichier</th><th>C'est mis</th><th>Commentaire</th></tr></thead>
+        <tbody>${aVenir.map(blocMatch).join('') || '<tr><td colspan="5" class="vide">Aucun match à venir.</td></tr>'}</tbody>
       </table>
     </div></div>
     ${passes.length ? `
@@ -173,12 +179,13 @@ function vueApp() {
       <td><span class="badge${quand(el) === 'en_ligne' ? ' statut-traitee' : ''}">${LIB[quand(el)]}</span></td>
       <td>${fichiers(el)}</td>
       <td>${cases(el)}${el.statut === 'actif' && quand(el) === 'terminee' && el.fait?.app ? '<div class="doux petit">à enlever de l’app</div>' : ''}</td>
+      <td>${commentaire(el)}</td>
     </tr>`;
   return `
     <div class="carte" style="padding:0;overflow:hidden"><div class="tableau-conteneur">
       <table class="tableau non-cliquable">
-        <thead><tr><th>Sponsor</th><th>Dates</th><th>État</th><th>Fichier</th><th>C'est mis</th></tr></thead>
-        <tbody>${liste.map(ligne).join('') || '<tr><td colspan="5" class="vide">Aucune bannière.</td></tr>'}</tbody>
+        <thead><tr><th>Sponsor</th><th>Dates</th><th>État</th><th>Fichier</th><th>C'est mis</th><th>Commentaire</th></tr></thead>
+        <tbody>${liste.map(ligne).join('') || '<tr><td colspan="6" class="vide">Aucune bannière.</td></tr>'}</tbody>
       </table>
     </div></div>`;
 }
@@ -201,18 +208,19 @@ function vueParrainage() {
   const rangees = (j) => {
     const liste = parJoueur.get(j.id) || [];
     const nomJ = `<strong>${j.numero ?? ''}</strong> ${echapper(`${j.prenom} ${j.nom}`)}`;
-    if (!liste.length) return `<tr><td>${nomJ}</td><td colspan="3" class="doux petit">libre</td></tr>`;
+    if (!liste.length) return `<tr><td>${nomJ}</td><td colspan="4" class="doux petit">libre</td></tr>`;
     return liste.map(el => `
-      <tr><td>${nomJ}</td><td>${sponsor(el)}${remarque(el)}</td><td>${fichiers(el)}</td><td>${cases(el)}</td></tr>`).join('');
+      <tr><td>${nomJ}</td><td>${sponsor(el)}${remarque(el)}</td><td>${fichiers(el)}</td><td>${cases(el)}</td>
+        <td>${commentaire(el)}</td></tr>`).join('');
   };
   return `
     <div class="carte" style="padding:0;overflow:hidden"><div class="tableau-conteneur">
       <table class="tableau non-cliquable">
-        <thead><tr><th>Joueur</th><th>Parrain</th><th>Logo</th><th>C'est mis</th></tr></thead>
+        <thead><tr><th>Joueur</th><th>Parrain</th><th>Logo</th><th>C'est mis</th><th>Commentaire</th></tr></thead>
         <tbody>${groupes.map(([pos, liste]) => `
-          <tr class="rangee-titre"><td colspan="4">${POS[pos] || 'Autres'}</td></tr>
+          <tr class="rangee-titre"><td colspan="5">${POS[pos] || 'Autres'}</td></tr>
           ${liste.map(rangees).join('')}`).join('')
-          || '<tr><td colspan="4" class="vide">Aucun joueur : exécutez la migration 55.</td></tr>'}</tbody>
+          || '<tr><td colspan="5" class="vide">Aucun joueur : exécutez la migration 55.</td></tr>'}</tbody>
       </table>
     </div></div>`;
 }
@@ -226,6 +234,16 @@ function afficher() {
 // ---------------------------------------------------------------------
 $('contenu').addEventListener('change', async (e) => {
   const t = e.target;
+  if (t.dataset.commentaire) {
+    const el = etat.elements.find(x => x.id === t.dataset.commentaire);
+    const texte = t.value.trim() || null;
+    const { error } = await sb.from('digital_elements').update({ commentaire: texte }).eq('id', t.dataset.commentaire);
+    if (error) {
+      return notifier(/commentaire/.test(error.message) ? 'Exécutez d’abord la migration 56 dans Supabase.' : `Pas enregistré : ${error.message}`, 'erreur');
+    }
+    if (el) el.commentaire = texte;
+    return notifier('Commentaire enregistré');
+  }
   if (!t.dataset.fait) return;
   const el = etat.elements.find(x => x.id === t.dataset.id);
   if (!el) return;
