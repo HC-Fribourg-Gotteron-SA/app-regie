@@ -259,6 +259,15 @@ const MENU = [
   ] },
 ];
 
+// Sponsoring (19.10.2026, Léa : « pour eux c'est surtout de faire et voir leurs demandes ») : Demandes en haut,
+// « Nouvelle demande » en premier, Jour de match tout en bas. Les autres rôles : MENU tel quel.
+function menuDuRole(role) {
+  if (role !== 'sponsoring') return MENU;
+  const demandes = MENU.find(r => r.titre === 'Demandes');
+  const jour = MENU.find(r => r.titre === 'Jour de match');
+  return [{ ...demandes, liens: [...demandes.liens].reverse() }, ...MENU.filter(r => r !== demandes && r !== jour), jour];
+}
+
 function construireMenu(profil) {
   // pages Ladies = mêmes pages avec ?ladies=1 : le lien actif tient compte du paramètre
   const page = pageCourante() + (modeLadies() ? '?ladies=1' : '')
@@ -275,7 +284,7 @@ function construireMenu(profil) {
     <a class="marque" href="${accueil}">${LOGO}
       <span class="marque-texte"><strong>Fribourg-Gottéron</strong><small>Sponsoring ↔ Régie</small></span>
     </a>
-    <nav>${MENU.map(r => ({ ...r, liens: r.liens.filter(visible) }))
+    <nav>${menuDuRole(profil.role).map(r => ({ ...r, liens: r.liens.filter(visible) }))
       .filter(r => r.liens.length).map(r => `
       <div class="menu-rubrique"${r.id ? ` id="${r.id}"` : ''}>
         <div class="menu-titre">${r.titre}</div>
