@@ -260,12 +260,13 @@ const MENU = [
 ];
 
 // Sponsoring (19.10.2026, Léa : « pour eux c'est surtout de faire et voir leurs demandes ») : Demandes en haut,
-// « Nouvelle demande » en premier, Jour de match tout en bas. Les autres rôles : MENU tel quel.
+// « Nouvelle demande » en premier, puis Digital et Jour de match tout en bas. Les autres rôles : MENU tel quel.
 function menuDuRole(role) {
   if (role !== 'sponsoring') return MENU;
-  const demandes = MENU.find(r => r.titre === 'Demandes');
-  const jour = MENU.find(r => r.titre === 'Jour de match');
-  return [{ ...demandes, liens: [...demandes.liens].reverse() }, ...MENU.filter(r => r !== demandes && r !== jour), jour];
+  const rubrique = (titre) => MENU.find(r => r.titre === titre);
+  const demandes = rubrique('Demandes'), digital = rubrique('Digital'), jour = rubrique('Jour de match');
+  return [{ ...demandes, liens: [...demandes.liens].reverse() },
+          ...MENU.filter(r => ![demandes, digital, jour].includes(r)), digital, jour];
 }
 
 function construireMenu(profil) {
