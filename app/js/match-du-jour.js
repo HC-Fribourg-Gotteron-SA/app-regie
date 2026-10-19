@@ -162,6 +162,7 @@ async function chargerMatch() {
   etat.passagesCe = passages.filter(p => p.match_id === m.id);
   const passagesAvant = passages.filter(p => p.match_id === etat.precedent?.id);
   etat.passagesAvant = passagesAvant;
+  if (await remettreDansLOrdre(m, passagesAvant)) return chargerMatch();
 
   etat.changements = etat.precedent
     ? calculerChangements({ passagesAvant, passagesCe: etat.passagesCe, lignes: etat.lignes }) : [];
@@ -211,6 +212,42 @@ async function chargerMatch() {
   await chargerFichiersDemandes(etat.demandesMatch);
 
   afficher();
+}
+
+// Versions qui passent à tour de rôle (ECAB 4 vidéos, FR / DE) : ce soir = TOUJOURS la version qui suit celle du
+// match précédent (19.10.2026, Léa : « on désactive 1, on active 2… et à 4 on recommence avec 1 »). Si le calcul
+// donne autre chose (départ de la rotation réglé après coup), on recale la rotation en base (RPC de la migration 50)
+// — seulement pour le prochain match (c'est celui que la RPC règle), une fois par chargement, Régie / admin.
+let ordreRecale = false;
+async function remettreDansLOrdre(m, passagesAvant) {
+  if (!estRegie || ordreRecale || !etat.precedent) return false;
+  const debutJour = new Date(); debutJour.setHours(0, 0, 0, 0);
+  const estChl = (x) => x.type === 'champions_league';
+  const prochain = etat.matchs.find(x => new Date(x.date_heure) >= debutJour && estChl(x) === estChl(m));
+  if (prochain?.id !== m.id) return false;
+  const avant = new Map(passagesAvant.map(p => [p.ligne_id, p]));
+  const corrections = [];
+  for (const p of etat.passagesCe) {
+    const l = etat.lignes.get(p.ligne_id);
+    const ordre = l?.ordre_variantes || [];
+    if (l?.regle_rotation !== 'alterner' || ordre.length < 2 || !PASSE.has(p.statut)) continue;
+    const ancien = etat.assets.get(avant.get(p.ligne_id)?.asset_id)?.variante;
+    const ceSoir = etat.assets.get(p.asset_id)?.variante;
+    if (!ancien || !ceSoir || !ordre.includes(ancien)) continue;
+    const suivante = ordre[(ordre.indexOf(ancien) + 1) % ordre.length];
+    if (ceSoir !== suivante) corrections.push({ l, suivante });
+  }
+  if (!corrections.length) return false;
+  ordreRecale = true;
+  for (const { l, suivante } of corrections) {
+    const { error } = await sb.rpc('langue_au_prochain_match', { p_ligne: l.id, p_variante: suivante });
+    if (error) { notifier(`Ordre des versions pas recalé : ${error.message}`, 'erreur'); return false; }
+  }
+  // les visuels du soir ont changé (passages régénérés) : on recharge diffusions et visuels
+  const { data: lignes } = await sb.from('lignes_vendues').select('*').in('id', corrections.map(c => c.l.id));
+  (lignes || []).forEach(l => etat.lignes.set(l.id, { ...etat.lignes.get(l.id), ...l }));
+  notifier(`Ordre des versions recalé : ${corrections.map(c => `${c.suivante} ce soir`).join(', ')}`);
+  return true;
 }
 
 // Fichiers joints à chaque produit de demande (vidéo, visuel anneau LED, logo…) : à télécharger ici,
