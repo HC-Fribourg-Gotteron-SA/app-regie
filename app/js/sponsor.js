@@ -1,6 +1,6 @@
 // Dossier d'un sponsor (sponsor.html?id=…) : ce qu'il a, les documents reçus, ses demandes
 import { sb, exigerConnexion, LIBELLES, echapper, dateCourte, notifier, taille, nomFichierSur,
-         libelleFichier, toutesLesLignes } from './app.js';
+         libelleFichier, toutesLesLignes, etatAuMatch } from './app.js';
 
 const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
 // Sponsoring : consultation ; les documents arrivent par les demandes. Déposer ici = Régie / admin.
@@ -19,7 +19,7 @@ async function charger() {
     sb.from('lignes_vendues')
       .select(`id, type_vente, date_fin, validee, suspendue, motif_suspension, visuel_attendu, ligne_couplee_id,
                produit:produits(id, nom, ordre, actif), contrat:contrats!inner(sponsor_id),
-               matchs:lignes_matchs(match_id)`)
+               matchs:lignes_matchs(match_id, match:matchs(date_heure))`)
       .eq('contrat.sponsor_id', idSponsor).not('statut', 'in', '(annule,termine)'),
     sb.from('documents_sponsors')
       .select('id, demande_id, role, nom, storage_path, mime, taille_octets, notes, depose_par, depose_le, produit:produits(nom, famille, support)')
@@ -128,7 +128,8 @@ function afficherProduits(lignes) {
   $('nb-produits').textContent = lignes.length ? `(${lignes.length})` : '';
   $('produits').innerHTML = lignes.map(l => {
     const n = l.matchs?.length || 0;
-    const etatTxt = l.validee && !l.suspendue ? '<span class="etat etat-ecran">À l’écran</span>'
+    // vendu au match : « Prévu le … » / « À l'écran ce soir » / « Match passé », comme sur les fiches (etatAuMatch)
+    const etatTxt = l.validee && !l.suspendue ? (etatAuMatch(l) || '<span class="etat etat-ecran">À l’écran</span>')
       : `<span class="etat etat-non" title="${echapper(l.motif_suspension || '')}">Pas à l’écran</span>`;
     return `<tr data-produit="${l.produit.id}">
       <td><strong>${echapper(court(l.produit.nom))}</strong>
