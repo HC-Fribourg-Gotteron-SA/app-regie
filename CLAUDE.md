@@ -273,6 +273,12 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    **Migration 57** : pubs actuelles du Programme de match (capture Airtable : Balmat, Rouvinez, Arconciel sans format,
    BSH, Bellarena « jusqu'au 7 nov » = chaque match de saison jusqu'au 07.11 ; « Ajouté » → case cochée ; visuels pas
    repris). Date sans match au calendrier → erreur, rien importé. 56 et 57 exclues de `installation_base_test.sql`.
+0-vicies. **Lettre des slides (19.10.2026, option A de Léa ; migration 58 à exécuter sur les deux bases, pas encore
+   testé)** : comme Airtable (« A Golden », « B Golden »…), `lignes_vendues.slide` (A, B…). Fiches Slides Young Dragons /
+   Ladies : colonne « Slide » (liste, Régie / admin), liste groupée par slide avec titre « Slide A · 4 / 4 logos » (⚠ si
+   plus que `logos_par_slide`), puis « À placer » (nouveau sponsor sans lettre) ; flèches ↑ ↓ dans la même slide.
+   Migration générée par `node outils/lettres-slides.mjs` depuis les CSV Airtable (même nettoyage des noms que
+   l'import ; ne remplace pas une lettre déjà choisie). Proposé, pas fait : la lettre dans « À mettre dans Canva ».
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.

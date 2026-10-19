@@ -48,7 +48,7 @@ const etat = {
 // ---------------------------------------------------------------------
 // Chargement
 // ---------------------------------------------------------------------
-const CHAMPS_LIGNE = `id, produit_id, type_vente, statut, avec_son, duree_s, occurrences, consignes, date_fin, created_at, ligne_couplee_id, regle_rotation, un_match_sur,
+const CHAMPS_LIGNE = `id, produit_id, type_vente, statut, avec_son, duree_s, occurrences, consignes, date_fin, created_at, ligne_couplee_id, regle_rotation, un_match_sur, slide,
   ordre_variantes, alternance_depart,
   priorite, validee, validee_le, validee_par, suspendue, motif_suspension, visuel_attendu, demande_id, created_by,
   produit:produits(nom), contrat:contrats(sponsor:sponsors(id, nom)),
@@ -62,8 +62,14 @@ const trouverLigne = (id) => etat.lignes.find(x => x.id === id) || etat.autres.f
 
 // Pub pause tiers : 1 avec son + anneau LED, 2 avec son sans anneau, 3 sans son + anneau, 4 sans son sans anneau
 const groupePauseTiers = (l) => (l.avec_son ? 0 : 2) + (l.ligne_couplee_id ? 0 : 1);
-// groupe d'une diffusion dans la liste du produit (Pub pause tiers : les 4 groupes ; autres produits : un seul)
-const groupeDe = (l) => etat.p?.lie_a_produit_id && /pause tiers/i.test(etat.p.nom) ? groupePauseTiers(l) : 0;
+// Slides (19.10.2026, migration 58) : lettre de la slide (A, B…) comme dans Airtable ; sans lettre = « à placer », en bas
+const rangSlide = (l) => l.slide ? l.slide.toUpperCase().charCodeAt(0) - 64 : 999;
+// groupe d'une diffusion dans la liste du produit (Pub pause tiers : les 4 groupes ; slides : par slide ; autres : un seul)
+const groupeDe = (l) => etat.p?.famille === 'slide' ? rangSlide(l)
+  : etat.p?.lie_a_produit_id && /pause tiers/i.test(etat.p.nom) ? groupePauseTiers(l) : 0;
+// ordre de diffusion (priorite) dans chaque groupe ; sans rang : à la fin, dans l'ordre de création
+const trierLignes = (lignes) => lignes.sort((a, b) => groupeDe(a) - groupeDe(b)
+  || (a.priorite ?? 1e9) - (b.priorite ?? 1e9) || new Date(a.created_at) - new Date(b.created_at));
 
 // Vendu « au match » et tous ses matchs sont passés (avant aujourd'hui)
 function matchsTousPasses(l) {
@@ -92,9 +98,7 @@ async function charger() {
   // ordre de diffusion (priorite) ; sans rang : à la fin, dans l'ordre de création
   // Pub pause tiers : d'abord par groupe (décidé par Léa le 01.10.2026). Les autres produits avec anneau
   // (migration 35 : tout le vidéotron) gardent simplement l'ordre de diffusion.
-  const groupe = groupeDe;
-  const triees = (lignes || []).sort((a, b) => groupe(a) - groupe(b)
-    || (a.priorite ?? 1e9) - (b.priorite ?? 1e9) || new Date(a.created_at) - new Date(b.created_at));
+  const triees = trierLignes(lignes || []);
   // sponsors « au match » dont tous les matchs sont passés : rangés dans « Matchs passés » (historique)
   etat.passees = triees.filter(matchsTousPasses);
   etat.lignes = triees.filter(l => !matchsTousPasses(l));
@@ -230,7 +234,7 @@ function afficherLignes() {
   const p = etat.p;
   const video = p.famille === 'temps' && p.support === 'Vidéotron';
   const cols = [
-    ['N°', true], ['État', true], ['Sponsor', true], ['Quand', true], ['Son', video],
+    ['N°', true], ['Slide', p.famille === 'slide'], ['État', true], ['Sponsor', true], ['Quand', true], ['Son', video],
     ['Emplacement', p.famille === 'emplacement'], [p.lie_a_produit_id ? 'Visuel écran' : 'Visuel', true],
     ['Anneau LED', !!p.lie_a_produit_id], ['Remarques', true],
   ].filter(([, v]) => v).map(([t]) => t);
@@ -250,8 +254,33 @@ function afficherLignes() {
     $('lignes').innerHTML = rangeesEmplacements(cols);
     return;
   }
-  $('lignes').innerHTML = etat.lignes.map((l, rang) => rangeeLigne(l, rang, cols)).join('') + rangeesSlides(cols, etat.lignes.length);
+  $('lignes').innerHTML = (p.famille === 'slide' ? rangeesParSlide(cols)
+    : etat.lignes.map((l, rang) => rangeeLigne(l, rang, cols)).join('')) + rangeesSlides(cols, etat.lignes.length);
   filtrer();
+}
+
+// Slides : un titre par slide (« Slide A · 4 / 4 logos », alerte si trop), puis « À placer » (sans lettre)
+function rangeesParSlide(cols) {
+  const max = etat.p.logos_par_slide || null;
+  const titre = (texte) => `<tr class="rangee-titre"><td colspan="${cols.length}">${texte}</td></tr>`;
+  let html = '', groupe = null;
+  etat.lignes.forEach((l, rang) => {
+    if (groupeDe(l) !== groupe) {
+      groupe = groupeDe(l);
+      const n = etat.lignes.filter(x => groupeDe(x) === groupe).length;
+      html += titre(l.slide
+        ? `Slide ${echapper(l.slide)} · ${n}${max ? ` / ${max}` : ''} logo${n > 1 ? 's' : ''}${max && n > max ? ` <span class="badge badge-suppression">⚠ ${n - max} de trop</span>` : ''}`
+        : `À placer · ${n} logo${n > 1 ? 's' : ''} sans slide`);
+    }
+    html += rangeeLigne(l, rang, cols);
+  });
+  return html;
+}
+
+// Lettres proposées : celles utilisées + 2 de plus (nouvelle slide), A au minimum
+function lettresSlides() {
+  const plusHaute = Math.max(0, ...etat.lignes.filter(l => l.slide).map(rangSlide));
+  return Array.from({ length: Math.min(26, plusHaute + 2) }, (_, i) => String.fromCharCode(65 + i));
 }
 
 // ---------------------------------------------------------------------
@@ -307,7 +336,7 @@ const qDepart = new URLSearchParams(location.search).get('q');
 if (qDepart) { $('recherche').value = qDepart; chercherAilleursPlusTard(); }
 
 // Classe d'une colonne (largeurs dans style.css, 09.10.2026 : petites colonnes au minimum, Remarques lisibles)
-const COLS_CLASSES = { 'N°': 'col-num', 'État': 'col-etat', 'Quand': 'col-court', 'Son': 'col-court', 'Anneau LED': 'col-court',
+const COLS_CLASSES = { 'N°': 'col-num', 'Slide': 'col-court', 'État': 'col-etat', 'Quand': 'col-court', 'Son': 'col-court', 'Anneau LED': 'col-court',
                        'Emplacement': 'col-court', 'Remarques': 'col-optionnelle col-remarques' };
 const classeCol = (t) => COLS_CLASSES[t] || '';
 
@@ -329,6 +358,11 @@ function rangeeLigne(l, rang, cols, emplUnique = null) {
     'N°': `<span class="ordre-cellule"><span class="doux" title="Ordre de diffusion">${rang + 1}</span>${fleches ? `
       <button type="button" class="btn btn-discret petit" data-deplacer="${l.id}" data-pas="-1" aria-label="Monter" title="Monter" ${voisin(-1) ? '' : 'disabled'}>↑</button><button
         type="button" class="btn btn-discret petit" data-deplacer="${l.id}" data-pas="1" aria-label="Descendre" title="Descendre" ${voisin(1) ? '' : 'disabled'}>↓</button>` : ''}</span>`,
+    'Slide': estRegie
+      ? `<select class="petit" data-lettre-slide="${l.id}" aria-label="Slide" style="width:auto;min-height:0;padding:.2rem .4rem">
+          <option value="" ${l.slide ? '' : 'selected'}>à placer</option>
+          ${lettresSlides().map(x => `<option ${l.slide === x ? 'selected' : ''}>${x}</option>`).join('')}</select>`
+      : l.slide ? `<strong>${echapper(l.slide)}</strong>` : '<span class="badge badge-a-venir">à placer</span>',
     'État': celluleEtat(l),
     'Sponsor': `<strong>${echapper(l.contrat?.sponsor?.nom || '—')}</strong>${l.produit_id !== etat.p.id
       ? ` <a class="badge" href="produit.html?id=${l.produit_id}" title="Vendu comme ${echapper(l.produit?.nom || '')}">${echapper(l.produit?.nom || '')}</a>` : ''}`,
@@ -527,6 +561,14 @@ document.addEventListener('change', async (e) => {
       t.checked = !t.checked; return;
     }
     rafraichirLigne(id);
+  } else if (t.dataset.lettreSlide) {
+    // slide choisie (A, B… ; vide = à placer) : la liste se réordonne par slide
+    const lettre = t.value || null;
+    if (!(await modifierLigne(t.dataset.lettreSlide, { slide: lettre }, lettre ? `Slide ${lettre}` : 'À placer'))) {
+      afficherLignes(); return;
+    }
+    trierLignes(etat.lignes);
+    afficherLignes();
   } else if (t.dataset.remarqueLigne) {
     const texte = t.value.trim() || null;
     if (await modifierLigne(t.dataset.remarqueLigne, { consignes: texte }, 'Remarque enregistrée')) {
