@@ -614,6 +614,8 @@ td .etat-attente { display: inline-block; }
 .duree-totale { background: var(--surface); border: 1px solid var(--bordure); border-radius: var(--rayon-petit);
   padding: .7rem .9rem; margin: 0 0 1rem; display: grid; gap: .45rem; }
 .duree-ligne { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.cellule-duree { white-space: nowrap; }
+.cellule-duree input { width: 4.2rem; min-height: 0; padding: .2rem .35rem; }
 .duree-chiffres { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
 .duree-barre { height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; border: 1px solid var(--bordure); }
 .duree-barre > div { height: 100%; background: var(--ok); border-radius: 999px; transition: width .3s; }

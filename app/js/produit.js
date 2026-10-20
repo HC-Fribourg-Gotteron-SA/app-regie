@@ -56,7 +56,7 @@ const CHAMPS_LIGNE = `id, produit_id, type_vente, statut, avec_son, duree_s, occ
   produit:produits(nom), contrat:contrats(sponsor:sponsors(id, nom)),
   matchs:lignes_matchs(match:matchs(date_heure, adversaire)),
   emplacements:lignes_emplacements(emplacement:emplacements(anneau, zone, position)),
-  assets(id, nom_visuel, statut, version, variante, depose_le, valide_le, motif_refus, storage_path, mime)`;
+  assets(id, nom_visuel, statut, version, variante, depose_le, valide_le, motif_refus, storage_path, mime, duree_s)`;
 
 // Diffusion de ce produit, ou d'un autre produit affichée ici (LED 3M sur la bande 6M)
 const trouverLigne = (id) => etat.lignes.find(x => x.id === id) || etat.autres.find(x => x.id === id)
@@ -175,6 +175,18 @@ async function charger() {
 // Ce qui passe vraiment ce soir-là = les passages du match (au match, un match sur deux, à l'écran compris),
 // + les slides pour la Pub pause tiers ; comparé au maximum du produit (capacite_s). Sans durée : signalé.
 // ---------------------------------------------------------------------
+// Durée d'un spot (colonne « Durée » et détail) : lue dans la vidéo → affichée, pas modifiable (20.10.2026, Léa) ;
+// sinon (import Airtable, pas de vidéo) la Régie la saisit. Produits sans durée : rien.
+const dureeVideo = (l) => Math.round(visuelActuel(l.assets)?.duree_s || 0) || null;
+function celluleDuree(l, classe) {
+  if (etat.p?.famille !== 'temps') return l.duree_s ? `${l.duree_s} s` : '';
+  const video = dureeVideo(l);
+  if (video) return `<span title="Lue dans la vidéo">${video} s 🎬</span>`;
+  return estRegie
+    ? `<span class="cellule-duree"><input type="number" min="1" step="1" class="${classe}" data-duree-ligne="${l.id}"
+         value="${l.duree_s ?? ''}" placeholder="?" aria-label="Durée en secondes"> s</span>`
+    : l.duree_s ? `${l.duree_s} s` : '<span class="badge badge-a-venir">?</span>';
+}
 const minSec = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 async function afficherDureeTotale() {
   const zone = $('duree-totale');
@@ -186,9 +198,10 @@ async function afficherDureeTotale() {
     : { data: [] };
   const passent = new Set((passages || []).filter(x => PASSE.has(x.statut)).map(x => x.ligne_id));
   const lignes = etat.lignes.filter(l => passent.has(l.id));
-  const sansDuree = lignes.filter(l => !l.duree_s);
+  const duree = (l) => dureeVideo(l) || l.duree_s || 0;
+  const sansDuree = lignes.filter(l => !duree(l));
   const slides = etat.slides.reduce((t, s) => t + (s.duree || 0), 0);
-  const total = lignes.reduce((t, l) => t + (l.duree_s || 0) * (l.occurrences || 1), 0) + slides;
+  const total = lignes.reduce((t, l) => t + duree(l) * (l.occurrences || 1), 0) + slides;
   const max = p.capacite_s;
   const part = max ? total / max : 0;
   const niveau = !max ? '' : part > 1 ? 'trop' : part >= 0.9 ? 'presque' : 'ok';
@@ -292,7 +305,8 @@ function afficherLignes() {
   const p = etat.p;
   const video = p.famille === 'temps' && p.support === 'Vidéotron';
   const cols = [
-    ['N°', true], ['Slide', p.famille === 'slide'], ['État', true], ['Sponsor', true], ['Quand', true], ['Son', video],
+    ['N°', true], ['Slide', p.famille === 'slide'], ['État', true], ['Sponsor', true], ['Quand', true],
+    ['Durée', p.famille === 'temps'], ['Son', video],
     ['Emplacement', p.famille === 'emplacement'], [p.lie_a_produit_id ? 'Visuel écran' : 'Visuel', true],
     ['Anneau LED', !!p.lie_a_produit_id], ['Remarques', true],
   ].filter(([, v]) => v).map(([t]) => t);
@@ -394,7 +408,7 @@ const qDepart = new URLSearchParams(location.search).get('q');
 if (qDepart) { $('recherche').value = qDepart; chercherAilleursPlusTard(); }
 
 // Classe d'une colonne (largeurs dans style.css, 09.10.2026 : petites colonnes au minimum, Remarques lisibles)
-const COLS_CLASSES = { 'N°': 'col-num', 'Slide': 'col-court', 'État': 'col-etat', 'Quand': 'col-court', 'Son': 'col-court', 'Anneau LED': 'col-court',
+const COLS_CLASSES = { 'N°': 'col-num', 'Slide': 'col-court', 'Durée': 'col-court', 'État': 'col-etat', 'Quand': 'col-court', 'Son': 'col-court', 'Anneau LED': 'col-court',
                        'Emplacement': 'col-court', 'Remarques': 'col-optionnelle col-remarques' };
 const classeCol = (t) => COLS_CLASSES[t] || '';
 
@@ -425,6 +439,7 @@ function rangeeLigne(l, rang, cols, emplUnique = null) {
     'Sponsor': `<strong>${echapper(l.contrat?.sponsor?.nom || '—')}</strong>${l.produit_id !== etat.p.id
       ? ` <a class="badge" href="produit.html?id=${l.produit_id}" title="Vendu comme ${echapper(l.produit?.nom || '')}">${echapper(l.produit?.nom || '')}</a>` : ''}`,
     'Quand': `${quand}${l.date_fin ? `<div class="doux petit">jusqu'au ${dateCourte(l.date_fin + 'T12:00')}</div>` : ''}`,
+    'Durée': celluleDuree(l, 'petit'),
     'Son': l.avec_son ? 'avec son' : '<span class="doux">sans</span>',
     'Emplacement': empl || '<span class="badge badge-a-venir">à placer</span>',
     'Visuel': visuelEcran,
@@ -645,8 +660,9 @@ document.addEventListener('change', async (e) => {
     if (await modifierLigne(id, { duree_s: duree }, 'Durée enregistrée')) {
       // l'anneau couplé dure comme sa vidéo
       if (l?.ligne_couplee_id) await sb.from('lignes_vendues').update({ duree_s: duree }).eq('id', l.ligne_couplee_id);
+      const depuisListe = !!t.closest('#lignes, #lignes-passes');     // colonne Durée : pas de détail ouvert
       await charger();
-      ouvrirDetail(id);
+      if (!depuisListe) ouvrirDetail(id);
     }
   }
 });
@@ -822,9 +838,7 @@ function ouvrirDetail(id) {
             ${info('Quand', l.type_vente === 'saison' ? 'Toute la saison'
               : `${dates.length} match${dates.length > 1 ? 's' : ''}<div class="petit">${dates.map(m => `${dateCourte(m.date_heure)} · ${echapper(m.adversaire)}`).join('<br>')}</div>`)}
             ${info('Jusqu’au', l.date_fin ? dateCourte(l.date_fin + 'T12:00') : '')}
-            ${estRegie && p.famille === 'temps'
-              ? info('Durée', `<input type="number" min="1" class="champ-court" data-duree-ligne="${l.id}" value="${l.duree_s ?? ''}" placeholder="—"> s`)
-              : info('Durée', l.duree_s ? `${l.duree_s} s` : '')}
+            ${info('Durée', celluleDuree(l, 'champ-court'))}
             ${info('Passages par match', l.occurrences > 1 ? l.occurrences : '')}
             ${p.famille === 'temps' && p.support === 'Vidéotron' ? info('Son', estRegie
               ? `<select class="champ-court" data-son-ligne="${l.id}">
