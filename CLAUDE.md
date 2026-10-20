@@ -309,6 +309,9 @@ d'infos entre le **département Sponsoring** (vend des produits de visibilité a
 
 - Porteuse du projet : Léa Talon (Régie), admin de l'outil. Elle parle français ; réponds en français.
 - Cahier des charges complet (Claude Docs) : https://claude.ai/code/artifact/deecc0db-6e12-4cf6-b96f-06bd15ee4bac
+- **Suivi pour Léa (Claude Docs, créé le 20.10.2026)** : https://claude.ai/code/artifact/682b38bf-afd6-4eca-9f9d-34eeb65114cc
+  (résumé, migrations à exécuter, ce qui est en place, décisions, idées en attente, journal des mises en ligne).
+  Le tenir à jour : à chaque push, une ligne en haut du journal ; nouvelle migration → tableau « À faire ».
 - Utilisateurs : Sponsoring, Régie, admin. **Pas de portail sponsor** en V1.
 - La diffusion se fait dans **Colosseo**, qui **n'accepte aucun import** : la Régie recopie à la main
   les playlists depuis l'outil. L'outil doit donc rendre cette saisie facile (ordre, noms exacts, changements).
