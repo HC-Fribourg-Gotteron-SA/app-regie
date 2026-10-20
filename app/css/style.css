@@ -619,6 +619,7 @@ td .etat-attente { display: inline-block; }
 .tableau tr.rangee-intercalaire td { padding: .2rem .9rem .2rem 2.4rem; font-size: .8rem; color: var(--texte-doux); background: var(--surface-2); }
 .cellule-duree { white-space: nowrap; }
 .cellule-duree input { width: 4.2rem; min-height: 0; padding: .2rem .35rem; }
+.cellule-duree input[data-passages-ligne] { width: 3.2rem; }
 .duree-chiffres { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
 .duree-barre { height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; border: 1px solid var(--bordure); }
 .duree-barre > div { height: 100%; background: var(--ok); border-radius: 999px; transition: width .3s; }

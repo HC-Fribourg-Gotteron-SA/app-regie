@@ -287,7 +287,11 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    vidéo = lecture seule (🎬), sinon saisie par la Régie (même règle dans le détail). **Intercalaire** (migration 59,
    `produits.intercalaire_nom / intercalaire_s`) : Anneau LED = « fond_Transparent.png » 5 s **après chaque sponsor**
    (playlist Colosseo de Léa), ligne grise dans la liste + compté dans le total ; admin : « ✏️ Après chaque sponsor ».
-   LED 3M / 6M d'1:00 dans la playlist de l'Anneau LED : pas compris (Léa ne sait pas), pas géré. Timings exacts des
+   LED 3M / 6M d'1:00 dans la playlist de l'Anneau LED : pas compris (Léa ne sait pas), pas géré.
+   **Play Count** (migration 60) : comme Colosseo, `duree_s` = UN passage, `occurrences` = passages par match (colonne
+   Durée « 15 s × 2 », × modifiable par la Régie) ; FRAPP et La Liberté 15 s × 2, ITS 10 s × 1. Comparaison
+   playlist Colosseo (74 lignes, 20.10.2026) ↔ feuille Airtable LED match : mêmes 37 éléments dans le même ordre ;
+   visuels « -SA » / « -SB » (BCF, BATR, TCS) et LED_3M_1A / 1B = probablement 2 versions qui alternent (pas renommés). Timings exacts des
    produits : Léa les donnera → les mettre en base (`capacite_s`). Lenteur (20.10.2026) : supabase-js fixé en 2.118.0 ;
    capture réseau = fiche ~1,9 s sans cache, base 65–200 ms/requête → OK ; Léa refuse d'alléger menu / Match du jour.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =

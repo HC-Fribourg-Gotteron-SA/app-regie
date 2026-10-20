@@ -1,7 +1,7 @@
 -- =====================================================================
 -- INSTALLATION COMPLÈTE d'une base neuve (base de TEST) — généré par outils/installation-base-test.mjs
 -- À exécuter UNE fois dans le SQL Editor du projet de test (jamais sur la vraie base).
--- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 58, 59.
+-- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 58, 59, 60.
 -- Ensuite : créer son compte (Authentication > Users), se mettre admin (voir en bas),
 -- importer le calendrier dans l'outil (.ics), puis lancer supabase/demo_donnees_test.sql.
 -- =====================================================================
@@ -5096,6 +5096,38 @@ select nom as "Produit", intercalaire_nom as "Intercalaire", intercalaire_s as "
 from produits where intercalaire_s is not null;
 
 
+-- #####################################################################
+-- 60_anneau_play_count.sql
+-- #####################################################################
+-- =====================================================================
+-- 60 — Anneau LED : durée d'UN passage + nombre de passages, comme dans Colosseo (« Play Count »)
+-- À exécuter sur la VRAIE base (sur la base de test : ne trouve rien, sans danger). Peut être exécuté plusieurs fois.
+-- =====================================================================
+-- Léa (20.10.2026, playlist Colosseo) : « garde comme dans Colosseo ». Airtable notait 0:30 « 2 x 15 s » ;
+-- Colosseo : 15 s joué 2 fois. ITS : Airtable « 3 x 10 sec », Colosseo 10 s joué 1 fois.
+-- duree_s = durée d'un passage ; occurrences = nombre de passages par match (la durée totale fait duree × occurrences).
+do $x$
+declare
+  v_produit uuid := (select id from produits where nom = 'Anneau LED');
+begin
+  update lignes_vendues l set duree_s = 15, occurrences = 2
+  where l.produit_id = v_produit and l.statut not in ('annule', 'termine')
+    and exists (select 1 from assets a where a.ligne_id = l.id
+                and (a.nom_visuel ilike 'FRAPP-2025-LED%' or a.nom_visuel ilike 'LL_2026_Play_off_Ribbon%'));
+
+  update lignes_vendues l set duree_s = 10, occurrences = 1
+  where l.produit_id = v_produit and l.statut not in ('annule', 'termine')
+    and exists (select 1 from assets a where a.ligne_id = l.id
+                and (a.nom_visuel ilike 'LED-ITS%' or a.nom_visuel ilike 'ITS-LED%'));
+end $x$;
+
+select s.nom as "Sponsor", a.nom_visuel as "Visuel", l.duree_s as "Durée (s)", l.occurrences as "Passages"
+from lignes_vendues l join contrats c on c.id = l.contrat_id join sponsors s on s.id = c.sponsor_id
+join assets a on a.ligne_id = l.id and a.statut <> 'archive'
+where l.produit_id = (select id from produits where nom = 'Anneau LED')
+  and (a.nom_visuel ilike 'FRAPP%' or a.nom_visuel ilike 'LL_2026%' or a.nom_visuel ilike '%ITS%');
+
+
 -- Après avoir créé ton compte dans Authentication > Users, lance ceci séparément :
 -- update profiles set role = 'admin', nom = 'Léa Talon' where email = 'lea.talon@fribourg-gotteron.ch';
-select 'Installation terminée : 55 fichiers.' as "Résultat";
+select 'Installation terminée : 56 fichiers.' as "Résultat";

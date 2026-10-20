@@ -178,14 +178,19 @@ async function charger() {
 // Durée d'un spot (colonne « Durée » et détail) : lue dans la vidéo → affichée, pas modifiable (20.10.2026, Léa) ;
 // sinon (import Airtable, pas de vidéo) la Régie la saisit. Produits sans durée : rien.
 const dureeVideo = (l) => Math.round(visuelActuel(l.assets)?.duree_s || 0) || null;
+// + nombre de passages par match (= « Play Count » de Colosseo, 20.10.2026 : ex. FRAPP 15 s × 2), modifiable par la Régie
 function celluleDuree(l, classe) {
   if (etat.p?.famille !== 'temps') return l.duree_s ? `${l.duree_s} s` : '';
   const video = dureeVideo(l);
-  if (video) return `<span title="Lue dans la vidéo">${video} s 🎬</span>`;
-  return estRegie
-    ? `<span class="cellule-duree"><input type="number" min="1" step="1" class="${classe}" data-duree-ligne="${l.id}"
-         value="${l.duree_s ?? ''}" placeholder="?" aria-label="Durée en secondes"> s</span>`
+  const fois = estRegie
+    ? ` × <input type="number" min="1" step="1" class="${classe}" data-passages-ligne="${l.id}" value="${l.occurrences || 1}"
+         aria-label="Passages par match" title="Passages par match (Play Count dans Colosseo)">`
+    : (l.occurrences || 1) > 1 ? ` × ${l.occurrences}` : '';
+  const duree = video ? `<span title="Lue dans la vidéo">${video} s 🎬</span>`
+    : estRegie ? `<input type="number" min="1" step="1" class="${classe}" data-duree-ligne="${l.id}"
+         value="${l.duree_s ?? ''}" placeholder="?" aria-label="Durée d'un passage en secondes"> s`
     : l.duree_s ? `${l.duree_s} s` : '<span class="badge badge-a-venir">?</span>';
+  return `<span class="cellule-duree">${duree}${fois}</span>`;
 }
 const minSec = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 async function afficherDureeTotale() {
@@ -658,6 +663,14 @@ document.addEventListener('change', async (e) => {
       t.checked = !t.checked; return;
     }
     rafraichirLigne(id);
+  } else if (t.dataset.passagesLigne) {
+    const n = parseInt(t.value, 10);
+    const occurrences = Number.isFinite(n) && n > 0 ? n : 1;
+    t.value = occurrences;
+    if (await modifierLigne(t.dataset.passagesLigne, { occurrences }, `${occurrences} passage${occurrences > 1 ? 's' : ''} par match`)) {
+      document.querySelectorAll(`[data-passages-ligne="${t.dataset.passagesLigne}"]`).forEach(x => { x.value = occurrences; });
+      afficherDureeTotale();
+    }
   } else if (t.dataset.lettreSlide) {
     // slide choisie (A, B… ; vide = à placer) : la liste se réordonne par slide
     const lettre = t.value || null;
@@ -863,7 +876,7 @@ function ouvrirDetail(id) {
               : `${dates.length} match${dates.length > 1 ? 's' : ''}<div class="petit">${dates.map(m => `${dateCourte(m.date_heure)} · ${echapper(m.adversaire)}`).join('<br>')}</div>`)}
             ${info('Jusqu’au', l.date_fin ? dateCourte(l.date_fin + 'T12:00') : '')}
             ${info('Durée', celluleDuree(l, 'champ-court'))}
-            ${info('Passages par match', l.occurrences > 1 ? l.occurrences : '')}
+            ${p.famille === 'temps' ? '' : info('Passages par match', l.occurrences > 1 ? l.occurrences : '')}
             ${p.famille === 'temps' && p.support === 'Vidéotron' ? info('Son', estRegie
               ? `<select class="champ-court" data-son-ligne="${l.id}">
                    <option value="oui" ${l.avec_son ? 'selected' : ''}>avec son</option>
