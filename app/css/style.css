@@ -610,6 +610,16 @@ body:has(.bandeau-test) { box-shadow: inset 0 4px 0 #e0a100; }
   white-space: pre-wrap; pointer-events: none; }
 .bulle-remarque[hidden] { display: none; }
 td .etat-attente { display: inline-block; }
+/* Fiche produit : durée totale au prochain match (produit.js) — barre verte, orange dès 90 %, rouge au-delà */
+.duree-totale { background: var(--surface); border: 1px solid var(--bordure); border-radius: var(--rayon-petit);
+  padding: .7rem .9rem; margin: 0 0 1rem; display: grid; gap: .45rem; }
+.duree-ligne { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.duree-chiffres { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.duree-barre { height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; border: 1px solid var(--bordure); }
+.duree-barre > div { height: 100%; background: var(--ok); border-radius: 999px; transition: width .3s; }
+.duree-totale.presque .duree-barre > div { background: #e0a100; }
+.duree-totale.trop { border-color: var(--erreur); }
+.duree-totale.trop .duree-barre > div { background: var(--erreur); }
 /* Digital · Programme de match : une carte par match (digital.js) */
 .carte-programme { margin-bottom: .9rem; padding: .9rem 1.1rem; }
 .carte-programme.trop { box-shadow: inset 5px 0 0 var(--erreur), var(--ombre); }

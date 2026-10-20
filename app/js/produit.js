@@ -1,9 +1,11 @@
 import { sb, exigerConnexion, echapper, dateCourte, notifier, taille, debounce,
          descriptionProduit, specsProduit, CATEGORIES_UNE_PAGE, lienCategorie, ongletsProduits, etatAuMatch, boutonVoir } from './app.js';
 import { carteTraitement, CHAMPS_A_TRAITER, boutonSupprimerFichier, confirmerSuppressionFichier } from './traitement.js';
+import { PASSE } from './changements.js';
 
 const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
+const estAdmin = profil.role === 'admin';      // durée à disposition d'un produit (Léa, 20.10.2026 : les admins)
 
 const $ = (id) => document.getElementById(id);
 const idProduit = new URLSearchParams(location.search).get('id');
@@ -108,6 +110,9 @@ async function charger() {
   etat.matchsSaison = (matchs || []).filter(m => m.type === 'saison')
     .sort((a, b) => new Date(a.date_heure) - new Date(b.date_heure));
   etat.prochains = etat.matchsSaison.filter(m => new Date(m.date_heure) >= debutJour);
+  // prochain match (CHL compris, pas Ladies) : durée totale du produit ce soir-là
+  etat.prochainMatch = (matchs || []).filter(m => m.type !== 'ladies' && new Date(m.date_heure) >= debutJour)
+    .sort((a, b) => new Date(a.date_heure) - new Date(b.date_heure))[0] || null;
   if (p.lie_a_produit_id) {
     const { data } = await sb.from('produits').select('*').eq('id', p.lie_a_produit_id).maybeSingle();
     etat.anneau = data;
@@ -162,6 +167,59 @@ async function charger() {
 
   afficherAttente();
   afficherLignes();
+  afficherDureeTotale();
+}
+
+// ---------------------------------------------------------------------
+// Durée totale au prochain match (20.10.2026, option A de Léa) : produits à durée (Anneau LED, Pub pause tiers…).
+// Ce qui passe vraiment ce soir-là = les passages du match (au match, un match sur deux, à l'écran compris),
+// + les slides pour la Pub pause tiers ; comparé au maximum du produit (capacite_s). Sans durée : signalé.
+// ---------------------------------------------------------------------
+const minSec = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
+async function afficherDureeTotale() {
+  const zone = $('duree-totale');
+  const p = etat.p, m = etat.prochainMatch;
+  if (p.famille !== 'temps' || !m) { zone.hidden = true; return; }
+  const ids = etat.lignes.map(l => l.id);
+  const { data: passages } = ids.length
+    ? await sb.from('passages').select('ligne_id, statut').eq('match_id', m.id).in('ligne_id', ids)
+    : { data: [] };
+  const passent = new Set((passages || []).filter(x => PASSE.has(x.statut)).map(x => x.ligne_id));
+  const lignes = etat.lignes.filter(l => passent.has(l.id));
+  const sansDuree = lignes.filter(l => !l.duree_s);
+  const slides = etat.slides.reduce((t, s) => t + (s.duree || 0), 0);
+  const total = lignes.reduce((t, l) => t + (l.duree_s || 0) * (l.occurrences || 1), 0) + slides;
+  const max = p.capacite_s;
+  const part = max ? total / max : 0;
+  const niveau = !max ? '' : part > 1 ? 'trop' : part >= 0.9 ? 'presque' : 'ok';
+  zone.className = `duree-totale ${niveau}`;
+  zone.innerHTML = `
+    <div class="duree-ligne">
+      <span>⏱ Au prochain match <span class="doux">(${dateCourte(m.date_heure)} · ${echapper(m.adversaire)})</span></span>
+      <strong class="duree-chiffres">${minSec(total)}${max ? ` / ${minSec(max)}` : ''}</strong>
+      ${max ? '' : '<span class="doux petit">durée à disposition pas définie</span>'}
+      ${estAdmin ? `<button type="button" class="btn btn-discret petit" data-capacite title="Changer la durée à disposition par match">✏️ Durée à disposition</button>` : ''}
+    </div>
+    ${max ? `<div class="duree-barre" role="progressbar" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${Math.round(total)}">
+      <div style="width:${Math.min(100, part * 100).toFixed(1)}%"></div></div>` : ''}
+    <div class="petit doux">${lignes.length} sponsor${lignes.length > 1 ? 's' : ''}${slides ? ` + slides ${minSec(slides)}` : ''}
+      ${max ? ` · ${total > max ? `<strong style="color:var(--erreur)">⚠ ${minSec(total - max)} de trop</strong>` : `reste ${minSec(max - total)}`}` : ''}
+      ${sansDuree.length ? ` · <span class="badge badge-a-venir" title="${echapper(sansDuree.map(l => l.contrat?.sponsor?.nom || '—').join(', '))}">
+        ${sansDuree.length} sans durée : ${echapper(sansDuree.slice(0, 4).map(l => l.contrat?.sponsor?.nom || '—').join(', '))}${sansDuree.length > 4 ? '…' : ''}</span>` : ''}</div>`;
+  zone.hidden = false;
+  zone.querySelector('[data-capacite]')?.addEventListener('click', async () => {
+    const actuel = p.capacite_s ? String(Math.round(p.capacite_s / 30) / 2) : '';
+    const saisie = prompt(`Durée à disposition par match pour « ${p.nom} », en minutes (ex. 17 ou 12.5 ; vide = pas de limite) :`, actuel);
+    if (saisie === null) return;
+    const min = parseFloat(saisie.replace(',', '.'));
+    const capacite_s = saisie.trim() === '' ? null : Number.isFinite(min) && min > 0 ? Math.round(min * 60) : undefined;
+    if (capacite_s === undefined) return notifier('Durée pas comprise : indiquez des minutes, ex. 17', 'erreur');
+    const { error } = await sb.from('produits').update({ capacite_s }).eq('id', p.id);
+    if (error) return notifier(`Pas enregistré : ${error.message}`, 'erreur');
+    p.capacite_s = capacite_s;
+    notifier(capacite_s ? `Durée à disposition : ${minSec(capacite_s)}` : 'Plus de limite de durée');
+    afficherDureeTotale();
+  });
 }
 
 // ---------------------------------------------------------------------
