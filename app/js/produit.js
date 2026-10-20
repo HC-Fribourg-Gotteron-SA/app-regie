@@ -201,7 +201,10 @@ async function afficherDureeTotale() {
   const duree = (l) => dureeVideo(l) || l.duree_s || 0;
   const sansDuree = lignes.filter(l => !duree(l));
   const slides = etat.slides.reduce((t, s) => t + (s.duree || 0), 0);
-  const total = lignes.reduce((t, l) => t + duree(l) * (l.occurrences || 1), 0) + slides;
+  // intercalaire après chaque sponsor (Anneau LED : fond transparent 5 s, migration 59)
+  const nbPassages = lignes.reduce((t, l) => t + (l.occurrences || 1), 0);
+  const inter = (p.intercalaire_s || 0) * nbPassages;
+  const total = lignes.reduce((t, l) => t + duree(l) * (l.occurrences || 1), 0) + slides + inter;
   const max = p.capacite_s;
   const part = max ? total / max : 0;
   const niveau = !max ? '' : part > 1 ? 'trop' : part >= 0.9 ? 'presque' : 'ok';
@@ -212,14 +215,32 @@ async function afficherDureeTotale() {
       <strong class="duree-chiffres">${minSec(total)}${max ? ` / ${minSec(max)}` : ''}</strong>
       ${max ? '' : '<span class="doux petit">durée à disposition pas définie</span>'}
       ${estAdmin ? `<button type="button" class="btn btn-discret petit" data-capacite title="Changer la durée à disposition par match">✏️ Durée à disposition</button>` : ''}
+      ${estAdmin && p.intercalaire_s ? `<button type="button" class="btn btn-discret petit" data-intercalaire title="Ce qui passe après chaque sponsor">✏️ Après chaque sponsor</button>` : ''}
     </div>
     ${max ? `<div class="duree-barre" role="progressbar" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${Math.round(total)}">
       <div style="width:${Math.min(100, part * 100).toFixed(1)}%"></div></div>` : ''}
-    <div class="petit doux">${lignes.length} sponsor${lignes.length > 1 ? 's' : ''}${slides ? ` + slides ${minSec(slides)}` : ''}
+    <div class="petit doux">${lignes.length} sponsor${lignes.length > 1 ? 's' : ''}${slides ? ` + slides ${minSec(slides)}` : ''}${
+      inter ? ` + ${echapper(p.intercalaire_nom || 'intercalaire')} ${minSec(inter)}` : ''}
       ${max ? ` · ${total > max ? `<strong style="color:var(--erreur)">⚠ ${minSec(total - max)} de trop</strong>` : `reste ${minSec(max - total)}`}` : ''}
       ${sansDuree.length ? ` · <span class="badge badge-a-venir" title="${echapper(sansDuree.map(l => l.contrat?.sponsor?.nom || '—').join(', '))}">
         ${sansDuree.length} sans durée : ${echapper(sansDuree.slice(0, 4).map(l => l.contrat?.sponsor?.nom || '—').join(', '))}${sansDuree.length > 4 ? '…' : ''}</span>` : ''}</div>`;
   zone.hidden = false;
+  zone.querySelector('[data-intercalaire]')?.addEventListener('click', async () => {
+    const nom = prompt('Après chaque sponsor : nom du visuel dans Colosseo', p.intercalaire_nom || '');
+    if (nom === null) return;
+    const saisie = prompt('Sa durée en secondes (vide = plus rien après chaque sponsor) :', String(p.intercalaire_s || ''));
+    if (saisie === null) return;
+    const s = parseInt(saisie, 10);
+    const intercalaire_s = saisie.trim() === '' ? null : Number.isFinite(s) && s > 0 ? s : undefined;
+    if (intercalaire_s === undefined) return notifier('Durée pas comprise : indiquez des secondes, ex. 5', 'erreur');
+    const champs = { intercalaire_nom: intercalaire_s ? nom.trim() || null : null, intercalaire_s };
+    const { error } = await sb.from('produits').update(champs).eq('id', p.id);
+    if (error) return notifier(`Pas enregistré : ${error.message}`, 'erreur');
+    Object.assign(p, champs);
+    notifier(intercalaire_s ? `Après chaque sponsor : ${champs.intercalaire_nom || 'intercalaire'} ${intercalaire_s} s` : 'Plus rien après chaque sponsor');
+    afficherLignes();
+    afficherDureeTotale();
+  });
   zone.querySelector('[data-capacite]')?.addEventListener('click', async () => {
     const actuel = p.capacite_s ? String(Math.round(p.capacite_s / 30) / 2) : '';
     const saisie = prompt(`Durée à disposition par match pour « ${p.nom} », en minutes (ex. 17 ou 12.5 ; vide = pas de limite) :`, actuel);
@@ -326,8 +347,11 @@ function afficherLignes() {
     $('lignes').innerHTML = rangeesEmplacements(cols);
     return;
   }
+  // Anneau LED (migration 59) : après chaque sponsor, l'intercalaire du club (fond transparent 5 s), comme dans Colosseo
+  const intercalaire = p.intercalaire_s ? `<tr class="rangee-intercalaire"><td colspan="${cols.length}">
+    ↳ ${echapper(p.intercalaire_nom || 'intercalaire')} · ${p.intercalaire_s} s</td></tr>` : '';
   $('lignes').innerHTML = (p.famille === 'slide' ? rangeesParSlide(cols)
-    : etat.lignes.map((l, rang) => rangeeLigne(l, rang, cols)).join('')) + rangeesSlides(cols, etat.lignes.length);
+    : etat.lignes.map((l, rang) => rangeeLigne(l, rang, cols) + intercalaire).join('')) + rangeesSlides(cols, etat.lignes.length);
   filtrer();
 }
 

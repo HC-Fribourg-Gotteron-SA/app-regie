@@ -279,6 +279,17 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    plus que `logos_par_slide`), puis « À placer » (nouveau sponsor sans lettre) ; flèches ↑ ↓ dans la même slide.
    Migration générée par `node outils/lettres-slides.mjs` depuis les CSV Airtable (même nettoyage des noms que
    l'import ; ne remplace pas une lettre déjà choisie). Proposé, pas fait : la lettre dans « À mettre dans Canva ».
+0-unvicies. **Durées des produits (20.10.2026, option A de Léa ; migration 59 à exécuter sur les deux bases, pas encore
+   testé)** : fiche d'un produit `temps` → encadré « ⏱ Au prochain match : 12:40 / 17:00 » + barre (verte, orange ≥ 90 %,
+   rouge au-delà) ; total = passages du prochain match (CHL compris, pas Ladies) × durée (vidéo, sinon `duree_s`)
+   + slides + intercalaire ; « N sans durée » signalé. **Durée à disposition** (`capacite_s`) modifiable par les
+   **admins** (✏️ sur la fiche ; aussi dans « Modifier le produit », Régie comprise). Colonne **Durée** : lue dans la
+   vidéo = lecture seule (🎬), sinon saisie par la Régie (même règle dans le détail). **Intercalaire** (migration 59,
+   `produits.intercalaire_nom / intercalaire_s`) : Anneau LED = « fond_Transparent.png » 5 s **après chaque sponsor**
+   (playlist Colosseo de Léa), ligne grise dans la liste + compté dans le total ; admin : « ✏️ Après chaque sponsor ».
+   LED 3M / 6M d'1:00 dans la playlist de l'Anneau LED : pas compris (Léa ne sait pas), pas géré. Timings exacts des
+   produits : Léa les donnera → les mettre en base (`capacite_s`). Lenteur (20.10.2026) : supabase-js fixé en 2.118.0 ;
+   capture réseau = fiche ~1,9 s sans cache, base 65–200 ms/requête → OK ; Léa refuse d'alléger menu / Match du jour.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
@@ -397,7 +408,9 @@ outil-regie/
 │   ├── 52_matchs_ladies.sql ← type de match « Ladies » + modèle de run of show « Ladies 26/27 »
 │   ├── 53_import_ladies.sql ← import Ladies séparé des matchs NL (même jour), numéros Ladies à part, moins de recalcul
 │   ├── 54_leguriviera_spots.sql ← Leguriviera : versions « Spot chef » / « Spot normal »
-│   └── 55_espace_digital.sql ← espace Digital : produits.espace, joueurs, digital_elements, traiter_digital, profiles.espaces
+│   ├── 55_espace_digital.sql ← espace Digital : produits.espace, joueurs, digital_elements, traiter_digital, profiles.espaces
+│   ├── 56 / 57 ← parrainages et programme actuels (Airtable, vraie base seulement) ; 58 lettres des slides
+│   └── 59_intercalaire_anneau.sql ← produits.intercalaire_nom / _s : Anneau LED, fond transparent 5 s après chaque sponsor
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)

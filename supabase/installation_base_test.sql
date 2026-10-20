@@ -1,7 +1,7 @@
 -- =====================================================================
 -- INSTALLATION COMPLÈTE d'une base neuve (base de TEST) — généré par outils/installation-base-test.mjs
 -- À exécuter UNE fois dans le SQL Editor du projet de test (jamais sur la vraie base).
--- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 58.
+-- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 58, 59.
 -- Ensuite : créer son compte (Authentication > Users), se mettre admin (voir en bas),
 -- importer le calendrier dans l'outil (.ics), puis lancer supabase/demo_donnees_test.sql.
 -- =====================================================================
@@ -5074,6 +5074,28 @@ group by p.ordre, p.nom, l.slide
 order by p.ordre, p.nom, l.slide nulls last;
 
 
+-- #####################################################################
+-- 59_intercalaire_anneau.sql
+-- #####################################################################
+-- =====================================================================
+-- 59 — Anneau LED : intercalaire après chaque sponsor (fond transparent, 5 s)
+-- À exécuter une fois dans Supabase > SQL Editor, sur la base de TEST puis sur la vraie base.
+-- Peut être exécuté plusieurs fois.
+-- =====================================================================
+-- Léa (20.10.2026, capture de la playlist Colosseo) : après chaque sponsor de l'Anneau LED, on met le nôtre,
+-- « fond_Transparent.png » de 5 s. Affiché dans la liste de la fiche (ligne grise après chaque sponsor) et compté
+-- dans la durée totale. Nom et durée réglés par produit (un admin peut les changer sur la fiche).
+alter table produits
+  add column if not exists intercalaire_nom text,      -- ex. fond_Transparent.png
+  add column if not exists intercalaire_s   int check (intercalaire_s is null or intercalaire_s > 0);
+
+update produits set intercalaire_nom = 'fond_Transparent.png', intercalaire_s = 5
+where nom = 'Anneau LED' and intercalaire_s is null;
+
+select nom as "Produit", intercalaire_nom as "Intercalaire", intercalaire_s as "Durée (s)"
+from produits where intercalaire_s is not null;
+
+
 -- Après avoir créé ton compte dans Authentication > Users, lance ceci séparément :
 -- update profiles set role = 'admin', nom = 'Léa Talon' where email = 'lea.talon@fribourg-gotteron.ch';
-select 'Installation terminée : 54 fichiers.' as "Résultat";
+select 'Installation terminée : 55 fichiers.' as "Résultat";
