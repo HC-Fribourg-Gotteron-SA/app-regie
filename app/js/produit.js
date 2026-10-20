@@ -206,9 +206,9 @@ async function afficherDureeTotale() {
   const duree = (l) => dureeVideo(l) || l.duree_s || 0;
   const sansDuree = lignes.filter(l => !duree(l));
   const slides = etat.slides.reduce((t, s) => t + (s.duree || 0), 0);
-  // intercalaire après chaque sponsor (Anneau LED : fond transparent 5 s, migration 59)
-  const nbPassages = lignes.reduce((t, l) => t + (l.occurrences || 1), 0);
-  const inter = (p.intercalaire_s || 0) * nbPassages;
+  // intercalaire après chaque sponsor (Anneau LED : fond transparent 5 s, migration 59) : une fois par LIGNE,
+  // comme dans Colosseo (le Play Count rejoue la vidéo, pas le fond)
+  const inter = (p.intercalaire_s || 0) * lignes.length;
   const total = lignes.reduce((t, l) => t + duree(l) * (l.occurrences || 1), 0) + slides + inter;
   const max = p.capacite_s;
   const part = max ? total / max : 0;
