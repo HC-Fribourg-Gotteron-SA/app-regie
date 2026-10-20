@@ -1,7 +1,7 @@
 -- =====================================================================
 -- INSTALLATION COMPLÈTE d'une base neuve (base de TEST) — généré par outils/installation-base-test.mjs
 -- À exécuter UNE fois dans le SQL Editor du projet de test (jamais sur la vraie base).
--- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 58, 59, 60, 61, 62.
+-- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 58, 59, 60, 61, 62, 63.
 -- Ensuite : créer son compte (Authentication > Users), se mettre admin (voir en bas),
 -- importer le calendrier dans l'outil (.ics), puis lancer supabase/demo_donnees_test.sql.
 -- =====================================================================
@@ -5268,6 +5268,61 @@ where l.produit_id = (select id from produits where nom = 'Pub pause tiers') and
 order by l.avec_son desc, (l.ligne_couplee_id is null), l.priorite nulls last;
 
 
+-- #####################################################################
+-- 63_leguriviera_nettoyage.sql
+-- #####################################################################
+-- =====================================================================
+-- 63 — Leguriviera (Pub pause tiers) : seulement « Spot chef » et « Spot normal »
+-- À exécuter sur la VRAIE base, en un seul bloc. Peut être exécuté plusieurs fois.
+-- =====================================================================
+-- Léa (20.10.2026) : « leguriviera c'est soit spot chef soit spot normal ». Il y avait 4 lignes :
+--   · au match, 10 matchs, « dates spot chef »    → gardée, visuel « Spot chef »
+--   · au match, 13 matchs, « dates spot normal »  → gardée, visuel « Spot normal »
+--   · au match, 1 match (29.09, passé), sans durée, venue d'une demande → retirée
+--   · saison, pas à l'écran, aucun match, venue d'une demande          → retirée
+-- Retirée = comme « Retirer de ce produit » (terminée, reste dans l'historique ; la demande n'est pas touchée).
+-- Les noms de visuels reprennent la migration 54 (pas exécutée ou sans effet : les lignes n'avaient aucun visuel).
+do $x$
+declare
+  l record;
+  v_nom text;
+begin
+  -- 1. lignes en trop : ni « chef » ni « normal » dans les remarques
+  update lignes_vendues lv set statut = 'termine', date_fin = least(coalesce(lv.date_fin, current_date - 1), current_date - 1)
+  from contrats c, sponsors s
+  where c.id = lv.contrat_id and s.id = c.sponsor_id and s.nom ilike '%leguriviera%'
+    and lv.produit_id = (select id from produits where nom = 'Pub pause tiers')
+    and lv.statut not in ('annule', 'termine')
+    and coalesce(lv.consignes, '') not ilike '%spot chef%' and coalesce(lv.consignes, '') not ilike '%spot normal%';
+
+  -- 2. visuels « Spot chef » / « Spot normal » (sans fichier, validés : contrôle désactivé le temps de l'ajout)
+  alter table assets disable trigger assets_avant;
+  for l in
+    select lv.id, lv.consignes from lignes_vendues lv
+    join contrats c on c.id = lv.contrat_id join sponsors s on s.id = c.sponsor_id
+    where s.nom ilike '%leguriviera%' and lv.produit_id = (select id from produits where nom = 'Pub pause tiers')
+      and lv.statut not in ('annule', 'termine')
+  loop
+    v_nom := case when l.consignes ilike '%spot chef%' then 'Spot chef' when l.consignes ilike '%spot normal%' then 'Spot normal' end;
+    continue when v_nom is null
+      or exists (select 1 from assets where ligne_id = l.id and nom_visuel = v_nom and statut = 'valide');
+    insert into assets (ligne_id, nom_visuel, statut, valide_le, version)
+    values (l.id, v_nom, 'valide', now(),
+            coalesce((select max(version) from assets where ligne_id = l.id and variante is null), 0) + 1);
+  end loop;
+  alter table assets enable trigger assets_avant;
+end $x$;
+
+select l.priorite as "Ordre", a.nom_visuel as "Visuel", l.duree_s as "Durée",
+       (select count(*) from lignes_matchs lm where lm.ligne_id = l.id) as "Matchs"
+from lignes_vendues l
+join contrats c on c.id = l.contrat_id join sponsors s on s.id = c.sponsor_id
+left join assets a on a.ligne_id = l.id and a.statut = 'valide'
+where s.nom ilike '%leguriviera%' and l.produit_id = (select id from produits where nom = 'Pub pause tiers')
+  and l.statut not in ('annule', 'termine')
+order by l.priorite;
+
+
 -- Après avoir créé ton compte dans Authentication > Users, lance ceci séparément :
 -- update profiles set role = 'admin', nom = 'Léa Talon' where email = 'lea.talon@fribourg-gotteron.ch';
-select 'Installation terminée : 58 fichiers.' as "Résultat";
+select 'Installation terminée : 59 fichiers.' as "Résultat";
