@@ -1,7 +1,6 @@
 import { sb, exigerConnexion, echapper, dateCourte, notifier, taille, debounce,
          descriptionProduit, specsProduit, CATEGORIES_UNE_PAGE, lienCategorie, ongletsProduits, etatAuMatch, boutonVoir } from './app.js';
 import { carteTraitement, CHAMPS_A_TRAITER, boutonSupprimerFichier, confirmerSuppressionFichier } from './traitement.js';
-import { PASSE } from './changements.js';
 
 const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
 const estRegie = ['regie', 'admin'].includes(profil.role);
@@ -172,7 +171,7 @@ async function charger() {
 
 // ---------------------------------------------------------------------
 // Durée totale au prochain match (20.10.2026, option A de Léa) : produits à durée (Anneau LED, Pub pause tiers…).
-// Ce qui passe vraiment ce soir-là = les passages du match (au match, un match sur deux, à l'écran compris),
+// Ce qui passe ce soir-là = diffusions à l'écran, saison ou vendues pour ce match (calcul sur la page, sans requête),
 // + les slides pour la Pub pause tiers ; comparé au maximum du produit (capacite_s). Sans durée : signalé.
 // ---------------------------------------------------------------------
 // Durée d'un spot (colonne « Durée » et détail) : lue dans la vidéo → affichée, pas modifiable (20.10.2026, Léa) ;
@@ -198,12 +197,15 @@ async function afficherDureeTotale() {
   const zone = $('duree-totale');
   const p = etat.p, m = etat.prochainMatch;
   if (p.famille !== 'temps' || !m) { zone.hidden = true; return; }
-  const ids = etat.lignes.map(l => l.id);
-  const { data: passages } = ids.length
-    ? await sb.from('passages').select('ligne_id, statut').eq('match_id', m.id).in('ligne_id', ids)
-    : { data: [] };
-  const passent = new Set((passages || []).filter(x => PASSE.has(x.statut)).map(x => x.ligne_id));
-  const lignes = etat.lignes.filter(l => passent.has(l.id));
+  // calculé avec ce qui est déjà chargé (20.10.2026 : la requête sur la table passages bloquait la base, fiches
+  // à 15 s) : à l'écran + vendu pour ce match (au match) ou saison (match de saison), pas terminé avant ce jour.
+  // « Un match sur deux » n'est pas déduit ici (compté comme s'il passait).
+  const jour = jourLocal(m.date_heure);
+  const lignes = etat.lignes.filter(l => aLEcran(l)
+    && (!l.date_fin || l.date_fin >= jour)
+    && (l.type_vente === 'match'
+      ? (l.matchs || []).some(x => x.match && jourLocal(x.match.date_heure) === jour)
+      : m.type === 'saison'));
   const duree = (l) => dureeVideo(l) || l.duree_s || 0;
   const sansDuree = lignes.filter(l => !duree(l));
   const slides = etat.slides.reduce((t, s) => t + (s.duree || 0), 0);
