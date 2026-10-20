@@ -182,7 +182,8 @@ const dureeVideo = (l) => Math.round(visuelActuel(l.assets)?.duree_s || 0) || nu
 function celluleDuree(l, classe) {
   if (etat.p?.famille !== 'temps') return l.duree_s ? `${l.duree_s} s` : '';
   const video = dureeVideo(l);
-  const fois = estRegie
+  // « × passages » seulement sur l'Anneau LED (Léa, 20.10.2026 : ailleurs pas besoin) ; ailleurs affiché seulement si > 1
+  const fois = estRegie && etat.p.nom === 'Anneau LED'
     ? ` × <input type="number" min="1" step="1" class="${classe}" data-passages-ligne="${l.id}" value="${l.occurrences || 1}"
          aria-label="Passages par match" title="Passages par match (Play Count dans Colosseo)">`
     : (l.occurrences || 1) > 1 ? ` × ${l.occurrences}` : '';
