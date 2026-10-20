@@ -1,6 +1,6 @@
 // Dossier d'un sponsor (sponsor.html?id=…) : ce qu'il a, les documents reçus, ses demandes
 import { sb, exigerConnexion, LIBELLES, echapper, dateCourte, notifier, taille, nomFichierSur,
-         libelleFichier, toutesLesLignes, etatAuMatch } from './app.js';
+         libelleFichier, toutesLesLignes, etatAuMatch, boutonVoir } from './app.js';
 
 const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
 // Sponsoring : consultation ; les documents arrivent par les demandes. Déposer ici = Régie / admin.
@@ -158,6 +158,7 @@ function afficherDocuments(docs) {
         ${d.notes ? `<br><span class="petit">${echapper(d.notes)}</span>` : ''}
       </span>
       ${d.demande_id ? `<a class="btn btn-discret" href="demandes.html?id=${d.demande_id}">Demande</a>` : ''}
+      ${boutonVoir(d.storage_path)}
       <button type="button" class="btn btn-discret" data-telecharger="${echapper(d.storage_path)}">Télécharger</button>
     </li>`).join('');
   $('vide-documents').hidden = docs.length > 0;

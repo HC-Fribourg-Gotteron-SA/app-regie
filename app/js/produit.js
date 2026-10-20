@@ -1,5 +1,5 @@
 import { sb, exigerConnexion, echapper, dateCourte, notifier, taille, debounce,
-         descriptionProduit, specsProduit, CATEGORIES_UNE_PAGE, lienCategorie, ongletsProduits, etatAuMatch } from './app.js';
+         descriptionProduit, specsProduit, CATEGORIES_UNE_PAGE, lienCategorie, ongletsProduits, etatAuMatch, boutonVoir } from './app.js';
 import { carteTraitement, CHAMPS_A_TRAITER, boutonSupprimerFichier, confirmerSuppressionFichier } from './traitement.js';
 
 const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
@@ -523,7 +523,7 @@ function listeVisuels(assets) {
     <li><span>${echapper(a.nom_visuel)}${a.variante ? ` <span class="doux petit">(${echapper(a.variante)})</span>` : ''}        <span class="doux petit"> · déposé le ${dateCourte(a.depose_le)}</span></span>
       ${a.statut === 'archive' ? '<span class="badge">ancien</span>'
         : STATUT_ASSET[a.statut] ? `<span class="badge ${STATUT_ASSET[a.statut][1]}">${STATUT_ASSET[a.statut][0]}</span>` : ''}
-      ${a.storage_path ? `<button type="button" class="btn btn-discret" data-telecharger-visuel="${echapper(a.storage_path)}">Télécharger</button>` : ''}
+      ${a.storage_path ? `${boutonVoir(a.storage_path)}<button type="button" class="btn btn-discret" data-telecharger-visuel="${echapper(a.storage_path)}">Télécharger</button>` : ''}
       ${a.storage_path && estRegie ? boutonSupprimerFichier(a.storage_path) : ''}
     </li>`).join('')}</ul>`
     : '<p class="doux petit" style="margin:0">Aucun visuel pour l’instant.</p>';
@@ -881,7 +881,7 @@ async function afficherDossierSponsor(l) {
     <h3>Dossier du sponsor <span class="doux petit">· ${docs.length} fichier${docs.length > 1 ? 's' : ''}</span></h3>
     <ul class="liste-fichiers liste-documents" style="margin:0">${docs.slice(0, 10).map(d => `
       <li><span>${echapper(d.nom)} <span class="doux petit">· reçu le ${dateCourte(d.depose_le)}${d.taille_octets ? ` · ${taille(d.taille_octets)}` : ''}</span></span>
-        <span><button type="button" class="btn btn-discret" data-telecharger-visuel="${echapper(d.storage_path)}">Télécharger</button>
+        <span>${boutonVoir(d.storage_path)}<button type="button" class="btn btn-discret" data-telecharger-visuel="${echapper(d.storage_path)}">Télécharger</button>
         ${estRegie ? boutonSupprimerFichier(d.storage_path) : ''}</span></li>`).join('')}
     </ul>
     ${docs.length > 10 ? `<a class="petit" href="sponsor.html?id=${sponsorId}">Voir tout le dossier →</a>` : ''}`;

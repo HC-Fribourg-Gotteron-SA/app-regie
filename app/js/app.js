@@ -590,6 +590,20 @@ export function debounce(fn, ms = 250) {
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
 
+// « Voir » un fichier du stockage (20.10.2026, Léa) : ouvert dans un nouvel onglet, sans le télécharger
+// (le navigateur affiche images, PDF, vidéos). Un seul écouteur pour toutes les pages : bouton [data-voir="<chemin>"].
+export const boutonVoir = (chemin) =>
+  `<button type="button" class="btn btn-discret" data-voir="${echapper(chemin)}" title="Aperçu dans un nouvel onglet">Voir</button>`;
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-voir]');
+  if (!b) return;
+  e.stopPropagation();
+  const onglet = window.open('', '_blank');        // ouvert tout de suite (sinon bloqué comme fenêtre surgissante)
+  const { data, error } = await sb.storage.from('assets').createSignedUrl(b.dataset.voir, 600);
+  if (error) { onglet?.close(); return notifier(`Aperçu impossible : ${error.message}`, 'erreur'); }
+  if (onglet) onglet.location = data.signedUrl; else window.open(data.signedUrl, '_blank');
+});
+
 // Nom de fichier sûr pour le stockage (accents et espaces retirés)
 export function nomFichierSur(nom) {
   return nom.normalize('NFD').replace(/[̀-ͯ]/g, '')
