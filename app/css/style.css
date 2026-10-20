@@ -619,6 +619,8 @@ td .etat-attente { display: inline-block; }
 .programme-pub { display: grid; grid-template-columns: minmax(12rem, 1.4fr) auto minmax(8rem, 1fr) auto minmax(12rem, 1.2fr);
   gap: .5rem .9rem; align-items: center; padding: .6rem 0 0; margin-top: .6rem; border-top: 1px solid var(--bordure); }
 .programme-pub.passe { color: var(--texte-doux); }
+.programme-enlever { background: var(--erreur-fond); margin-left: -1.1rem; margin-right: -1.1rem; padding: .6rem 1.1rem; }
+.programme-enlever.passe { background: none; }
 .programme-commentaire textarea { width: 100%; min-width: 0 !important; }
 @media (max-width: 860px) { .programme-pub { grid-template-columns: 1fr auto; } .programme-commentaire { grid-column: 1 / -1; } }
 .tableau-diffusions tr.rangee-slides td { background: var(--info-fond); }

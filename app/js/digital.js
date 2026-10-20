@@ -126,16 +126,26 @@ function vueProgramme() {
   const aVenir = etat.matchs.filter(m => new Date(m.date_heure) >= debut);
   const passes = etat.matchs.filter(m => new Date(m.date_heure) < debut && parMatch.has(m.id)).reverse();
   // une carte par match (choix de Léa, 16.10.2026) : ses pubs dessous, compteur « N / 3 » bien visible
+  // À enlever (20.10.2026, option A de Léa) : le programme est refait à partir de celui du match précédent →
+  // ses pubs qui ne sont plus dans ce match, en rouge, case « Enlevé » (gardée sur la pub du match précédent)
+  const aEnlever = (m) => {
+    const i = etat.matchs.findIndex(x => x.id === m.id);
+    const precedent = i > 0 ? etat.matchs[i - 1] : null;
+    if (!precedent) return [];
+    const ici = new Set((parMatch.get(m.id) || []).filter(el => el.statut === 'actif').map(el => el.sponsor_id));
+    return (parMatch.get(precedent.id) || []).filter(el => el.statut === 'actif' && !ici.has(el.sponsor_id));
+  };
   const carteMatch = (m) => {
     const liste = parMatch.get(m.id) || [];
     const actifs = liste.filter(el => el.statut === 'actif');
     const trop = actifs.length > MAX_PUBS_PROGRAMME;
-    const restent = actifs.filter(el => !el.fait?.programme).length;
+    const enlever = aEnlever(m);
+    const restent = actifs.filter(el => !el.fait?.programme).length + enlever.filter(el => !el.fait?.enleve).length;
     return `
       <section class="carte carte-programme${trop ? ' trop' : ''}">
         <div class="programme-entete">
           <strong>${dateCourte(m.date_heure)} · ${echapper(m.adversaire)}</strong>
-          ${restent ? `<span class="doux petit">${restent} à mettre</span>` : actifs.length ? '<span class="petit" style="color:var(--ok)">✓ tout est mis</span>' : ''}
+          ${restent ? `<span class="doux petit">${restent} à faire</span>` : actifs.length || enlever.length ? '<span class="petit" style="color:var(--ok)">✓ tout est fait</span>' : ''}
           <span class="espace"></span>
           <span class="badge ${trop ? 'badge-suppression' : actifs.length === MAX_PUBS_PROGRAMME ? 'badge-a-venir' : ''}">
             ${trop ? '⚠ ' : ''}${actifs.length} / ${MAX_PUBS_PROGRAMME} pubs</span>
@@ -148,6 +158,20 @@ function vueProgramme() {
             <div>${cases(el)}</div>
             <div class="programme-commentaire">${commentaire(el)}</div>
           </div>`).join('') : '<p class="doux petit" style="margin:.4rem 0 0">Aucune pub</p>'}
+        ${enlever.map(el => {
+          const f = el.fait?.enleve;
+          return `
+          <div class="programme-pub programme-enlever${f ? ' passe' : ''}">
+            <div class="programme-sponsor">🗑️ <strong>${echapper(el.sponsor?.nom || '—')}</strong>
+              <span class="badge badge-suppression">à enlever</span>
+              <div class="doux petit">était au match précédent</div></div>
+            <span class="badge">${el.format === 'pleine' ? 'Page pleine' : el.format === 'demi' ? 'Demi-page' : 'format ?'}</span>
+            <div></div>
+            <div><label class="petit" style="margin:0;color:var(--erreur)" title="${f ? `par ${echapper(f.par)} le ${dateCourte(f.le)}` : ''}">
+              <input type="checkbox" data-fait="enleve" data-id="${el.id}" ${f ? 'checked' : ''} ${estRegie ? '' : 'disabled'}> Enlevé</label></div>
+            <div></div>
+          </div>`;
+        }).join('')}
       </section>`;
   };
   const nbAlertes = aVenir.filter(m => (parMatch.get(m.id) || []).filter(el => el.statut === 'actif').length > MAX_PUBS_PROGRAMME).length;
