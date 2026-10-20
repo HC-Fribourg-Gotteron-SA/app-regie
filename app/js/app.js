@@ -37,7 +37,7 @@ async function verrouOnglet(nom, _attente, fn) {
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { lock: verrouOnglet } });
 
 // Date de la version, affichée en bas du menu : à changer à chaque mise en ligne (pour vérifier que Netlify a publié)
-const VERSION = '20.10.2026 i';
+const VERSION = '20.10.2026 j';
 
 // ---------------------------------------------------------------------
 // Libellés affichés
