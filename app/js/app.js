@@ -1,5 +1,6 @@
 // Base commune à toutes les pages : client Supabase, contrôle d'accès, menu, petits outils.
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+// version exacte (20.10.2026) : gardée en cache par le navigateur (« @2 » = vérifié à chaque page, plus lent)
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/+esm';
 import { SUPABASE_URL, SUPABASE_KEY, BASE, EN_LOCAL, SITE_TEST, BASE_TEST_PRETE } from './config.js';
 
 // Bandeau en local / sur le site de test : sur quelle base on travaille (test = données fictives ; vraie base = attention)
