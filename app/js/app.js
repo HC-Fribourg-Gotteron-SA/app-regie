@@ -18,7 +18,23 @@ export function changerDeBase() {
   location.href = 'index.html';
 }
 
-export const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+// Verrou de la session PAR ONGLET (20.10.2026, Léa : pages bloquées sur « Chargement… », 1re requête « Pending ») :
+// par défaut supabase-js partage un verrou entre tous les onglets (navigator.locks) ; un onglet en veille qui le
+// garde bloque les autres (10 s, ou pour toujours). Ici chaque onglet a le sien : les appels d'un même onglet
+// passent l'un après l'autre, comme avant, sans attendre les autres onglets.
+const verrous = new Map();
+async function verrouOnglet(nom, _attente, fn) {
+  const avant = verrous.get(nom) || Promise.resolve();
+  let liberer;
+  const tour = new Promise(r => { liberer = r; });
+  const suite = avant.then(() => tour);
+  verrous.set(nom, suite);
+  await avant;
+  try { return await fn(); }
+  finally { liberer(); if (verrous.get(nom) === suite) verrous.delete(nom); }
+}
+
+export const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { lock: verrouOnglet } });
 
 // Date de la version, affichée en bas du menu : à changer à chaque mise en ligne (pour vérifier que Netlify a publié)
 const VERSION = '20.10.2026 h';
