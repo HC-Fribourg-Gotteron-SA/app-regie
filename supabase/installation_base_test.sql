@@ -1,7 +1,7 @@
 -- =====================================================================
 -- INSTALLATION COMPLÈTE d'une base neuve (base de TEST) — généré par outils/installation-base-test.mjs
 -- À exécuter UNE fois dans le SQL Editor du projet de test (jamais sur la vraie base).
--- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 58, 59, 60.
+-- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 58, 59, 60, 61.
 -- Ensuite : créer son compte (Authentication > Users), se mettre admin (voir en bas),
 -- importer le calendrier dans l'outil (.ics), puis lancer supabase/demo_donnees_test.sql.
 -- =====================================================================
@@ -5128,6 +5128,33 @@ where l.produit_id = (select id from produits where nom = 'Anneau LED')
   and (a.nom_visuel ilike 'FRAPP%' or a.nom_visuel ilike 'LL_2026%' or a.nom_visuel ilike '%ITS%');
 
 
+-- #####################################################################
+-- 61_anneau_a_l_ecran.sql
+-- #####################################################################
+-- =====================================================================
+-- 61 — Anneau LED : tout ce qui passe dans Colosseo est « À l'écran »
+-- À exécuter sur la VRAIE base (après la 60). Peut être exécuté plusieurs fois.
+-- =====================================================================
+-- Léa (20.10.2026) : la playlist Colosseo dure 14:30, l'outil n'en comptait que ~8:26. Cause : 9 lignes de la feuille
+-- Airtable « LED match » n'avaient pas « Validation saison 26/27 » cochée → importées « Pas à l'écran » (LED_3M / LED_6M
+-- HCFG ×4, BCF, TCS, BLS, UPCF, BCF Arena location de salles), alors qu'elles passent toutes dans Colosseo.
+-- → À l'écran pour toutes les lignes de l'Anneau LED, SAUF celles désactivées (La Berra, Dieci, Fischer : suspendue),
+--   et « ⚠ Non validé » retiré des remarques. Les passages des matchs à venir suivent (trigger).
+update lignes_vendues l
+set validee = true,
+    consignes = nullif(trim(both E' \n' from replace(coalesce(l.consignes, ''), '⚠ Non validé', '')), '')
+where l.produit_id = (select id from produits where nom = 'Anneau LED')
+  and l.statut not in ('annule', 'termine')
+  and not l.suspendue
+  and l.consignes like '%⚠ Non validé%';      -- seulement l'import (une ligne décochée à la main dans l'outil ne bouge pas)
+
+select s.nom as "Sponsor", case when l.suspendue then 'désactivé' when l.validee then 'à l''écran' else 'pas à l''écran' end as "État",
+       l.duree_s as "Durée (s)", l.occurrences as "Passages", l.priorite as "Ordre"
+from lignes_vendues l join contrats c on c.id = l.contrat_id join sponsors s on s.id = c.sponsor_id
+where l.produit_id = (select id from produits where nom = 'Anneau LED') and l.statut not in ('annule', 'termine')
+order by l.priorite nulls last;
+
+
 -- Après avoir créé ton compte dans Authentication > Users, lance ceci séparément :
 -- update profiles set role = 'admin', nom = 'Léa Talon' where email = 'lea.talon@fribourg-gotteron.ch';
-select 'Installation terminée : 56 fichiers.' as "Résultat";
+select 'Installation terminée : 57 fichiers.' as "Résultat";
