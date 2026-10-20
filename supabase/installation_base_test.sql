@@ -5153,6 +5153,19 @@ where l.produit_id = (select id from produits where nom = 'Anneau LED')
                                    'BLS-Kampagne-Hockey-26-LED-Ribbon-FR', 'UPCFxGotteron_frise_complete',
                                    '260310_v3_BCFArena_Ring_LocationSalles_FR-DE'));
 
+-- Doublon BLS (Léa : « ça doit correspondre à Colosseo », un seul BLS) : la ligne ajoutée après l'import, sans visuel
+-- ni durée, est retirée comme « Retirer de ce produit » (terminée, reste dans l'historique) ; celle d'Airtable reste.
+update lignes_vendues l
+set statut = 'termine', date_fin = current_date - 1
+where l.produit_id = (select id from produits where nom = 'Anneau LED')
+  and l.statut not in ('annule', 'termine')
+  and l.contrat_id in (select c.id from contrats c join sponsors s on s.id = c.sponsor_id where s.nom = 'BLS')
+  and l.duree_s is null
+  and not exists (select 1 from assets a where a.ligne_id = l.id and a.statut <> 'archive')
+  and exists (select 1 from lignes_vendues autre join contrats c2 on c2.id = autre.contrat_id join sponsors s2 on s2.id = c2.sponsor_id
+              where autre.produit_id = l.produit_id and autre.id <> l.id and s2.nom = 'BLS'
+                and autre.statut not in ('annule', 'termine'));
+
 select l.priorite as "Ordre", s.nom as "Sponsor",
        case when l.suspendue then 'désactivé' when l.validee then 'à l''écran' else 'PAS à l''écran' end as "État",
        l.duree_s as "Durée (s)", l.occurrences as "×"
