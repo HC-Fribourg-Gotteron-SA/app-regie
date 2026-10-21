@@ -212,6 +212,16 @@ async function chargerMatch() {
   await chargerFichiersDemandes(etat.demandesMatch);
 
   afficher();
+  afficherVideosMatch();
+}
+
+// Vidéo différente à chaque match (Spot chef…, migration 64) : reçue ou pas encore, déposable par la Régie aussi
+async function afficherVideosMatch() {
+  const zone = $('videos-match');
+  if (!zone || !etat.match) return;
+  const { chargerVideosMatch, cartesVideos, brancherVideos } = await import('./video-match.js');
+  zone.innerHTML = cartesVideos(await chargerVideosMatch(), { matchId: etat.match.id, peutDeposer: estRegie });
+  brancherVideos(zone, afficherVideosMatch);
 }
 
 // Versions qui passent à tour de rôle (ECAB 4 vidéos, FR / DE) : ce soir = TOUJOURS la version qui suit celle du

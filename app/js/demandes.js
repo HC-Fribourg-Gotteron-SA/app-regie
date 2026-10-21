@@ -565,5 +565,14 @@ const rafraichir = debounce(async () => {
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') rafraichir(); });
 setInterval(() => { if (document.visibilityState === 'visible') rafraichir(); }, 60000);
 
+// Vidéo du prochain match à déposer (Spot chef de Leguriviera… ; migration 64) : Sponsoring, Régie, admin
+async function afficherVideosMatch() {
+  const { chargerVideosMatch, cartesVideos, brancherVideos } = await import('./video-match.js');
+  const zone = $('videos-match');
+  zone.innerHTML = cartesVideos(await chargerVideosMatch());
+  brancherVideos(zone, afficherVideosMatch);
+}
+
 await charger();
 if (etat.ouverte) ouvrir(etat.ouverte, { silencieux: true });
+afficherVideosMatch();

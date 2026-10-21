@@ -610,6 +610,10 @@ body:has(.bandeau-test) { box-shadow: inset 0 4px 0 #e0a100; }
   white-space: pre-wrap; pointer-events: none; }
 .bulle-remarque[hidden] { display: none; }
 td .etat-attente { display: inline-block; }
+/* Vidéo différente à chaque match (video-match.js) : orange tant qu'elle n'est pas reçue */
+.video-match { margin-bottom: 1rem; padding: .8rem 1rem; box-shadow: inset 5px 0 0 #e0a100, var(--ombre); }
+.video-match.recue { box-shadow: inset 5px 0 0 var(--ok), var(--ombre); }
+.video-match-entete { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; }
 /* Fiche produit : durée totale au prochain match (produit.js) — barre verte, orange dès 90 %, rouge au-delà */
 .duree-totale { background: var(--surface); border: 1px solid var(--bordure); border-radius: var(--rayon-petit);
   padding: .7rem .9rem; margin: 0 0 1rem; display: grid; gap: .45rem; }
