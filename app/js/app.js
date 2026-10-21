@@ -98,7 +98,8 @@ export const formatsLisibles = (formats) =>
 export function specsProduit(p) {
   if (!p) return '';
   const att = dimensionsAttendues(p);
-  const dims = att ? `${att.l} × ${att.h} px` : p.hauteur_px ? `${p.hauteur_px} px de haut` : '';
+  const dims = att ? `${att.l} × ${att.h} px${att.l === 1920 && att.h === 1080 ? ' (ou 4K 3840 × 2160)' : ''}`
+    : p.hauteur_px ? `${p.hauteur_px} px de haut` : '';
   return [dims, formatsLisibles(p.formats), p.duree_max_s ? `max ${p.duree_max_s} s` : ''].filter(Boolean).join(' · ');
 }
 
@@ -116,7 +117,9 @@ export function alertesFichier(p, f) {
   const video = f.duree != null || /^(mp4|mov|m4v|webm)$/.test(ext);
   const marge = video ? 16 : 0;
   const ecart = (lu, voulu) => lu < voulu || lu - voulu > marge;
-  if (att && f.largeur && (ecart(f.largeur, att.l) || ecart(f.hauteur, att.h))) alertes.push(`${f.largeur} × ${f.hauteur} px : attendu ${att.l} × ${att.h} px`);
+  // 1920 × 1080 attendu : la 4K (3840 × 2160) est aussi acceptée (Léa, 21.10.2026)
+  const enQuatreK = att && att.l === 1920 && att.h === 1080 && !ecart(f.largeur, 3840) && !ecart(f.hauteur, 2160);
+  if (att && f.largeur && !enQuatreK && (ecart(f.largeur, att.l) || ecart(f.hauteur, att.h))) alertes.push(`${f.largeur} × ${f.hauteur} px : attendu ${att.l} × ${att.h} px`);
   if (p.duree_max_s && f.duree && f.duree > p.duree_max_s + 0.5) alertes.push(`${Math.round(f.duree)} s : maximum ${p.duree_max_s} s`);
   return alertes;
 }
