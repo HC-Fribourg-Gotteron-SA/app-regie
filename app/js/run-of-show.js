@@ -543,11 +543,26 @@ $('choix-modele').addEventListener('change', async (e) => {
 // ---------------------------------------------------------------------
 // En direct : chrono / animation voient les changements et la ligne en cours sans recharger
 // ---------------------------------------------------------------------
+// Seulement quand l'onglet est affiché (21.10.2026 : chaque écoute fait interroger la base sans arrêt par Supabase) ;
+// en revenant sur l'onglet, la vue est rechargée puis l'écoute reprend.
 const rafraichir = debounce(() => { if (!etat.edition) chargerVue(); }, 400);
-sb.channel('run-of-show')
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'ros_lignes' }, rafraichir)
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'ros_matchs' }, rafraichir)
-  .subscribe();
+let canal = null;
+function ecouter() {
+  if (canal) return;
+  canal = sb.channel('run-of-show')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'ros_lignes' }, rafraichir)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'ros_matchs' }, rafraichir)
+    .subscribe();
+}
+function arreterEcoute() {
+  if (!canal) return;
+  sb.removeChannel(canal);
+  canal = null;
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') { ecouter(); rafraichir(); } else arreterEcoute();
+});
+if (document.visibilityState === 'visible') ecouter();
 
 if (await chargerListes()) {
   etat.edition = estRegie && params.get('edition') === '1';

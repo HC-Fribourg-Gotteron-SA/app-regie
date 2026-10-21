@@ -552,7 +552,9 @@ $('voile').addEventListener('click', fermer);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('fenetre').hidden) fermer(); });
 
 // ---------------------------------------------------------------------
-// Mise à jour en direct (nécessite 04_temps_reel.sql)
+// Mise à jour : plus d'écoute « en direct » (21.10.2026 : le temps réel de Supabase interrogeait la base sans arrêt,
+// CPU à 100 % et toutes les pages lentes). La liste se recharge quand on revient sur l'onglet et toutes les 60 s
+// tant qu'il est affiché.
 // ---------------------------------------------------------------------
 const rafraichir = debounce(async () => {
   const ouverte = etat.ouverte;
@@ -560,9 +562,8 @@ const rafraichir = debounce(async () => {
   await charger();
   if (ouverte && !saisie) ouvrir(ouverte, { silencieux: true });
 }, 500);
-sb.channel('demandes')
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'demandes' }, rafraichir)
-  .subscribe();
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') rafraichir(); });
+setInterval(() => { if (document.visibilityState === 'visible') rafraichir(); }, 60000);
 
 await charger();
 if (etat.ouverte) ouvrir(etat.ouverte, { silencieux: true });
