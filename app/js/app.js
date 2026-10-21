@@ -276,6 +276,15 @@ const MENU = [
   ] },
 ];
 
+// Sauvegarde (21.10.2026, sauvegarde.js) : rappel en bas du menu si la dernière, faite depuis ce navigateur, a
+// plus de 7 jours (même clé que sauvegarde.js)
+function sauvegardeEnRetard() {
+  try {
+    const v = localStorage.getItem('derniere-sauvegarde');
+    return !v || Date.now() - new Date(v).getTime() > 7 * 864e5;
+  } catch { return false; }
+}
+
 // Sponsoring (19.10.2026, Léa : « pour eux c'est surtout de faire et voir leurs demandes ») : Demandes en haut,
 // « Nouvelle demande » en premier, puis Digital et Jour de match tout en bas. Les autres rôles : MENU tel quel.
 function menuDuRole(role) {
@@ -317,6 +326,9 @@ function construireMenu(profil) {
         <span><strong>${echapper(profil.nom || profil.email.split('@')[0])}</strong>
           <small>${LIBELLES.role[profil.role]}</small></span>
       </div>
+      ${profil.role === 'admin' ? `<button type="button" class="lien-menu" id="btn-sauvegarde"
+          title="Télécharger toutes les données (ZIP : Excel / CSV + fichier complet)">💾 Sauvegarde${
+          sauvegardeEnRetard() ? ' <span class="menu-compteur" title="Dernière sauvegarde il y a plus de 7 jours">à faire</span>' : ''}</button>` : ''}
       <a href="mot-de-passe.html">Mot de passe</a>
       <button type="button" class="lien-menu" id="btn-deconnexion">Déconnexion</button>
       ${EN_LOCAL && BASE_TEST_PRETE ? `<button type="button" class="lien-menu" id="btn-base">${BASE === 'test'
@@ -348,6 +360,10 @@ function construireMenu(profil) {
   document.getElementById('btn-menu').onclick = () => basculer(true);
   voile.onclick = () => basculer(false);
   document.getElementById('btn-deconnexion').onclick = deconnecter;
+  document.getElementById('btn-sauvegarde')?.addEventListener('click', async (e) => {
+    const b = e.currentTarget;
+    if (await (await import('./sauvegarde.js')).telechargerSauvegarde(b)) b.querySelector('.menu-compteur')?.remove();
+  });
   if (profil.role === 'animation') return;
   compterDemandes(profil);
   menuProduits(profil);
