@@ -294,6 +294,14 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    visuels « -SA » / « -SB » (BCF, BATR, TCS) et LED_3M_1A / 1B = probablement 2 versions qui alternent (pas renommés). Timings exacts des
    produits : Léa les donnera → les mettre en base (`capacite_s`). Lenteur (20.10.2026) : supabase-js fixé en 2.118.0 ;
    capture réseau = fiche ~1,9 s sans cache, base 65–200 ms/requête → OK ; Léa refuse d'alléger menu / Match du jour.
+0-duovicies. **Sauvegarde (21.10.2026, option B de Léa ; pas de migration, pas encore testé)** : Supabase gratuit = aucune
+   sauvegarde récupérable. Bouton **« 💾 Sauvegarde »** en bas du menu (admin seulement) → `js/sauvegarde.js` : ZIP avec un
+   CSV par table (« ; », BOM, pour Excel) + `sauvegarde.json` (tout, pour restaurer) + LISEZMOI.txt (nb de lignes) ;
+   pagination triée par clé ; tables absentes notées. **Pas les fichiers du Storage.** Rappel « à faire » à côté du bouton
+   si la dernière sauvegarde de CE navigateur (localStorage `derniere-sauvegarde`) a plus de 7 jours. Refusé / écarté :
+   sauvegarde auto par GitHub Actions (dépôt de l'entreprise, droits / IT) ; plan Pro Supabase = option pour plus tard.
+   Lenteur des fiches (20.10.2026) : requête `passages` de la durée totale retirée (calcul sur la page) ; verrou de
+   session supabase-js par onglet (`verrouOnglet` dans app.js : un onglet en veille bloquait les autres).
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
