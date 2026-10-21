@@ -302,6 +302,21 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    sauvegarde auto par GitHub Actions (dépôt de l'entreprise, droits / IT) ; plan Pro Supabase = option pour plus tard.
    Lenteur des fiches (20.10.2026) : requête `passages` de la durée totale retirée (calcul sur la page) ; verrou de
    session supabase-js par onglet (`verrouOnglet` dans app.js : un onglet en veille bloquait les autres).
+0-trevicies. **Vidéo par match / Spot chef (21.10.2026, accord de Léa « on peut tenter » ; migration 64 à exécuter sur
+   les deux bases, pas encore testé)** : la vidéo du chef (Leguriviera) change à chaque match et arrive le jour même, par
+   le **Sponsoring**. Diffusion en `regle_rotation = 'par_match'` (64 : la ligne « Spot chef » de la Pub pause tiers) →
+   une vidéo par match (`assets.match_id`, choisie par `choisir_asset`). RPC `deposer_video_match` (security definer,
+   Sponsoring / Régie / admin, seulement une ligne par_match et un de ses matchs ; valide tout de suite grâce au réglage
+   de transaction `outil.depot_video_match` lu par `tg_asset_avant` ; aussi dans le dossier du sponsor). Front
+   `js/video-match.js` : carte « 🎬 Spot chef · Leguriviera · ⏳ vidéo pas encore reçue / ✓ reçue » + zone de dépôt ; en
+   haut de **Demandes** (prochain match) et dans **Match du jour** (match affiché, dépôt Régie). Seulement les lignes
+   « au match » (lignes_matchs). Remplace l'idée en attente « Vidéo du chef » du point 0-octies.
+   Autres changements du 21.10 : dossier sponsor = aussi les produits Digital (en cours + retirés / terminés) ; joueurs
+   déjà parrainés retirés de la liste de la demande (sauf ceux du sponsor) et grisés dans « + Ajouter » ; plus d'écoute
+   temps réel sur Demandes (rechargement au retour + 60 s), run of show en direct seulement onglet affiché.
+   ⚠ Lecture du graphique CPU de Supabase : la ligne grise en haut = part INUTILISÉE ; l'utilisation = lignes de
+   couleur en bas (CPU bas, ~3 %). La lenteur des fiches n'est donc pas le CPU ; cause encore à confirmer (capture
+   Network demandée ; connecteur MCP Supabase en lecture seule proposé).
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
