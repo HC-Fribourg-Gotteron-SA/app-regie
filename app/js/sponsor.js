@@ -44,8 +44,8 @@ async function charger() {
   // espace Digital (migration 55) : programme de match, bannière app, parrainage — rangés à part des diffusions
   // (21.10.2026, Léa : Arconciel dans le programme de match mais « rien » dans son dossier). Absent avant la 55 : rien.
   const { data: digital } = await sb.from('digital_elements')
-    .select('id, du, au, produit:produits(id, nom), match:matchs(date_heure), joueur:joueurs(numero, prenom, nom)')
-    .eq('sponsor_id', idSponsor).eq('statut', 'actif');
+    .select('id, du, au, statut, produit:produits(id, nom), match:matchs(date_heure), joueur:joueurs(numero, prenom, nom)')
+    .eq('sponsor_id', idSponsor);              // aussi ce qu'il a eu (retiré, bannière terminée) : Léa, 21.10.2026
   afficherProduits(produits, digital || []);
   afficherDocuments(documents || []);
   afficherDemandes(demandes || []);
@@ -142,10 +142,18 @@ function rangeesDigital(elements) {
   }
   const debut = new Date(); debut.setHours(0, 0, 0, 0);
   const auj = jourLocal(new Date());
-  return [...parProduit.values()].map(({ p, liste }) => {
+  return [...parProduit.values()].map(({ p, liste: tous }) => {
     const vue = vueDigital({ ...p, espace: 'digital' });
+    // en cours d'abord ; s'il n'a plus que des éléments retirés : « Retiré » (ce qu'il a eu)
+    const actifs = tous.filter(el => el.statut !== 'retire');
+    const liste = actifs.length ? actifs : tous;
     let quand = '', etatTxt = '';
-    if (vue === 'programme') {
+    if (!actifs.length) {
+      quand = vue === 'programme' ? pluriel(liste.length, 'match')
+        : vue === 'app' ? liste.map(el => `du ${el.du ? dateCourte(el.du + 'T12:00') : '?'} au ${el.au ? dateCourte(el.au + 'T12:00') : '?'}`).join('<br>')
+        : liste.map(el => el.joueur ? echapper(`${el.joueur.numero ?? ''} ${el.joueur.prenom} ${el.joueur.nom}`.trim()) : '—').join(', ');
+      etatTxt = '<span class="etat etat-non">Retiré</span>';
+    } else if (vue === 'programme') {
       const dates = liste.map(el => el.match && new Date(el.match.date_heure)).filter(Boolean).sort((a, b) => a - b);
       const prochain = dates.find(d => d >= debut);
       quand = pluriel(dates.length, 'match');
@@ -154,7 +162,9 @@ function rangeesDigital(elements) {
     } else if (vue === 'app') {
       quand = liste.map(el => `du ${el.du ? dateCourte(el.du + 'T12:00') : '?'} au ${el.au ? dateCourte(el.au + 'T12:00') : '?'}`).join('<br>');
       const enLigne = liste.some(el => (!el.du || el.du <= auj) && (!el.au || el.au >= auj));
-      etatTxt = enLigne ? '<span class="etat etat-ecran">En ligne</span>' : '<span class="etat etat-non">Pas en ligne</span>';
+      const aVenir = liste.some(el => el.du && el.du > auj);
+      etatTxt = enLigne ? '<span class="etat etat-ecran">En ligne</span>'
+        : aVenir ? '<span class="etat etat-prevu">À venir</span>' : '<span class="etat etat-non">Terminée</span>';
     } else {
       quand = `Toute la saison<div class="doux petit">${liste.map(el => el.joueur
         ? echapper(`${el.joueur.numero ?? ''} ${el.joueur.prenom} ${el.joueur.nom}`.trim()) : '—').join(', ')}</div>`;

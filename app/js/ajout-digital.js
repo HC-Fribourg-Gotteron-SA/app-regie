@@ -18,6 +18,13 @@ export async function ouvrirAjoutDigital(p, apres = () => {}) {
     vue === 'parrainage' ? sb.from('joueurs').select('id, numero, prenom, nom').eq('actif', true).order('numero')
                          : Promise.resolve({ data: [] }),
   ]);
+  // joueurs déjà parrainés : grisés avec le nom du parrain (Léa, 21.10.2026)
+  const parrains = new Map();
+  if (vue === 'parrainage') {
+    const { data } = await sb.from('digital_elements').select('joueur_id, sponsor:sponsors(nom)')
+      .eq('produit_id', p.id).eq('statut', 'actif').not('joueur_id', 'is', null);
+    (data || []).forEach(x => parrains.set(x.joueur_id, x.sponsor?.nom || 'un parrain'));
+  }
 
   const voile = document.createElement('div');
   voile.className = 'voile';
@@ -50,7 +57,8 @@ export async function ouvrirAjoutDigital(p, apres = () => {}) {
         <label for="adg-joueur">Joueur</label>
         <select id="adg-joueur" name="joueur">
           <option value="">— Choisir le joueur —</option>
-          ${(joueurs || []).map(j => `<option value="${j.id}">${j.numero ?? ''} · ${echapper(`${j.prenom} ${j.nom}`)}</option>`).join('')}
+          ${(joueurs || []).map(j => `<option value="${j.id}" ${parrains.has(j.id) ? 'disabled' : ''}>${j.numero ?? ''} · ${echapper(`${j.prenom} ${j.nom}`)}${
+            parrains.has(j.id) ? ` — parrainé par ${echapper(parrains.get(j.id))}` : ''}</option>`).join('')}
         </select>
       </div>`;
   fenetre.innerHTML = `

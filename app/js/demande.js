@@ -131,6 +131,10 @@ async function chargerSaisonEtMatchs() {
   // joueurs (parrainage joueur, espace Digital, migration 55) ; absent avant la migration → liste vide
   const { data: joueurs } = await sb.from('joueurs').select('id, numero, prenom, nom').eq('actif', true).order('numero');
   etat.joueurs = joueurs || [];
+  // joueurs déjà parrainés (Léa, 21.10.2026 : ils ne doivent plus être proposés) : joueur → sponsor du parrain
+  const { data: parrains } = await sb.from('digital_elements').select('joueur_id, sponsor_id, produit:produits!inner(nom)')
+    .eq('statut', 'actif').not('joueur_id', 'is', null).ilike('produit.nom', '%parrainage%');
+  etat.parraines = new Map((parrains || []).map(x => [x.joueur_id, x.sponsor_id]));
 }
 
 // ---------------------------------------------------------------------
@@ -157,7 +161,7 @@ function blocDigital(id, p, d, matchs, suppr) {
       <div class="champ-ligne"><span class="etiquette">Joueur</span>
         <select data-champ="joueur_id" style="width:auto;min-width:14rem">
           <option value="">— Choisir le joueur —</option>
-          ${(etat.joueurs || []).map(j => `<option value="${j.id}" ${d.joueur_id === j.id ? 'selected' : ''}>${j.numero ?? ''} · ${echapper(`${j.prenom} ${j.nom}`)}</option>`).join('')}
+          ${joueursLibres(d).map(j => `<option value="${j.id}" ${d.joueur_id === j.id ? 'selected' : ''}>${j.numero ?? ''} · ${echapper(`${j.prenom} ${j.nom}`)}</option>`).join('')}
         </select></div>
       <div class="aide">Toute la saison ${echapper(etat.saison)}.</div>`;
   return `
@@ -172,6 +176,14 @@ function blocDigital(id, p, d, matchs, suppr) {
       ${suppr ? '' : rolesFichiers(p).map(r => zoneFichiers(d, r)).join('')}
       ${remarque}
     </div>`;
+}
+
+// Joueurs proposés : pas ceux qui ont déjà un parrain, sauf le joueur de CE sponsor (changement de logo, suppression)
+// et celui déjà choisi
+function joueursLibres(d) {
+  const parraines = etat.parraines || new Map();
+  return (etat.joueurs || []).filter(j => !parraines.has(j.id) || j.id === d.joueur_id
+    || (etat.sponsor?.id && parraines.get(j.id) === etat.sponsor.id));
 }
 
 // Erreur à signaler pour un produit Digital (null = complet)
