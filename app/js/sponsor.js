@@ -1,6 +1,9 @@
 // Dossier d'un sponsor (sponsor.html?id=…) : ce qu'il a, les documents reçus, ses demandes
 import { sb, exigerConnexion, LIBELLES, echapper, dateCourte, notifier, taille, nomFichierSur,
-         libelleFichier, toutesLesLignes, etatAuMatch, boutonVoir } from './app.js';
+         libelleFichier, toutesLesLignes, etatAuMatch, boutonVoir, vueDigital } from './app.js';
+
+const pad2 = (n) => String(n).padStart(2, '0');
+const jourLocal = (d) => { const x = new Date(d); return `${x.getFullYear()}-${pad2(x.getMonth() + 1)}-${pad2(x.getDate())}`; };
 
 const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
 // Sponsoring : consultation ; les documents arrivent par les demandes. Déposer ici = Régie / admin.
@@ -38,7 +41,12 @@ async function charger() {
   $('s-resume').textContent = [s.origine && s.origine !== 'sponsor' ? `Contenu ${s.origine}` : '',
     s.alias?.length ? `aussi écrit : ${s.alias.join(', ')}` : ''].filter(Boolean).join(' · ');
 
-  afficherProduits(produits);
+  // espace Digital (migration 55) : programme de match, bannière app, parrainage — rangés à part des diffusions
+  // (21.10.2026, Léa : Arconciel dans le programme de match mais « rien » dans son dossier). Absent avant la 55 : rien.
+  const { data: digital } = await sb.from('digital_elements')
+    .select('id, du, au, produit:produits(id, nom), match:matchs(date_heure), joueur:joueurs(numero, prenom, nom)')
+    .eq('sponsor_id', idSponsor).eq('statut', 'actif');
+  afficherProduits(produits, digital || []);
   afficherDocuments(documents || []);
   afficherDemandes(demandes || []);
   etatSponsor = s;
@@ -124,9 +132,46 @@ $('btn-fusionner').addEventListener('click', async () => {
   };
 });
 
-function afficherProduits(lignes) {
-  $('nb-produits').textContent = lignes.length ? `(${lignes.length})` : '';
-  $('produits').innerHTML = lignes.map(l => {
+// Une rangée par produit Digital (programme : ses matchs ; bannière : du … au … ; parrainage : le joueur)
+function rangeesDigital(elements) {
+  const parProduit = new Map();
+  for (const el of elements) {
+    if (!el.produit) continue;
+    if (!parProduit.has(el.produit.id)) parProduit.set(el.produit.id, { p: el.produit, liste: [] });
+    parProduit.get(el.produit.id).liste.push(el);
+  }
+  const debut = new Date(); debut.setHours(0, 0, 0, 0);
+  const auj = jourLocal(new Date());
+  return [...parProduit.values()].map(({ p, liste }) => {
+    const vue = vueDigital({ ...p, espace: 'digital' });
+    let quand = '', etatTxt = '';
+    if (vue === 'programme') {
+      const dates = liste.map(el => el.match && new Date(el.match.date_heure)).filter(Boolean).sort((a, b) => a - b);
+      const prochain = dates.find(d => d >= debut);
+      quand = pluriel(dates.length, 'match');
+      etatTxt = prochain ? `<span class="etat etat-prevu">📅 Prochain le ${prochain.toLocaleDateString('fr-CH', { day: '2-digit', month: '2-digit' })}</span>`
+        : '<span class="etat etat-non">Matchs passés</span>';
+    } else if (vue === 'app') {
+      quand = liste.map(el => `du ${el.du ? dateCourte(el.du + 'T12:00') : '?'} au ${el.au ? dateCourte(el.au + 'T12:00') : '?'}`).join('<br>');
+      const enLigne = liste.some(el => (!el.du || el.du <= auj) && (!el.au || el.au >= auj));
+      etatTxt = enLigne ? '<span class="etat etat-ecran">En ligne</span>' : '<span class="etat etat-non">Pas en ligne</span>';
+    } else {
+      quand = `Toute la saison<div class="doux petit">${liste.map(el => el.joueur
+        ? echapper(`${el.joueur.numero ?? ''} ${el.joueur.prenom} ${el.joueur.nom}`.trim()) : '—').join(', ')}</div>`;
+      etatTxt = '<span class="etat etat-ecran">Parrain</span>';
+    }
+    return `<tr data-lien="digital.html?vue=${vue}">
+      <td><strong>${echapper(p.nom)}</strong> <span class="badge">Digital</span></td>
+      <td>${quand}</td>
+      <td>${etatTxt}</td>
+    </tr>`;
+  }).join('');
+}
+
+function afficherProduits(lignes, digital = []) {
+  const nbDigital = new Set(digital.map(el => el.produit?.id).filter(Boolean)).size;
+  $('nb-produits').textContent = lignes.length + nbDigital ? `(${lignes.length + nbDigital})` : '';
+  $('produits').innerHTML = rangeesDigital(digital) + lignes.map(l => {
     const n = l.matchs?.length || 0;
     // vendu au match : « Prévu le … » / « À l'écran ce soir » / « Match passé », comme sur les fiches (etatAuMatch)
     const etatTxt = l.validee && !l.suspendue ? (etatAuMatch(l) || '<span class="etat etat-ecran">À l’écran</span>')
@@ -139,7 +184,7 @@ function afficherProduits(lignes) {
       <td>${etatTxt}${l.visuel_attendu ? ' <span class="etat etat-attente">⏳ visuel attendu</span>' : ''}</td>
     </tr>`;
   }).join('');
-  $('vide-produits').hidden = lignes.length > 0;
+  $('vide-produits').hidden = lignes.length + nbDigital > 0;
 }
 
 function typeDocument(d) {
@@ -186,6 +231,8 @@ document.addEventListener('click', async (e) => {
   }
   const p = e.target.closest('tr[data-produit]');
   if (p) { location.href = `produit.html?id=${p.dataset.produit}`; return; }
+  const lien = e.target.closest('tr[data-lien]');
+  if (lien) { location.href = lien.dataset.lien; return; }
   const d = e.target.closest('tr[data-demande]');
   if (d) location.href = `demandes.html?id=${d.dataset.demande}`;
 });
