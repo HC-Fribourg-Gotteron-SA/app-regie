@@ -12,10 +12,11 @@ const qui = profil.nom || (profil.email || '').split('@')[0];
 const $ = (id) => document.getElementById(id);
 const VUES = {
   programme: { titre: 'Programme de match', onglet: 'Programme de match' },
-  app: { titre: 'Bannières app', onglet: 'Bannières app' },
+  app: { titre: 'App · Bannières', onglet: 'App', sous: 'Bannières' },
   parrainage: { titre: 'Parrainages joueurs', onglet: 'Parrainages joueurs' },
   reseaux: { titre: 'Réseaux sociaux', onglet: 'Réseaux sociaux' },
-  jeux: { titre: 'Jeux et onglets app', onglet: 'Jeux et onglets app' },
+  // un seul onglet « App » (Léa, 22.10.2026) : bannières + jeux et onglets, en sous-onglets
+  jeux: { titre: 'App · Jeux et onglets', onglet: 'App', sous: 'Jeux et onglets', dans: 'app' },
 };
 // accès « reseaux » (migration 65) : la personne qui publie voit seulement la page Réseaux sociaux
 const espaces = profil.espaces || [];
@@ -37,12 +38,18 @@ const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 document.title = `${VUES[vue].titre} — Sponsoring ↔ Régie`;
 $('titre').textContent = VUES[vue].titre;
-$('onglets').innerHTML = Object.entries(VUES).map(([v, x]) =>
-  `<button type="button" data-vue="${v}" class="${v === vue ? 'actif' : ''}">${x.onglet}</button>`).join('');
-$('onglets').addEventListener('click', (e) => {
+const groupe = (v) => VUES[v].dans || v;
+$('onglets').innerHTML = Object.entries(VUES).filter(([, x]) => !x.dans).map(([v, x]) =>
+  `<button type="button" data-vue="${v}" class="${v === groupe(vue) ? 'actif' : ''}">${x.onglet}</button>`).join('');
+if (VUES[vue].sous) {
+  $('onglets').insertAdjacentHTML('afterend', `<div class="onglets onglets-sous">${Object.entries(VUES)
+    .filter(([v]) => groupe(v) === groupe(vue)).map(([v, x]) =>
+      `<button type="button" data-vue="${v}" class="${v === vue ? 'actif' : ''}">${x.sous}</button>`).join('')}</div>`);
+}
+document.querySelectorAll('.onglets').forEach(barre => barre.addEventListener('click', (e) => {
   const b = e.target.closest('[data-vue]');
   if (b && b.dataset.vue !== vue) location.href = `digital.html?vue=${b.dataset.vue}`;
-});
+}));
 
 function erreur(texte) { $('erreur').textContent = texte; $('erreur').hidden = !texte; }
 

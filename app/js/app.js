@@ -263,11 +263,11 @@ const MENU = [
   // espace Digital (16.10.2026, migration 55) : seulement les comptes qui ont l'espace « digital »
   { titre: 'Digital', espace: 'digital', liens: [
     { href: 'digital.html?vue=programme', texte: 'Programme de match', icone: 'onglets', espace: 'digital' },
-    { href: 'digital.html?vue=app', texte: 'Bannières app', icone: 'onglets', espace: 'digital' },
+    // « App » = bannières + jeux et onglets (Léa, 22.10.2026 : un onglet global App)
+    { href: 'digital.html?vue=app', texte: 'App', icone: 'onglets', espace: 'digital', aussi: ['digital.html?vue=jeux'] },
     { href: 'digital.html?vue=parrainage', texte: 'Parrainages joueurs', icone: 'sponsors', espace: 'digital' },
     // réseaux sociaux (22.10.2026, migration 65) : aussi pour l'accès « reseaux » (la personne qui publie)
     { href: 'digital.html?vue=reseaux', texte: 'Réseaux sociaux', icone: 'onglets', espace: ['digital', 'reseaux'] },
-    { href: 'digital.html?vue=jeux', texte: 'Jeux et onglets app', icone: 'onglets', espace: 'digital' },
   ] },
   { titre: 'Demandes', liens: [
     { href: 'demandes.html', texte: 'Toutes les demandes', icone: 'demandes', compteur: 'demandes' },

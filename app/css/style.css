@@ -372,6 +372,9 @@ textarea { min-height: 90px; resize: vertical; }
   display: inline-grid; place-items: center; background: rgba(0,0,0,.08);
 }
 .onglets button.actif .compte { background: rgba(255,255,255,.2); }
+/* sous-onglets (Digital › App : Bannières / Jeux et onglets) */
+.onglets-sous { background: transparent; padding: 0; }
+.onglets-sous button { font-size: .85rem; padding: .32rem .8rem; border: 1px solid #c4cedb; }
 
 .tableau-conteneur { overflow-x: auto; }
 table.tableau { width: 100%; border-collapse: collapse; background: var(--surface); }
