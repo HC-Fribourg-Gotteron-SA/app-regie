@@ -274,12 +274,10 @@ function vueReseaux() {
   const types = [...new Set([...etat.types, ...actifs.map(el => el.type_post)])];
   const carte = (m) => {
     const posts = surMatch(m);
-    const aFaire = posts.filter(el => !el.fait?.[m.id]).length;
     return `
       <section class="carte carte-programme">
         <div class="programme-entete">
           <strong>${dateCourte(m.date_heure)} · ${echapper(m.adversaire)}</strong>
-          ${posts.length ? (aFaire ? `<span class="doux petit">${aFaire} à publier</span>` : '<span class="petit" style="color:var(--ok)">✓ tout est publié</span>') : ''}
           <span class="espace"></span>
           <span class="badge">${posts.length} / ${types.length} posts sponsorisés</span>
         </div>
@@ -287,21 +285,15 @@ function vueReseaux() {
           const liste = posts.filter(el => el.type_post === t);
           if (!liste.length) return `<div class="programme-pub"><div class="programme-sponsor"><strong>${echapper(t)}</strong></div>
             <span class="doux petit">libre</span><div></div><div></div><div></div></div>`;
-          return liste.map(el => {
-            const f = el.fait?.[m.id];
-            return `<div class="programme-pub">
+          // (case « Publié » et lien du post retirés le 22.10.2026 : Léa, pas besoin)
+          return liste.map(el => `<div class="programme-pub">
               <div class="programme-sponsor"><strong>${echapper(t)}</strong> · ${echapper(el.sponsor?.nom || '—')}
                 <span class="doux petit">${el.match_id ? 'ce match' : 'saison'}</span>
                 ${liste.length > 1 ? ' <span class="badge badge-suppression">⚠ 2 sponsors</span>' : ''}${remarque(el)}</div>
               <div>${fichiers(el)}</div>
-              <div><label class="petit" style="margin:0;white-space:nowrap" title="${f ? `par ${echapper(f.par || '')} le ${dateCourte(f.le)}` : ''}">
-                <input type="checkbox" data-publie="${el.id}" data-match="${m.id}" ${f ? 'checked' : ''} ${peutPublier ? '' : 'disabled'}> Publié</label></div>
-              <div>${peutPublier ? `<input type="url" class="petit" data-lien="${el.id}" data-match="${m.id}" value="${echapper(f?.lien || '')}"
-                  placeholder="Lien du post (facultatif)" style="min-height:0;padding:.25rem .45rem">`
-                : f?.lien ? `<a class="petit" href="${echapper(f.lien)}" target="_blank" rel="noopener">Voir le post</a>` : ''}</div>
+              <div></div><div></div>
               <div class="programme-commentaire">${commentaire(el)}</div>
-            </div>`;
-          }).join('');
+            </div>`).join('');
         }).join('')}
       </section>`;
   };
@@ -319,34 +311,12 @@ function afficher() {
     : vue === 'reseaux' ? vueReseaux() : vueParrainage();
 }
 
-// « Publié » / lien du post (RPC publier_post : Régie, admin, accès « reseaux »)
-async function publier(id, match, publie, lien) {
-  const { data, error } = await sb.rpc('publier_post', { p_element: id, p_match: match, p_publie: publie, p_lien: lien || null });
-  if (error) { notifier(/publier_post/.test(error.message) ? 'Exécutez d’abord la migration 65 dans Supabase.' : `Pas enregistré : ${error.message}`, 'erreur'); return false; }
-  const el = etat.elements.find(x => x.id === id);
-  if (el) el.fait = data || {};
-  return true;
-}
 
 // ---------------------------------------------------------------------
 // Cases « c'est mis » et téléchargement
 // ---------------------------------------------------------------------
 $('contenu').addEventListener('change', async (e) => {
   const t = e.target;
-  if (t.dataset.publie) {
-    t.disabled = true;
-    const lien = t.closest('.programme-pub')?.querySelector('[data-lien]')?.value;
-    if (await publier(t.dataset.publie, t.dataset.match, t.checked, lien)) afficher(); else { t.checked = !t.checked; t.disabled = false; }
-    return;
-  }
-  if (t.dataset.lien) {
-    // un lien collé = publié
-    if (await publier(t.dataset.lien, t.dataset.match, !!t.value.trim() || !!etat.elements.find(x => x.id === t.dataset.lien)?.fait?.[t.dataset.match], t.value)) {
-      notifier('Lien enregistré');
-      afficher();
-    }
-    return;
-  }
   if (t.dataset.commentaire) {
     const el = etat.elements.find(x => x.id === t.dataset.commentaire);
     const texte = t.value.trim() || null;

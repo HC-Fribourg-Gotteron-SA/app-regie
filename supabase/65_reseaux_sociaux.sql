@@ -4,7 +4,7 @@
 -- =====================================================================
 -- Léa (22.10.2026, capture d'Airtable) : à chaque match, des types de posts ; chacun peut avoir un sponsor (ou rester
 -- libre), vendu à la saison (Alloboissons GAMEDAY, Rouvinez MVP) ou pour certains matchs. Traité par une personne hors
--- Régie : pas dans Match du jour. Accès « reseaux » (profiles.espaces) : voit la page et coche « Publié ».
+-- Régie : pas dans Match du jour. Accès « reseaux » (profiles.espaces) : voit la page Réseaux sociaux.
 
 -- 1. Le produit ------------------------------------------------------------------------
 insert into produits (nom, categorie, famille, support, mode_vente, ordre, espace, formats)
@@ -33,34 +33,11 @@ on conflict (nom) do nothing;
 -- 3. Colonnes : type de post d'un élément, types demandés -------------------------------------
 alter table digital_elements add column if not exists type_post text;
 alter table demandes_produits add column if not exists types_posts text[];
--- (publication par match : digital_elements.fait = { "<match_id>": { le, par, lien } })
 
 -- 4. Qui a l'accès « Réseaux sociaux » : les admins (à ajouter à la personne qui publie) ---------
+-- (pas de case « Publié » ni de lien : retirés à la demande de Léa le 22.10.2026)
 update profiles set espaces = array_append(espaces, 'reseaux')
 where role::text = 'admin' and not ('reseaux' = any (espaces));
-
--- 5. Cocher « Publié » (Régie, admin, accès « reseaux ») ---------------------------------------
-create or replace function publier_post(p_element uuid, p_match uuid, p_publie boolean, p_lien text default null)
-returns jsonb
-language plpgsql security definer set search_path = public as $$
-declare v jsonb;
-begin
-  if not (a_role('regie', 'admin')
-          or exists (select 1 from profiles where id = auth.uid() and 'reseaux' = any (espaces))) then
-    raise exception 'Accès refusé';
-  end if;
-  update digital_elements
-  set fait = case when p_publie
-                  then coalesce(fait, '{}'::jsonb) || jsonb_build_object(p_match::text, jsonb_build_object(
-                         'le', now(), 'par', (select coalesce(nom, split_part(email, '@', 1)) from profiles where id = auth.uid()),
-                         'lien', nullif(trim(coalesce(p_lien, '')), '')))
-                  else coalesce(fait, '{}'::jsonb) - p_match::text end
-  where id = p_element
-  returning fait into v;
-  if not found then raise exception 'Post introuvable'; end if;
-  return v;
-end $$;
-grant execute on function publier_post(uuid, uuid, boolean, text) to authenticated;
 
 -- 6. Traiter une demande « Réseaux sociaux » : un élément par type de post (saison : sans match ; au match : par match)
 create or replace function traiter_digital(p_demande uuid, p_produit uuid, p_suite text, p_fichiers jsonb default '[]')
