@@ -5580,7 +5580,7 @@ group by t.nom, t.ordre order by t.ordre;
 -- 66_jeux_app.sql
 -- #####################################################################
 -- =====================================================================
--- 66 — Digital : « Jeux et onglets app » (Jeu MVP, Pronostics, Quiz, Sondage… sponsorisés dans l'app)
+-- 66 — Digital : « Jeux app » (Jeu MVP, Pronostics, Quiz, Sondage… sponsorisés dans l'app)
 -- À exécuter APRÈS la 65, sur la base de TEST puis sur la VRAIE base. Peut être exécuté plusieurs fois.
 -- =====================================================================
 -- Léa (22.10.2026, option A) : comme les Réseaux sociaux — des emplacements dans l'app, un sponsor chacun, vendus
@@ -5588,11 +5588,12 @@ group by t.nom, t.ordre order by t.ordre;
 -- La liste réglable `types_posts` sert aux deux produits : colonne `liste` = 'reseaux' ou 'app'.
 
 -- 1. Le produit ------------------------------------------------------------------------------
+update produits set nom = 'Jeux app' where nom = 'Jeux et onglets app';   -- ancien nom (si déjà exécutée)
 insert into produits (nom, categorie, famille, support, mode_vente, ordre, espace, formats)
-select 'Jeux et onglets app', 'Digital', 'exclusif', 'App', 'saison'::mode_vente, 204, 'digital',
+select 'Jeux app', 'Digital', 'exclusif', 'App', 'saison'::mode_vente, 204, 'digital',
        '{png,jpg,jpeg,svg,pdf,ai,eps}'::text[]
-where not exists (select 1 from produits where nom = 'Jeux et onglets app');
-update produits set espace = 'digital' where nom = 'Jeux et onglets app';
+where not exists (select 1 from produits where nom = 'Jeux app');
+update produits set espace = 'digital' where nom = 'Jeux app';
 
 -- 2. Une liste par produit -------------------------------------------------------------------
 alter table types_posts add column if not exists liste text not null default 'reseaux';
@@ -5600,7 +5601,7 @@ insert into types_posts (nom, ordre, liste) values
   ('Jeu MVP', 10, 'app'), ('Pronostics', 20, 'app'), ('Quiz', 30, 'app'), ('Sondage', 40, 'app')
 on conflict (nom) do nothing;
 
--- 3. traiter_digital : « Jeux et onglets app » se traite comme les Réseaux sociaux (un élément par emplacement)
+-- 3. traiter_digital : « Jeux app » se traite comme les Réseaux sociaux (un élément par emplacement)
 do $x$
 declare src text;
 begin
@@ -5615,7 +5616,7 @@ end $x$;
 -- 4. Rouvinez : Jeu MVP à la saison (vraie base ; base de test : rien)
 do $x$
 declare
-  v_pr uuid := (select id from produits where nom = 'Jeux et onglets app');
+  v_pr uuid := (select id from produits where nom = 'Jeux app');
   v_sponsor uuid := (select id from sponsors where lower(sans_accent(nom)) like 'rouvinez%' order by created_at limit 1);
 begin
   if v_sponsor is not null then

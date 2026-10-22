@@ -171,7 +171,7 @@ export const vueDigital = (p) => p?.espace !== 'digital' ? null
   : /programme/i.test(p.nom) ? 'programme' : /banni/i.test(p.nom) ? 'app' : /r[ée]seaux/i.test(p.nom) ? 'reseaux'
   : /jeux/i.test(p.nom) ? 'jeux' : 'parrainage';
 // Produits Digital « à emplacements » (un sponsor par emplacement, liste réglable types_posts) : vue → liste
-// Réseaux sociaux (migration 65), Jeux et onglets app (migration 66)
+// Réseaux sociaux (migration 65), Jeux app (migration 66)
 export const listeDigital = (vue) => ({ reseaux: 'reseaux', jeux: 'app' })[vue] || null;
 
 // Nom du fichier attendu pour un produit (role = 'visuel' ou 'anneau')

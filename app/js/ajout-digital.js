@@ -8,7 +8,7 @@ const normaliser = (t) => (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toL
 // p = produit Digital ; apres() = appelé après chaque ajout (recharger la page)
 export async function ouvrirAjoutDigital(p, apres = () => {}) {
   const vue = vueDigital(p);
-  const aListe = !!listeDigital(vue);        // Réseaux sociaux, Jeux et onglets app : un sponsor par emplacement
+  const aListe = !!listeDigital(vue);        // Réseaux sociaux, Jeux app : un sponsor par emplacement
   const debutJour = new Date(); debutJour.setHours(0, 0, 0, 0);
   const [sponsors, { data: matchs }, { data: joueurs }] = await Promise.all([
     toutesLesLignes((de, a) => sb.from('sponsors').select('id, nom').order('nom').range(de, a)),
@@ -62,7 +62,7 @@ export async function ouvrirAjoutDigital(p, apres = () => {}) {
       </div>`
     : aListe ? `
       <div class="champ">
-        <label>${vue === 'jeux' ? 'Jeu(x) ou onglet(s)' : 'Post(s)'}</label>
+        <label>${vue === 'jeux' ? 'Jeu(x)' : 'Post(s)'}</label>
         <div class="choix">${types.map(t => `<label class="${postsPris.has(t) ? 'doux' : ''}"><input type="checkbox" name="type_post" value="${echapper(t)}"
           ${postsPris.has(t) ? 'disabled' : ''}> ${echapper(t)}${postsPris.has(t) ? ` <span class="petit">— pris à la saison par ${echapper(postsPris.get(t))}</span>` : ''}</label>`).join('')}</div>
       </div>

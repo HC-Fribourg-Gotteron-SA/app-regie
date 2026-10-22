@@ -16,7 +16,7 @@ const VUES = {
   parrainage: { titre: 'Parrainages joueurs', onglet: 'Parrainages joueurs' },
   reseaux: { titre: 'Réseaux sociaux', onglet: 'Réseaux sociaux' },
   // un seul onglet « App » (Léa, 22.10.2026) : bannières + jeux et onglets, en sous-onglets
-  jeux: { titre: 'App · Jeux et onglets', onglet: 'App', sous: 'Jeux et onglets', dans: 'app' },
+  jeux: { titre: 'App · Jeux app', onglet: 'App', sous: 'Jeux app', dans: 'app' },
 };
 // accès « reseaux » (migration 65) : la personne qui publie voit seulement la page Réseaux sociaux
 const espaces = profil.espaces || [];
@@ -305,7 +305,7 @@ function vueReseaux() {
         }).join('')}
       </section>`;
   };
-  $('resume').textContent = `${aVenir.length} match${aVenir.length > 1 ? 's' : ''} à venir · ${types.length} ${vue === 'jeux' ? 'jeux et onglets' : 'types de posts'}`;
+  $('resume').textContent = `${aVenir.length} match${aVenir.length > 1 ? 's' : ''} à venir · ${types.length} ${vue === 'jeux' ? 'jeux' : 'types de posts'}`;
   return `
     ${aVenir.map(carte).join('') || '<p class="vide">Aucun match à venir.</p>'}
     ${passes.length ? `
@@ -316,7 +316,7 @@ function vueReseaux() {
 
 function afficher() {
   $('contenu').innerHTML = vue === 'programme' ? vueProgramme() : vue === 'app' ? vueApp()
-    : listeDigital(vue) ? vueReseaux() : vueParrainage();    // Réseaux sociaux et Jeux et onglets app : même page
+    : listeDigital(vue) ? vueReseaux() : vueParrainage();    // Réseaux sociaux et Jeux app : même page
 }
 
 
