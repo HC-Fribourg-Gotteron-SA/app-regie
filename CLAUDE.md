@@ -328,6 +328,8 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    (admins l'ont par la 65) → menu Digital / Réseaux sociaux seulement si pas l'espace digital.
    Ouvert : qui publie (compte à créer, rôle à choisir), ce qu'elle doit voir d'autre.
    Posts déjà pris **à la saison** par un autre sponsor : grisés dans la demande et « + Ajouter ».
+   **Onglet « App » unique** (même jour, Léa) : menu Digital → « App » ; dans la page, sous-onglets « Bannières » /
+   « Jeux et onglets » (`dans: 'app'` dans VUES de digital.js). Les 2 produits restent séparés dans la demande.
    **Jeux et onglets app (même jour, option A de Léa ; migration 66)** : 5e produit Digital, même mécanisme que les
    Réseaux sociaux (`listeDigital(vue)` dans app.js : reseaux → liste 'reseaux', jeux → liste 'app' ;
    `types_posts.liste`) : Jeu MVP, Pronostics, Quiz, Sondage (+ d'autres onglets à ajouter, Léa n'a plus la liste) ;
