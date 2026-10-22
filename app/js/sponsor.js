@@ -153,7 +153,7 @@ function rangeesDigital(elements) {
         : vue === 'app' ? liste.map(el => `du ${el.du ? dateCourte(el.du + 'T12:00') : '?'} au ${el.au ? dateCourte(el.au + 'T12:00') : '?'}`).join('<br>')
         : liste.map(el => el.joueur ? echapper(`${el.joueur.numero ?? ''} ${el.joueur.prenom} ${el.joueur.nom}`.trim()) : '—').join(', ');
       etatTxt = '<span class="etat etat-non">Retiré</span>';
-    } else if (vue === 'reseaux') {
+    } else if (vue === 'reseaux' || vue === 'jeux') {
       // réseaux sociaux (migration 65) : ses posts, à la saison ou pour N matchs
       const saison = [...new Set(liste.filter(el => !el.match_id).map(el => el.type_post))];
       const auMatch = [...new Set(liste.filter(el => el.match_id).map(el => el.type_post))];

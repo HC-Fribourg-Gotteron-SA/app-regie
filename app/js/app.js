@@ -168,14 +168,18 @@ export function devinerVersion(nom) {
 
 // Espace Digital (migration 55) : 'programme' | 'app' | 'parrainage' (= ?vue= de digital.html), null hors Digital
 export const vueDigital = (p) => p?.espace !== 'digital' ? null
-  : /programme/i.test(p.nom) ? 'programme' : /banni/i.test(p.nom) ? 'app' : /r[ée]seaux/i.test(p.nom) ? 'reseaux' : 'parrainage';
+  : /programme/i.test(p.nom) ? 'programme' : /banni/i.test(p.nom) ? 'app' : /r[ée]seaux/i.test(p.nom) ? 'reseaux'
+  : /jeux/i.test(p.nom) ? 'jeux' : 'parrainage';
+// Produits Digital « à emplacements » (un sponsor par emplacement, liste réglable types_posts) : vue → liste
+// Réseaux sociaux (migration 65), Jeux et onglets app (migration 66)
+export const listeDigital = (vue) => ({ reseaux: 'reseaux', jeux: 'app' })[vue] || null;
 
 // Nom du fichier attendu pour un produit (role = 'visuel' ou 'anneau')
 export function libelleFichier(p, role) {
   if (role === 'anneau') return 'Visuel anneau LED';
   if (!p) return 'Fichier';
   // espace Digital (migration 55)
-  if (p.espace === 'digital') return /parrainage|r[ée]seaux/i.test(p.nom) ? 'Logo' : /banni/i.test(p.nom) ? 'Visuel / logo' : 'Visuel';
+  if (p.espace === 'digital') return /parrainage|r[ée]seaux|jeux/i.test(p.nom) ? 'Logo' : /banni/i.test(p.nom) ? 'Visuel / logo' : 'Visuel';
   if (p.famille === 'slide') return 'Logo';
   if (p.famille === 'temps' && p.support === 'Vidéotron') return 'Vidéo vidéotron';
   if (p.famille === 'exclusif') return 'Visuel ou vidéo';
@@ -263,6 +267,7 @@ const MENU = [
     { href: 'digital.html?vue=parrainage', texte: 'Parrainages joueurs', icone: 'sponsors', espace: 'digital' },
     // réseaux sociaux (22.10.2026, migration 65) : aussi pour l'accès « reseaux » (la personne qui publie)
     { href: 'digital.html?vue=reseaux', texte: 'Réseaux sociaux', icone: 'onglets', espace: ['digital', 'reseaux'] },
+    { href: 'digital.html?vue=jeux', texte: 'Jeux et onglets app', icone: 'onglets', espace: 'digital' },
   ] },
   { titre: 'Demandes', liens: [
     { href: 'demandes.html', texte: 'Toutes les demandes', icone: 'demandes', compteur: 'demandes' },

@@ -1,17 +1,18 @@
 // « + Ajouter » sur une page Digital, SANS demande (Régie / admin, demandé par Léa le 16.10.2026 : « pour aller plus
 // vite »). Même fenêtre que « + Ajouter un sponsor » des fiches produit (ajout-diffusion.js), mais crée directement
 // les éléments Digital (digital_elements ; programme : un par match coché). Pas de diffusion, pas de passages.
-import { sb, echapper, notifier, nomFichierSur, toutesLesLignes, dateCourte, libelleFichier, vueDigital } from './app.js';
+import { sb, echapper, notifier, nomFichierSur, toutesLesLignes, dateCourte, libelleFichier, vueDigital, listeDigital } from './app.js';
 
 const normaliser = (t) => (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
 // p = produit Digital ; apres() = appelé après chaque ajout (recharger la page)
 export async function ouvrirAjoutDigital(p, apres = () => {}) {
   const vue = vueDigital(p);
+  const aListe = !!listeDigital(vue);        // Réseaux sociaux, Jeux et onglets app : un sponsor par emplacement
   const debutJour = new Date(); debutJour.setHours(0, 0, 0, 0);
   const [sponsors, { data: matchs }, { data: joueurs }] = await Promise.all([
     toutesLesLignes((de, a) => sb.from('sponsors').select('id, nom').order('nom').range(de, a)),
-    ['programme', 'reseaux'].includes(vue)
+    vue === 'programme' || aListe
       ? sb.from('matchs').select('id, date_heure, adversaire, type').neq('type', 'ladies')
           .gte('date_heure', debutJour.toISOString()).order('date_heure')
       : Promise.resolve({ data: [] }),
@@ -28,13 +29,13 @@ export async function ouvrirAjoutDigital(p, apres = () => {}) {
   // réseaux sociaux (migration 65) : types de posts
   let types = [];
   const postsPris = new Map();          // pris à la saison : grisés (Léa, 22.10.2026)
-  if (vue === 'reseaux') {
+  if (aListe) {
     const [{ data }, { data: pris }] = await Promise.all([
-      sb.from('types_posts').select('nom').eq('actif', true).order('ordre'),
+      sb.from('types_posts').select('*').eq('actif', true).order('ordre'),
       sb.from('digital_elements').select('type_post, sponsor:sponsors(nom)')
         .eq('produit_id', p.id).eq('statut', 'actif').is('match_id', null).not('type_post', 'is', null),
     ]);
-    types = (data || []).map(t => t.nom);
+    types = (data || []).filter(t => (t.liste || 'reseaux') === listeDigital(vue)).map(t => t.nom);
     (pris || []).forEach(x => postsPris.set(x.type_post, x.sponsor?.nom || 'un sponsor'));
   }
 
@@ -59,9 +60,9 @@ export async function ouvrirAjoutDigital(p, apres = () => {}) {
           <label><input type="radio" name="format" value="demi"> Demi-page</label>
         </div>
       </div>`
-    : vue === 'reseaux' ? `
+    : aListe ? `
       <div class="champ">
-        <label>Post(s)</label>
+        <label>${vue === 'jeux' ? 'Jeu(x) ou onglet(s)' : 'Post(s)'}</label>
         <div class="choix">${types.map(t => `<label class="${postsPris.has(t) ? 'doux' : ''}"><input type="checkbox" name="type_post" value="${echapper(t)}"
           ${postsPris.has(t) ? 'disabled' : ''}> ${echapper(t)}${postsPris.has(t) ? ` <span class="petit">— pris à la saison par ${echapper(postsPris.get(t))}</span>` : ''}</label>`).join('')}</div>
       </div>
@@ -173,8 +174,8 @@ export async function ouvrirAjoutDigital(p, apres = () => {}) {
     if (vue === 'parrainage' && !el('joueur').value) return montrerErreur('Choisissez le joueur.');
     const typesCoches = [...form.querySelectorAll('input[name=type_post]:checked')].map(c => c.value);
     const auMatch = form.querySelector('input[name=quand]:checked')?.value === 'match';
-    if (vue === 'reseaux' && !typesCoches.length) return montrerErreur('Cochez au moins un post.');
-    if (vue === 'reseaux' && auMatch && !idsMatchs.length) return montrerErreur('Cochez au moins un match, ou « Toute la saison ».');
+    if (aListe && !typesCoches.length) return montrerErreur(vue === 'jeux' ? 'Cochez au moins un jeu ou un onglet.' : 'Cochez au moins un post.');
+    if (aListe && auMatch && !idsMatchs.length) return montrerErreur('Cochez au moins un match, ou « Toute la saison ».');
 
     boutons.forEach(b => { b.disabled = true; });
     const groupe = crypto.randomUUID();
@@ -202,7 +203,7 @@ export async function ouvrirAjoutDigital(p, apres = () => {}) {
       const base = { produit_id: p.id, sponsor_id: s.id, fichiers: fichiers.map(({ mime, ...f }) => f),
                      remarque: el('remarque').value.trim() || null };
       const lignes = vue === 'programme' ? idsMatchs.map(match_id => ({ ...base, match_id, format }))
-        : vue === 'reseaux' ? typesCoches.flatMap(type_post => auMatch
+        : aListe ? typesCoches.flatMap(type_post => auMatch
             ? idsMatchs.map(match_id => ({ ...base, type_post, match_id }))
             : [{ ...base, type_post }])
         : vue === 'app' ? [{ ...base, du: el('du').value, au: el('au').value }]

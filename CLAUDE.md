@@ -327,6 +327,12 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    Traité par une personne **hors Régie** : pas dans Match du jour ; accès **`profiles.espaces` contient 'reseaux'**
    (admins l'ont par la 65) → menu Digital / Réseaux sociaux seulement si pas l'espace digital.
    Ouvert : qui publie (compte à créer, rôle à choisir), ce qu'elle doit voir d'autre.
+   Posts déjà pris **à la saison** par un autre sponsor : grisés dans la demande et « + Ajouter ».
+   **Jeux et onglets app (même jour, option A de Léa ; migration 66)** : 5e produit Digital, même mécanisme que les
+   Réseaux sociaux (`listeDigital(vue)` dans app.js : reseaux → liste 'reseaux', jeux → liste 'app' ;
+   `types_posts.liste`) : Jeu MVP, Pronostics, Quiz, Sondage (+ d'autres onglets à ajouter, Léa n'a plus la liste) ;
+   saison ou certains matchs ; Rouvinez = Jeu MVP à la saison (en plus de son post MVP). Page `digital.html?vue=jeux`
+   (= vueReseaux), 66 patche `traiter_digital` (« jeux% » traité comme réseaux).
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.

@@ -1,7 +1,7 @@
 -- =====================================================================
 -- INSTALLATION COMPLÈTE d'une base neuve (base de TEST) — généré par outils/installation-base-test.mjs
 -- À exécuter UNE fois dans le SQL Editor du projet de test (jamais sur la vraie base).
--- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 58, 59, 60, 61, 62, 63, 64, 65.
+-- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 58, 59, 60, 61, 62, 63, 64, 65, 66.
 -- Ensuite : créer son compte (Authentication > Users), se mettre admin (voir en bas),
 -- importer le calendrier dans l'outil (.ics), puis lancer supabase/demo_donnees_test.sql.
 -- =====================================================================
@@ -5576,6 +5576,64 @@ left join sponsors s on s.id = e.sponsor_id
 group by t.nom, t.ordre order by t.ordre;
 
 
+-- #####################################################################
+-- 66_jeux_app.sql
+-- #####################################################################
+-- =====================================================================
+-- 66 — Digital : « Jeux et onglets app » (Jeu MVP, Pronostics, Quiz, Sondage… sponsorisés dans l'app)
+-- À exécuter APRÈS la 65, sur la base de TEST puis sur la VRAIE base. Peut être exécuté plusieurs fois.
+-- =====================================================================
+-- Léa (22.10.2026, option A) : comme les Réseaux sociaux — des emplacements dans l'app, un sponsor chacun, vendus
+-- plutôt à la saison (ou pour certains matchs). Rouvinez a le Jeu MVP à la saison (en plus de son post MVP).
+-- La liste réglable `types_posts` sert aux deux produits : colonne `liste` = 'reseaux' ou 'app'.
+
+-- 1. Le produit ------------------------------------------------------------------------------
+insert into produits (nom, categorie, famille, support, mode_vente, ordre, espace, formats)
+select 'Jeux et onglets app', 'Digital', 'exclusif', 'App', 'saison'::mode_vente, 204, 'digital',
+       '{png,jpg,jpeg,svg,pdf,ai,eps}'::text[]
+where not exists (select 1 from produits where nom = 'Jeux et onglets app');
+update produits set espace = 'digital' where nom = 'Jeux et onglets app';
+
+-- 2. Une liste par produit -------------------------------------------------------------------
+alter table types_posts add column if not exists liste text not null default 'reseaux';
+insert into types_posts (nom, ordre, liste) values
+  ('Jeu MVP', 10, 'app'), ('Pronostics', 20, 'app'), ('Quiz', 30, 'app'), ('Sondage', 40, 'app')
+on conflict (nom) do nothing;
+
+-- 3. traiter_digital : « Jeux et onglets app » se traite comme les Réseaux sociaux (un élément par emplacement)
+do $x$
+declare src text;
+begin
+  select pg_get_functiondef('traiter_digital(uuid, uuid, text, jsonb)'::regprocedure) into src;
+  if position('jeux%' in src) = 0 then
+    src := replace(src, $r$v_reseaux := pr.nom ilike 'r_seaux%';$r$,
+                        $r$v_reseaux := pr.nom ilike 'r_seaux%' or pr.nom ilike 'jeux%';$r$);
+    execute src;
+  end if;
+end $x$;
+
+-- 4. Rouvinez : Jeu MVP à la saison (vraie base ; base de test : rien)
+do $x$
+declare
+  v_pr uuid := (select id from produits where nom = 'Jeux et onglets app');
+  v_sponsor uuid := (select id from sponsors where lower(sans_accent(nom)) like 'rouvinez%' order by created_at limit 1);
+begin
+  if v_sponsor is not null then
+    insert into digital_elements (produit_id, sponsor_id, type_post, remarque)
+    select v_pr, v_sponsor, 'Jeu MVP', 'Repris (Léa, 22.10.2026)'
+    where not exists (select 1 from digital_elements where produit_id = v_pr and sponsor_id = v_sponsor
+                        and type_post = 'Jeu MVP' and statut = 'actif');
+  end if;
+end $x$;
+
+select t.liste as "Liste", t.nom as "Emplacement",
+       coalesce(string_agg(s.nom || case when e.match_id is null then ' (saison)' else '' end, ', '), 'libre') as "Sponsors"
+from types_posts t
+left join digital_elements e on e.type_post = t.nom and e.statut = 'actif'
+left join sponsors s on s.id = e.sponsor_id
+group by t.liste, t.nom, t.ordre order by t.liste, t.ordre;
+
+
 -- Après avoir créé ton compte dans Authentication > Users, lance ceci séparément :
 -- update profiles set role = 'admin', nom = 'Léa Talon' where email = 'lea.talon@fribourg-gotteron.ch';
-select 'Installation terminée : 61 fichiers.' as "Résultat";
+select 'Installation terminée : 62 fichiers.' as "Résultat";

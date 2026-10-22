@@ -1,7 +1,7 @@
 // Espace Digital (16.10.2026, migration 55) : Programme de match, Bannière app, Parrainage joueur.
 // Léa gère le digital, toujours reçu du Sponsoring par la même demande. Pas de diffusion Colosseo :
 // des « éléments » (digital_elements) avec des cases « c'est mis » (programme, app, site, vidéotron).
-import { sb, exigerConnexion, echapper, dateCourte, notifier, vueDigital } from './app.js';
+import { sb, exigerConnexion, echapper, dateCourte, notifier, vueDigital, listeDigital } from './app.js';
 import { carteTraitement, CHAMPS_A_TRAITER } from './traitement.js';
 import { ouvrirAjoutDigital } from './ajout-digital.js';
 
@@ -15,11 +15,11 @@ const VUES = {
   app: { titre: 'Bannières app', onglet: 'Bannières app' },
   parrainage: { titre: 'Parrainages joueurs', onglet: 'Parrainages joueurs' },
   reseaux: { titre: 'Réseaux sociaux', onglet: 'Réseaux sociaux' },
+  jeux: { titre: 'Jeux et onglets app', onglet: 'Jeux et onglets app' },
 };
-// accès « reseaux » (migration 65) : la personne qui publie voit la page Réseaux sociaux et coche « Publié »
+// accès « reseaux » (migration 65) : la personne qui publie voit seulement la page Réseaux sociaux
 const espaces = profil.espaces || [];
 const accesDigital = espaces.includes('digital');
-const peutPublier = estRegie || espaces.includes('reseaux');
 const MAX_PUBS_PROGRAMME = 3;       // Léa : « plus que 3 c'est chiant », quelle que soit la taille
 // cases « c'est mis » par vue
 const CASES = {
@@ -54,7 +54,7 @@ async function charger() {
   const { data: produits, error } = await sb.from('produits').select('*').eq('espace', 'digital');
   if (error) return erreur(/espace/.test(error.message) ? 'Exécutez d’abord la migration 55 dans Supabase.' : error.message);
   etat.produit = (produits || []).find(p => vueDigital(p) === vue);
-  if (!etat.produit) return erreur(`Produit introuvable : exécutez la migration ${vue === 'reseaux' ? 65 : 55} dans Supabase.`);
+  if (!etat.produit) return erreur(`Produit introuvable : exécutez la migration ${({ reseaux: 65, jeux: 66 })[vue] || 55} dans Supabase.`);
   $('btn-ajouter').hidden = !estRegie;      // ajouter sans demande (Léa, 16.10.2026 : « pour aller plus vite »)
 
   const [{ data: elements, error: e1 }, { data: attente }, { data: joueurs }, { data: matchs }] = await Promise.all([
@@ -64,7 +64,7 @@ async function charger() {
     sb.from('demandes_produits').select(CHAMPS_A_TRAITER)
       .eq('produit_id', etat.produit.id).is('traite_le', null).neq('demande.statut', 'traitee'),
     sb.from('joueurs').select('*').eq('actif', true).order('numero'),
-    ['programme', 'reseaux'].includes(vue) ? sb.from('matchs').select('id, numero, date_heure, adversaire, type').neq('type', 'ladies').order('date_heure')
+    vue === 'programme' || listeDigital(vue) ? sb.from('matchs').select('id, numero, date_heure, adversaire, type').neq('type', 'ladies').order('date_heure')
                         : Promise.resolve({ data: [] }),
   ]);
   if (e1) return erreur(e1.message);
@@ -72,9 +72,10 @@ async function charger() {
   etat.attente = attente || [];
   etat.joueurs = joueurs || [];
   etat.matchs = matchs || [];
-  if (vue === 'reseaux') {
-    const { data: types } = await sb.from('types_posts').select('nom, ordre').eq('actif', true).order('ordre');
-    etat.types = (types || []).map(t => t.nom);
+  if (listeDigital(vue)) {
+    // « * » : la colonne liste (migration 66) n'existe pas encore → tout est « reseaux »
+    const { data: types } = await sb.from('types_posts').select('*').eq('actif', true).order('ordre');
+    etat.types = (types || []).filter(t => (t.liste || 'reseaux') === listeDigital(vue)).map(t => t.nom);
   }
   afficherAttente();
   afficher();
@@ -279,7 +280,7 @@ function vueReseaux() {
         <div class="programme-entete">
           <strong>${dateCourte(m.date_heure)} · ${echapper(m.adversaire)}</strong>
           <span class="espace"></span>
-          <span class="badge">${posts.length} / ${types.length} posts sponsorisés</span>
+          <span class="badge">${posts.length} / ${types.length} ${vue === 'jeux' ? 'emplacements' : 'posts'} sponsorisés</span>
         </div>
         ${types.map(t => {
           const liste = posts.filter(el => el.type_post === t);
@@ -297,7 +298,7 @@ function vueReseaux() {
         }).join('')}
       </section>`;
   };
-  $('resume').textContent = `${aVenir.length} match${aVenir.length > 1 ? 's' : ''} à venir · ${types.length} types de posts`;
+  $('resume').textContent = `${aVenir.length} match${aVenir.length > 1 ? 's' : ''} à venir · ${types.length} ${vue === 'jeux' ? 'jeux et onglets' : 'types de posts'}`;
   return `
     ${aVenir.map(carte).join('') || '<p class="vide">Aucun match à venir.</p>'}
     ${passes.length ? `
@@ -308,7 +309,7 @@ function vueReseaux() {
 
 function afficher() {
   $('contenu').innerHTML = vue === 'programme' ? vueProgramme() : vue === 'app' ? vueApp()
-    : vue === 'reseaux' ? vueReseaux() : vueParrainage();
+    : listeDigital(vue) ? vueReseaux() : vueParrainage();    // Réseaux sociaux et Jeux et onglets app : même page
 }
 
 

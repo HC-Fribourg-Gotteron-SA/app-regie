@@ -1,5 +1,5 @@
 import { sb, exigerConnexion, LIBELLES, echapper, dateCourte, notifier, debounce, nomFichierSur, taille, libelleFichier,
-         descriptionProduit, specsProduit, dimensionsAttendues, alertesFichier, lireDimensions, devinerVersion, vueDigital } from './app.js';
+         descriptionProduit, specsProduit, dimensionsAttendues, alertesFichier, lireDimensions, devinerVersion, vueDigital, listeDigital } from './app.js';
 import { analyserSon, LIBELLE_SON } from './son-video.js';
 
 const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
@@ -135,9 +135,11 @@ async function chargerSaisonEtMatchs() {
   const { data: parrains } = await sb.from('digital_elements').select('joueur_id, sponsor_id, produit:produits!inner(nom)')
     .eq('statut', 'actif').not('joueur_id', 'is', null).ilike('produit.nom', '%parrainage%');
   etat.parraines = new Map((parrains || []).map(x => [x.joueur_id, x.sponsor_id]));
-  // types de posts des réseaux sociaux (migration 65) ; absent avant → liste vide
-  const { data: types } = await sb.from('types_posts').select('nom').eq('actif', true).order('ordre');
-  etat.typesPosts = (types || []).map(t => t.nom);
+  // emplacements des produits « à liste » : posts des réseaux sociaux (65), jeux et onglets de l'app (66) ;
+  // absent avant → listes vides ; sans la colonne liste (avant la 66) → tout est « reseaux »
+  const { data: types } = await sb.from('types_posts').select('*').eq('actif', true).order('ordre');
+  etat.typesListe = {};
+  for (const t of types || []) (etat.typesListe[t.liste || 'reseaux'] ||= []).push(t.nom);
   // posts déjà pris À LA SAISON (Léa, 22.10.2026 : Alloboissons GAMEDAY, Rouvinez MVP) : type → { sponsor_id, nom }
   const { data: pris } = await sb.from('digital_elements').select('type_post, sponsor_id, sponsor:sponsors(nom)')
     .eq('statut', 'actif').is('match_id', null).not('type_post', 'is', null);
@@ -160,16 +162,16 @@ function blocDigital(id, p, d, matchs, suppr) {
       <div class="petit" style="margin-top:.4rem"><strong>Quel(s) match(s) ?</strong></div>
       <div class="choix choix-compact">${matchs}</div>
       ${suppr ? '' : `<div class="champ-ligne"><span class="etiquette">Format</span>${choixOuiNon(id, 'format', d.format, 'Page pleine', 'Demi-page', 'pleine', 'demi')}</div>`}`
-    : t === 'reseaux' ? `
-      <div class="petit" style="margin-top:.4rem"><strong>Quel(s) post(s) ?</strong></div>
-      <div class="choix choix-compact">${(etat.typesPosts || []).map(nom => {
+    : listeDigital(t) ? `
+      <div class="petit" style="margin-top:.4rem"><strong>${t === 'jeux' ? 'Quel(s) jeu(x) ou onglet(s) ?' : 'Quel(s) post(s) ?'}</strong></div>
+      <div class="choix choix-compact">${(etat.typesListe?.[listeDigital(t)] || []).map(nom => {
         // pris à la saison par un AUTRE sponsor : grisé (le sien reste choisissable : changement de logo, suppression)
         const pris = etat.postsPris?.get(nom);
         const bloque = pris && pris.sponsor_id !== etat.sponsor?.id && !d.types?.has(nom);
         return `<label class="${bloque ? 'doux' : ''}"><input type="checkbox" data-type-post="${echapper(nom)}"
           ${d.types?.has(nom) ? 'checked' : ''} ${bloque ? 'disabled' : ''}> ${echapper(nom)}${
           bloque ? ` <span class="petit">— pris à la saison par ${echapper(pris.nom)}</span>` : ''}</label>`;
-      }).join('') || '<span class="doux petit">Aucun type de post (migration 65)</span>'}</div>
+      }).join('') || `<span class="doux petit">Liste vide (migration ${t === 'jeux' ? 66 : 65})</span>`}</div>
       <div class="choix">
         <label><input type="radio" name="quand-${id}" value="saison" ${d.quand === 'saison' ? 'checked' : ''}> Toute la saison ${echapper(etat.saison)}</label>
         <label><input type="radio" name="quand-${id}" value="match" ${d.quand === 'match' ? 'checked' : ''}> Seulement certains matchs</label>
@@ -194,10 +196,11 @@ function blocDigital(id, p, d, matchs, suppr) {
       <div class="detail-entete">
         <strong>${echapper(p.nom)}</strong>
         <span class="doux petit description">${t === 'programme' ? 'Pub dans le programme de match' : t === 'app' ? 'Bannière dans l’app du club'
-          : t === 'reseaux' ? 'Logo sur des posts du club (GAMEDAY, MVP…)' : 'Logo du parrain : vidéotron, app, site et programme'}</span>
+          : t === 'reseaux' ? 'Logo sur des posts du club (GAMEDAY, MVP…)'
+          : t === 'jeux' ? 'Logo sur un jeu ou un onglet de l’app (jeu MVP, pronostics…)' : 'Logo du parrain : vidéotron, app, site et programme'}</span>
       </div>
       ${blocDejaPris(id)}
-      ${suppr && !['programme', 'reseaux'].includes(t) ? '' : quoi}
+      ${suppr && t !== 'programme' && !listeDigital(t) ? '' : quoi}
       ${suppr ? '' : rolesFichiers(p).map(r => zoneFichiers(d, r)).join('')}
       ${remarque}
     </div>`;
@@ -220,8 +223,8 @@ function manqueDigital(p, d) {
   } else if (t === 'app') {
     if (!d.du || !d.au) return `${p.nom} : indiquez du … au ….`;
     if (d.au < d.du) return `${p.nom} : la date de fin est avant la date de début.`;
-  } else if (t === 'reseaux') {
-    if (!d.types?.size) return `${p.nom} : cochez au moins un post.`;
+  } else if (listeDigital(t)) {
+    if (!d.types?.size) return `${p.nom} : cochez au moins ${t === 'jeux' ? 'un jeu ou un onglet' : 'un post'}.`;
     if (d.quand === 'match' && !d.dates.size) return `${p.nom} : cochez au moins un match, ou choisissez « Toute la saison ».`;
   } else if (t === 'parrainage' && !d.joueur_id) {
     return `${p.nom} : choisissez le joueur.`;
@@ -687,7 +690,7 @@ $('form-demande').addEventListener('submit', async (e) => {
     if (estDigital(p)) {
       const manque = type !== 'suppression' ? manqueDigital(p, d)
         : typeDigital(p) === 'programme' && !d.dates.size ? `${p.nom} : cochez au moins un match.`
-        : typeDigital(p) === 'reseaux' ? manqueDigital(p, d) : null;
+        : listeDigital(typeDigital(p)) ? manqueDigital(p, d) : null;
       if (manque) return erreur(manque);
       continue;
     }
@@ -725,14 +728,14 @@ $('form-demande').addEventListener('submit', async (e) => {
     if (produits.length) {
       const { error: e2 } = await sb.from('demandes_produits').insert(produits.map(produit_id => {
         const d = detailDe(produit_id), p = etat.produits.get(produit_id);
-        const posts = typeDigital(p) === 'reseaux' ? { types_posts: [...(d.types || [])] } : {};
+        const posts = listeDigital(typeDigital(p)) ? { types_posts: [...(d.types || [])] } : {};
         if (type === 'suppression') {
           return { demande_id: demande.id, produit_id, type_vente: d.quand, ...posts,
                    dates_matchs: d.quand === 'match' ? [...d.dates].sort() : null, remarque_sponsoring: d.remarque.trim() || null };
         }
         if (estDigital(p)) {
           const t = typeDigital(p);
-          const auMatch = t === 'programme' || (t === 'reseaux' && d.quand === 'match');
+          const auMatch = t === 'programme' || (listeDigital(t) && d.quand === 'match');
           return { demande_id: demande.id, produit_id, type_vente: auMatch ? 'match' : 'saison', ...posts,
                    dates_matchs: auMatch ? [...d.dates].sort() : null,
                    format: t === 'programme' ? d.format : null,
