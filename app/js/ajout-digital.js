@@ -27,9 +27,15 @@ export async function ouvrirAjoutDigital(p, apres = () => {}) {
   }
   // réseaux sociaux (migration 65) : types de posts
   let types = [];
+  const postsPris = new Map();          // pris à la saison : grisés (Léa, 22.10.2026)
   if (vue === 'reseaux') {
-    const { data } = await sb.from('types_posts').select('nom').eq('actif', true).order('ordre');
+    const [{ data }, { data: pris }] = await Promise.all([
+      sb.from('types_posts').select('nom').eq('actif', true).order('ordre'),
+      sb.from('digital_elements').select('type_post, sponsor:sponsors(nom)')
+        .eq('produit_id', p.id).eq('statut', 'actif').is('match_id', null).not('type_post', 'is', null),
+    ]);
     types = (data || []).map(t => t.nom);
+    (pris || []).forEach(x => postsPris.set(x.type_post, x.sponsor?.nom || 'un sponsor'));
   }
 
   const voile = document.createElement('div');
@@ -56,7 +62,8 @@ export async function ouvrirAjoutDigital(p, apres = () => {}) {
     : vue === 'reseaux' ? `
       <div class="champ">
         <label>Post(s)</label>
-        <div class="choix">${types.map(t => `<label><input type="checkbox" name="type_post" value="${echapper(t)}"> ${echapper(t)}</label>`).join('')}</div>
+        <div class="choix">${types.map(t => `<label class="${postsPris.has(t) ? 'doux' : ''}"><input type="checkbox" name="type_post" value="${echapper(t)}"
+          ${postsPris.has(t) ? 'disabled' : ''}> ${echapper(t)}${postsPris.has(t) ? ` <span class="petit">— pris à la saison par ${echapper(postsPris.get(t))}</span>` : ''}</label>`).join('')}</div>
       </div>
       <div class="champ">
         <label>Quand ?</label>

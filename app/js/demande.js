@@ -138,6 +138,10 @@ async function chargerSaisonEtMatchs() {
   // types de posts des réseaux sociaux (migration 65) ; absent avant → liste vide
   const { data: types } = await sb.from('types_posts').select('nom').eq('actif', true).order('ordre');
   etat.typesPosts = (types || []).map(t => t.nom);
+  // posts déjà pris À LA SAISON (Léa, 22.10.2026 : Alloboissons GAMEDAY, Rouvinez MVP) : type → { sponsor_id, nom }
+  const { data: pris } = await sb.from('digital_elements').select('type_post, sponsor_id, sponsor:sponsors(nom)')
+    .eq('statut', 'actif').is('match_id', null).not('type_post', 'is', null);
+  etat.postsPris = new Map((pris || []).map(x => [x.type_post, { sponsor_id: x.sponsor_id, nom: x.sponsor?.nom || 'un sponsor' }]));
 }
 
 // ---------------------------------------------------------------------
@@ -158,8 +162,14 @@ function blocDigital(id, p, d, matchs, suppr) {
       ${suppr ? '' : `<div class="champ-ligne"><span class="etiquette">Format</span>${choixOuiNon(id, 'format', d.format, 'Page pleine', 'Demi-page', 'pleine', 'demi')}</div>`}`
     : t === 'reseaux' ? `
       <div class="petit" style="margin-top:.4rem"><strong>Quel(s) post(s) ?</strong></div>
-      <div class="choix choix-compact">${(etat.typesPosts || []).map(nom => `<label><input type="checkbox" data-type-post="${echapper(nom)}"
-        ${d.types?.has(nom) ? 'checked' : ''}> ${echapper(nom)}</label>`).join('') || '<span class="doux petit">Aucun type de post (migration 65)</span>'}</div>
+      <div class="choix choix-compact">${(etat.typesPosts || []).map(nom => {
+        // pris à la saison par un AUTRE sponsor : grisé (le sien reste choisissable : changement de logo, suppression)
+        const pris = etat.postsPris?.get(nom);
+        const bloque = pris && pris.sponsor_id !== etat.sponsor?.id && !d.types?.has(nom);
+        return `<label class="${bloque ? 'doux' : ''}"><input type="checkbox" data-type-post="${echapper(nom)}"
+          ${d.types?.has(nom) ? 'checked' : ''} ${bloque ? 'disabled' : ''}> ${echapper(nom)}${
+          bloque ? ` <span class="petit">— pris à la saison par ${echapper(pris.nom)}</span>` : ''}</label>`;
+      }).join('') || '<span class="doux petit">Aucun type de post (migration 65)</span>'}</div>
       <div class="choix">
         <label><input type="radio" name="quand-${id}" value="saison" ${d.quand === 'saison' ? 'checked' : ''}> Toute la saison ${echapper(etat.saison)}</label>
         <label><input type="radio" name="quand-${id}" value="match" ${d.quand === 'match' ? 'checked' : ''}> Seulement certains matchs</label>
