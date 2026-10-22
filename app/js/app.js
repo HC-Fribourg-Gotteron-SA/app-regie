@@ -168,14 +168,14 @@ export function devinerVersion(nom) {
 
 // Espace Digital (migration 55) : 'programme' | 'app' | 'parrainage' (= ?vue= de digital.html), null hors Digital
 export const vueDigital = (p) => p?.espace !== 'digital' ? null
-  : /programme/i.test(p.nom) ? 'programme' : /banni/i.test(p.nom) ? 'app' : 'parrainage';
+  : /programme/i.test(p.nom) ? 'programme' : /banni/i.test(p.nom) ? 'app' : /r[ée]seaux/i.test(p.nom) ? 'reseaux' : 'parrainage';
 
 // Nom du fichier attendu pour un produit (role = 'visuel' ou 'anneau')
 export function libelleFichier(p, role) {
   if (role === 'anneau') return 'Visuel anneau LED';
   if (!p) return 'Fichier';
   // espace Digital (migration 55)
-  if (p.espace === 'digital') return /parrainage/i.test(p.nom) ? 'Logo' : /banni/i.test(p.nom) ? 'Visuel / logo' : 'Visuel';
+  if (p.espace === 'digital') return /parrainage|r[ée]seaux/i.test(p.nom) ? 'Logo' : /banni/i.test(p.nom) ? 'Visuel / logo' : 'Visuel';
   if (p.famille === 'slide') return 'Logo';
   if (p.famille === 'temps' && p.support === 'Vidéotron') return 'Vidéo vidéotron';
   if (p.famille === 'exclusif') return 'Visuel ou vidéo';
@@ -261,6 +261,8 @@ const MENU = [
     { href: 'digital.html?vue=programme', texte: 'Programme de match', icone: 'onglets', espace: 'digital' },
     { href: 'digital.html?vue=app', texte: 'Bannières app', icone: 'onglets', espace: 'digital' },
     { href: 'digital.html?vue=parrainage', texte: 'Parrainages joueurs', icone: 'sponsors', espace: 'digital' },
+    // réseaux sociaux (22.10.2026, migration 65) : aussi pour l'accès « reseaux » (la personne qui publie)
+    { href: 'digital.html?vue=reseaux', texte: 'Réseaux sociaux', icone: 'onglets', espace: ['digital', 'reseaux'] },
   ] },
   { titre: 'Demandes', liens: [
     { href: 'demandes.html', texte: 'Toutes les demandes', icone: 'demandes', compteur: 'demandes' },
@@ -305,7 +307,8 @@ function construireMenu(profil) {
   const accueil = pageAccueil(profil.role);
   // Chrono & animation : seulement les liens qui le nomment (run of show)
   const visible = (l) => profil.role === 'animation' ? l.roles?.includes('animation')
-    : (!l.roles || l.roles.includes(profil.role)) && (!l.espace || (profil.espaces || []).includes(l.espace));
+    : (!l.roles || l.roles.includes(profil.role))
+      && (!l.espace || [].concat(l.espace).some(e => (profil.espaces || []).includes(e)));
 
   const menu = document.createElement('aside');
   menu.className = 'menu-lateral';

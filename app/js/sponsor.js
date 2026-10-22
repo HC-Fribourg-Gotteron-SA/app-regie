@@ -44,7 +44,7 @@ async function charger() {
   // espace Digital (migration 55) : programme de match, bannière app, parrainage — rangés à part des diffusions
   // (21.10.2026, Léa : Arconciel dans le programme de match mais « rien » dans son dossier). Absent avant la 55 : rien.
   const { data: digital } = await sb.from('digital_elements')
-    .select('id, du, au, statut, produit:produits(id, nom), match:matchs(date_heure), joueur:joueurs(numero, prenom, nom)')
+    .select('*, produit:produits(id, nom), match:matchs(date_heure), joueur:joueurs(numero, prenom, nom)')
     .eq('sponsor_id', idSponsor);              // aussi ce qu'il a eu (retiré, bannière terminée) : Léa, 21.10.2026
   afficherProduits(produits, digital || []);
   afficherDocuments(documents || []);
@@ -153,6 +153,14 @@ function rangeesDigital(elements) {
         : vue === 'app' ? liste.map(el => `du ${el.du ? dateCourte(el.du + 'T12:00') : '?'} au ${el.au ? dateCourte(el.au + 'T12:00') : '?'}`).join('<br>')
         : liste.map(el => el.joueur ? echapper(`${el.joueur.numero ?? ''} ${el.joueur.prenom} ${el.joueur.nom}`.trim()) : '—').join(', ');
       etatTxt = '<span class="etat etat-non">Retiré</span>';
+    } else if (vue === 'reseaux') {
+      // réseaux sociaux (migration 65) : ses posts, à la saison ou pour N matchs
+      const saison = [...new Set(liste.filter(el => !el.match_id).map(el => el.type_post))];
+      const auMatch = [...new Set(liste.filter(el => el.match_id).map(el => el.type_post))];
+      const nbMatchs = new Set(liste.filter(el => el.match_id).map(el => el.match_id)).size;
+      quand = [saison.length ? `${saison.map(echapper).join(', ')} · toute la saison` : '',
+               auMatch.length ? `${auMatch.map(echapper).join(', ')} · ${pluriel(nbMatchs, 'match')}` : ''].filter(Boolean).join('<br>');
+      etatTxt = '<span class="etat etat-ecran">Sponsor</span>';
     } else if (vue === 'programme') {
       const dates = liste.map(el => el.match && new Date(el.match.date_heure)).filter(Boolean).sort((a, b) => a - b);
       const prochain = dates.find(d => d >= debut);

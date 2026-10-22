@@ -127,6 +127,7 @@ function dessiner(k) {
       ${a.format ? `<span class="badge badge-son">${a.format === 'pleine' ? 'Page pleine' : 'Demi-page'}</span>` : ''}
       ${a.du || a.au ? `<span class="badge badge-son">du ${a.du ? dateCourte(a.du + 'T12:00') : '?'} au ${a.au ? dateCourte(a.au + 'T12:00') : '?'}</span>` : ''}
       ${a.joueur_id ? `<span class="badge badge-son">${echapper(nomJoueur(ctx.joueurs?.get(a.joueur_id)))}</span>` : ''}
+      ${(a.types_posts || []).map(t => `<span class="badge badge-son">${echapper(t)}</span>`).join(' ')}
       ${options.mode === 'produit' ? `<span class="doux petit description">Reçue ${depuis(d.created_at)}${d.statut === 'question' ? ' · <strong>question en cours au Sponsoring</strong>' : ''}</span>` : ''}
     </div>
     ${a.a_corriger ? `<p class="message message-erreur petit">⚠ <strong>Fichier à refaire</strong>${a.a_corriger_le

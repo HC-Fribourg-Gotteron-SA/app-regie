@@ -135,6 +135,9 @@ async function chargerSaisonEtMatchs() {
   const { data: parrains } = await sb.from('digital_elements').select('joueur_id, sponsor_id, produit:produits!inner(nom)')
     .eq('statut', 'actif').not('joueur_id', 'is', null).ilike('produit.nom', '%parrainage%');
   etat.parraines = new Map((parrains || []).map(x => [x.joueur_id, x.sponsor_id]));
+  // types de posts des réseaux sociaux (migration 65) ; absent avant → liste vide
+  const { data: types } = await sb.from('types_posts').select('nom').eq('actif', true).order('ordre');
+  etat.typesPosts = (types || []).map(t => t.nom);
 }
 
 // ---------------------------------------------------------------------
@@ -153,6 +156,18 @@ function blocDigital(id, p, d, matchs, suppr) {
       <div class="petit" style="margin-top:.4rem"><strong>Quel(s) match(s) ?</strong></div>
       <div class="choix choix-compact">${matchs}</div>
       ${suppr ? '' : `<div class="champ-ligne"><span class="etiquette">Format</span>${choixOuiNon(id, 'format', d.format, 'Page pleine', 'Demi-page', 'pleine', 'demi')}</div>`}`
+    : t === 'reseaux' ? `
+      <div class="petit" style="margin-top:.4rem"><strong>Quel(s) post(s) ?</strong></div>
+      <div class="choix choix-compact">${(etat.typesPosts || []).map(nom => `<label><input type="checkbox" data-type-post="${echapper(nom)}"
+        ${d.types?.has(nom) ? 'checked' : ''}> ${echapper(nom)}</label>`).join('') || '<span class="doux petit">Aucun type de post (migration 65)</span>'}</div>
+      <div class="choix">
+        <label><input type="radio" name="quand-${id}" value="saison" ${d.quand === 'saison' ? 'checked' : ''}> Toute la saison ${echapper(etat.saison)}</label>
+        <label><input type="radio" name="quand-${id}" value="match" ${d.quand === 'match' ? 'checked' : ''}> Seulement certains matchs</label>
+      </div>
+      <div class="matchs-produit" ${d.quand === 'match' ? '' : 'hidden'}>
+        <p class="aide">Cochez le ou les matchs :</p>
+        <div class="choix choix-compact">${matchs}</div>
+      </div>`
     : t === 'app' ? `
       <div class="champ-ligne"><span class="etiquette">Affichée</span>
         <label class="petit">du <input type="date" data-champ="du" value="${d.du || ''}" style="width:auto"></label>
@@ -169,10 +184,10 @@ function blocDigital(id, p, d, matchs, suppr) {
       <div class="detail-entete">
         <strong>${echapper(p.nom)}</strong>
         <span class="doux petit description">${t === 'programme' ? 'Pub dans le programme de match' : t === 'app' ? 'Bannière dans l’app du club'
-          : 'Logo du parrain : vidéotron, app, site et programme'}</span>
+          : t === 'reseaux' ? 'Logo sur des posts du club (GAMEDAY, MVP…)' : 'Logo du parrain : vidéotron, app, site et programme'}</span>
       </div>
       ${blocDejaPris(id)}
-      ${suppr && t !== 'programme' ? '' : quoi}
+      ${suppr && !['programme', 'reseaux'].includes(t) ? '' : quoi}
       ${suppr ? '' : rolesFichiers(p).map(r => zoneFichiers(d, r)).join('')}
       ${remarque}
     </div>`;
@@ -195,6 +210,9 @@ function manqueDigital(p, d) {
   } else if (t === 'app') {
     if (!d.du || !d.au) return `${p.nom} : indiquez du … au ….`;
     if (d.au < d.du) return `${p.nom} : la date de fin est avant la date de début.`;
+  } else if (t === 'reseaux') {
+    if (!d.types?.size) return `${p.nom} : cochez au moins un post.`;
+    if (d.quand === 'match' && !d.dates.size) return `${p.nom} : cochez au moins un match, ou choisissez « Toute la saison ».`;
   } else if (t === 'parrainage' && !d.joueur_id) {
     return `${p.nom} : choisissez le joueur.`;
   }
@@ -491,6 +509,9 @@ $('details-produits').addEventListener('input', (e) => {
     bloc.querySelector('.matchs-produit').hidden = d.quand !== 'match';
   } else if (t.dataset.date) {
     t.checked ? d.dates.add(t.dataset.date) : d.dates.delete(t.dataset.date);
+  } else if (t.dataset.typePost) {           // réseaux sociaux : types de posts cochés
+    d.types = d.types || new Set();
+    t.checked ? d.types.add(t.dataset.typePost) : d.types.delete(t.dataset.typePost);
   } else if (t.dataset.champ) {
     d[t.dataset.champ] = t.value;
   }
@@ -655,7 +676,8 @@ $('form-demande').addEventListener('submit', async (e) => {
     const p = etat.produits.get(id);
     if (estDigital(p)) {
       const manque = type !== 'suppression' ? manqueDigital(p, d)
-        : typeDigital(p) === 'programme' && !d.dates.size ? `${p.nom} : cochez au moins un match.` : null;
+        : typeDigital(p) === 'programme' && !d.dates.size ? `${p.nom} : cochez au moins un match.`
+        : typeDigital(p) === 'reseaux' ? manqueDigital(p, d) : null;
       if (manque) return erreur(manque);
       continue;
     }
@@ -693,14 +715,16 @@ $('form-demande').addEventListener('submit', async (e) => {
     if (produits.length) {
       const { error: e2 } = await sb.from('demandes_produits').insert(produits.map(produit_id => {
         const d = detailDe(produit_id), p = etat.produits.get(produit_id);
+        const posts = typeDigital(p) === 'reseaux' ? { types_posts: [...(d.types || [])] } : {};
         if (type === 'suppression') {
-          return { demande_id: demande.id, produit_id, type_vente: d.quand,
+          return { demande_id: demande.id, produit_id, type_vente: d.quand, ...posts,
                    dates_matchs: d.quand === 'match' ? [...d.dates].sort() : null, remarque_sponsoring: d.remarque.trim() || null };
         }
         if (estDigital(p)) {
           const t = typeDigital(p);
-          return { demande_id: demande.id, produit_id, type_vente: t === 'programme' ? 'match' : 'saison',
-                   dates_matchs: t === 'programme' ? [...d.dates].sort() : null,
+          const auMatch = t === 'programme' || (t === 'reseaux' && d.quand === 'match');
+          return { demande_id: demande.id, produit_id, type_vente: auMatch ? 'match' : 'saison', ...posts,
+                   dates_matchs: auMatch ? [...d.dates].sort() : null,
                    format: t === 'programme' ? d.format : null,
                    du: t === 'app' ? d.du : null, au: t === 'app' ? d.au : null,
                    joueur_id: t === 'parrainage' ? d.joueur_id : null,

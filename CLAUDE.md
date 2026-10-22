@@ -317,6 +317,16 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    ⚠ Lecture du graphique CPU de Supabase : la ligne grise en haut = part INUTILISÉE ; l'utilisation = lignes de
    couleur en bas (CPU bas, ~3 %). La lenteur des fiches n'est donc pas le CPU ; cause encore à confirmer (capture
    Network demandée ; connecteur MCP Supabase en lecture seule proposé).
+0-quattuorvicies. **Réseaux sociaux (22.10.2026, plan validé par Léa ; migration 65 à exécuter sur les deux bases, pas
+   encore testé)** : 4e produit Digital « Réseaux sociaux ». À chaque match, des **types de posts** (table `types_posts` :
+   GAMEDAY, MVP, STATISTIQUES, FIN DE TIERS, LINEUP, réglable), chacun avec un sponsor ou libre ; vendu **à la saison**
+   (élément sans match = tous les matchs de saison / playoffs ; Alloboissons GAMEDAY, Rouvinez MVP repris par la 65) ou
+   pour certains matchs. Demande : posts cochés + saison / matchs + logo (`demandes_produits.types_posts`) ;
+   `traiter_digital` crée un élément par type (× match). Page `digital.html?vue=reseaux` : carte par match, post →
+   sponsor (⚠ 2 sponsors), case **« Publié »** + **lien du post** par match (`digital_elements.fait[match_id]`, RPC
+   `publier_post`). Traité par une personne **hors Régie** : pas dans Match du jour ; accès **`profiles.espaces` contient
+   'reseaux'** (admins l'ont par la 65) → menu Digital / Réseaux sociaux seulement si pas l'espace digital, coche
+   « Publié ». Ouvert : qui publie (compte à créer, rôle à choisir), ce qu'elle doit voir d'autre.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.

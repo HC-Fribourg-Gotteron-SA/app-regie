@@ -11,7 +11,7 @@ export async function ouvrirAjoutDigital(p, apres = () => {}) {
   const debutJour = new Date(); debutJour.setHours(0, 0, 0, 0);
   const [sponsors, { data: matchs }, { data: joueurs }] = await Promise.all([
     toutesLesLignes((de, a) => sb.from('sponsors').select('id, nom').order('nom').range(de, a)),
-    vue === 'programme'
+    ['programme', 'reseaux'].includes(vue)
       ? sb.from('matchs').select('id, date_heure, adversaire, type').neq('type', 'ladies')
           .gte('date_heure', debutJour.toISOString()).order('date_heure')
       : Promise.resolve({ data: [] }),
@@ -24,6 +24,12 @@ export async function ouvrirAjoutDigital(p, apres = () => {}) {
     const { data } = await sb.from('digital_elements').select('joueur_id, sponsor:sponsors(nom)')
       .eq('produit_id', p.id).eq('statut', 'actif').not('joueur_id', 'is', null);
     (data || []).forEach(x => parrains.set(x.joueur_id, x.sponsor?.nom || 'un parrain'));
+  }
+  // réseaux sociaux (migration 65) : types de posts
+  let types = [];
+  if (vue === 'reseaux') {
+    const { data } = await sb.from('types_posts').select('nom').eq('actif', true).order('ordre');
+    types = (data || []).map(t => t.nom);
   }
 
   const voile = document.createElement('div');
@@ -45,6 +51,22 @@ export async function ouvrirAjoutDigital(p, apres = () => {}) {
         <div class="choix">
           <label><input type="radio" name="format" value="pleine"> Page pleine</label>
           <label><input type="radio" name="format" value="demi"> Demi-page</label>
+        </div>
+      </div>`
+    : vue === 'reseaux' ? `
+      <div class="champ">
+        <label>Post(s)</label>
+        <div class="choix">${types.map(t => `<label><input type="checkbox" name="type_post" value="${echapper(t)}"> ${echapper(t)}</label>`).join('')}</div>
+      </div>
+      <div class="champ">
+        <label>Quand ?</label>
+        <div class="choix">
+          <label><input type="radio" name="quand" value="saison" checked> Toute la saison</label>
+          <label><input type="radio" name="quand" value="match"> Seulement certains matchs</label>
+        </div>
+        <div class="liste-matchs-ajout" data-matchs-reseaux hidden>
+          ${(matchs || []).map(m => `<label><input type="checkbox" name="match" value="${m.id}"> ${dateCourte(m.date_heure)} · ${echapper(m.adversaire)}</label>`).join('')
+            || '<p class="doux">Aucun match à venir dans le calendrier.</p>'}
         </div>
       </div>`
     : vue === 'app' ? `
@@ -109,6 +131,11 @@ export async function ouvrirAjoutDigital(p, apres = () => {}) {
       : `<span class="badge statut-nouvelle">nouveau sponsor</span> « ${echapper(nom)} » sera créé`;
   };
   form.addEventListener('input', majAffichage);
+  // réseaux sociaux : la liste des matchs seulement pour « certains matchs »
+  form.addEventListener('change', () => {
+    const zone = form.querySelector('[data-matchs-reseaux]');
+    if (zone) zone.hidden = form.querySelector('input[name=quand]:checked')?.value !== 'match';
+  });
 
   const fermer = () => {
     voile.remove(); fenetre.remove();
@@ -137,6 +164,10 @@ export async function ouvrirAjoutDigital(p, apres = () => {}) {
     if (vue === 'app' && (!el('du').value || !el('au').value)) return montrerErreur('Indiquez du … au ….');
     if (vue === 'app' && el('au').value < el('du').value) return montrerErreur('La date de fin est avant la date de début.');
     if (vue === 'parrainage' && !el('joueur').value) return montrerErreur('Choisissez le joueur.');
+    const typesCoches = [...form.querySelectorAll('input[name=type_post]:checked')].map(c => c.value);
+    const auMatch = form.querySelector('input[name=quand]:checked')?.value === 'match';
+    if (vue === 'reseaux' && !typesCoches.length) return montrerErreur('Cochez au moins un post.');
+    if (vue === 'reseaux' && auMatch && !idsMatchs.length) return montrerErreur('Cochez au moins un match, ou « Toute la saison ».');
 
     boutons.forEach(b => { b.disabled = true; });
     const groupe = crypto.randomUUID();
@@ -164,6 +195,9 @@ export async function ouvrirAjoutDigital(p, apres = () => {}) {
       const base = { produit_id: p.id, sponsor_id: s.id, fichiers: fichiers.map(({ mime, ...f }) => f),
                      remarque: el('remarque').value.trim() || null };
       const lignes = vue === 'programme' ? idsMatchs.map(match_id => ({ ...base, match_id, format }))
+        : vue === 'reseaux' ? typesCoches.flatMap(type_post => auMatch
+            ? idsMatchs.map(match_id => ({ ...base, type_post, match_id }))
+            : [{ ...base, type_post }])
         : vue === 'app' ? [{ ...base, du: el('du').value, au: el('au').value }]
         : [{ ...base, joueur_id: el('joueur').value }];
       const { error } = await sb.from('digital_elements').insert(lignes);

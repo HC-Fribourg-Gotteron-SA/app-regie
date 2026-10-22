@@ -14,7 +14,12 @@ const VUES = {
   programme: { titre: 'Programme de match', onglet: 'Programme de match' },
   app: { titre: 'Bannières app', onglet: 'Bannières app' },
   parrainage: { titre: 'Parrainages joueurs', onglet: 'Parrainages joueurs' },
+  reseaux: { titre: 'Réseaux sociaux', onglet: 'Réseaux sociaux' },
 };
+// accès « reseaux » (migration 65) : la personne qui publie voit la page Réseaux sociaux et coche « Publié »
+const espaces = profil.espaces || [];
+const accesDigital = espaces.includes('digital');
+const peutPublier = estRegie || espaces.includes('reseaux');
 const MAX_PUBS_PROGRAMME = 3;       // Léa : « plus que 3 c'est chiant », quelle que soit la taille
 // cases « c'est mis » par vue
 const CASES = {
@@ -23,8 +28,10 @@ const CASES = {
   parrainage: [['videotron', 'Vidéotron'], ['app', 'App'], ['site', 'Site'], ['programme', 'Programme']],
 };
 
-const vue = VUES[new URLSearchParams(location.search).get('vue')] ? new URLSearchParams(location.search).get('vue') : 'programme';
-const etat = { produit: null, elements: [], attente: [], joueurs: [], matchs: [] };
+const vueDemandee = new URLSearchParams(location.search).get('vue');
+const vue = !accesDigital ? 'reseaux' : VUES[vueDemandee] ? vueDemandee : 'programme';
+if (!accesDigital) Object.keys(VUES).forEach(v => { if (v !== 'reseaux') delete VUES[v]; });
+const etat = { produit: null, elements: [], attente: [], joueurs: [], matchs: [], types: [] };
 const jour = (d) => d ? dateCourte(d + 'T12:00') : '?';
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
@@ -40,14 +47,14 @@ $('onglets').addEventListener('click', (e) => {
 function erreur(texte) { $('erreur').textContent = texte; $('erreur').hidden = !texte; }
 
 async function charger() {
-  if (!(profil.espaces || []).includes('digital')) {
+  if (!accesDigital && !espaces.includes('reseaux')) {
     $('resume').textContent = '';
     return erreur('Accès réservé à l’espace Digital : demandez à un admin.');
   }
   const { data: produits, error } = await sb.from('produits').select('*').eq('espace', 'digital');
   if (error) return erreur(/espace/.test(error.message) ? 'Exécutez d’abord la migration 55 dans Supabase.' : error.message);
   etat.produit = (produits || []).find(p => vueDigital(p) === vue);
-  if (!etat.produit) return erreur('Produit introuvable : exécutez la migration 55 dans Supabase.');
+  if (!etat.produit) return erreur(`Produit introuvable : exécutez la migration ${vue === 'reseaux' ? 65 : 55} dans Supabase.`);
   $('btn-ajouter').hidden = !estRegie;      // ajouter sans demande (Léa, 16.10.2026 : « pour aller plus vite »)
 
   const [{ data: elements, error: e1 }, { data: attente }, { data: joueurs }, { data: matchs }] = await Promise.all([
@@ -57,7 +64,7 @@ async function charger() {
     sb.from('demandes_produits').select(CHAMPS_A_TRAITER)
       .eq('produit_id', etat.produit.id).is('traite_le', null).neq('demande.statut', 'traitee'),
     sb.from('joueurs').select('*').eq('actif', true).order('numero'),
-    vue === 'programme' ? sb.from('matchs').select('id, numero, date_heure, adversaire, type').neq('type', 'ladies').order('date_heure')
+    ['programme', 'reseaux'].includes(vue) ? sb.from('matchs').select('id, numero, date_heure, adversaire, type').neq('type', 'ladies').order('date_heure')
                         : Promise.resolve({ data: [] }),
   ]);
   if (e1) return erreur(e1.message);
@@ -65,6 +72,10 @@ async function charger() {
   etat.attente = attente || [];
   etat.joueurs = joueurs || [];
   etat.matchs = matchs || [];
+  if (vue === 'reseaux') {
+    const { data: types } = await sb.from('types_posts').select('nom, ordre').eq('actif', true).order('ordre');
+    etat.types = (types || []).map(t => t.nom);
+  }
   afficherAttente();
   afficher();
 }
@@ -250,8 +261,71 @@ function vueParrainage() {
     </div></div>`;
 }
 
+// ---------------------------------------------------------------------
+// Réseaux sociaux (22.10.2026, migration 65) : une carte par match, chaque type de post avec son sponsor (vendu à la
+// saison = tous les matchs de saison / playoffs, ou pour ce match) ou « libre » ; case « Publié » + lien, par match.
+// ---------------------------------------------------------------------
+function vueReseaux() {
+  const debut = new Date(); debut.setHours(0, 0, 0, 0);
+  const actifs = etat.elements.filter(el => el.statut === 'actif' && el.type_post);
+  const surMatch = (m) => actifs.filter(el => el.match_id ? el.match_id === m.id : ['saison', 'playoffs'].includes(m.type));
+  const aVenir = etat.matchs.filter(m => new Date(m.date_heure) >= debut);
+  const passes = etat.matchs.filter(m => new Date(m.date_heure) < debut && surMatch(m).length).reverse();
+  const types = [...new Set([...etat.types, ...actifs.map(el => el.type_post)])];
+  const carte = (m) => {
+    const posts = surMatch(m);
+    const aFaire = posts.filter(el => !el.fait?.[m.id]).length;
+    return `
+      <section class="carte carte-programme">
+        <div class="programme-entete">
+          <strong>${dateCourte(m.date_heure)} · ${echapper(m.adversaire)}</strong>
+          ${posts.length ? (aFaire ? `<span class="doux petit">${aFaire} à publier</span>` : '<span class="petit" style="color:var(--ok)">✓ tout est publié</span>') : ''}
+          <span class="espace"></span>
+          <span class="badge">${posts.length} / ${types.length} posts sponsorisés</span>
+        </div>
+        ${types.map(t => {
+          const liste = posts.filter(el => el.type_post === t);
+          if (!liste.length) return `<div class="programme-pub"><div class="programme-sponsor"><strong>${echapper(t)}</strong></div>
+            <span class="doux petit">libre</span><div></div><div></div><div></div></div>`;
+          return liste.map(el => {
+            const f = el.fait?.[m.id];
+            return `<div class="programme-pub">
+              <div class="programme-sponsor"><strong>${echapper(t)}</strong> · ${echapper(el.sponsor?.nom || '—')}
+                <span class="doux petit">${el.match_id ? 'ce match' : 'saison'}</span>
+                ${liste.length > 1 ? ' <span class="badge badge-suppression">⚠ 2 sponsors</span>' : ''}${remarque(el)}</div>
+              <div>${fichiers(el)}</div>
+              <div><label class="petit" style="margin:0;white-space:nowrap" title="${f ? `par ${echapper(f.par || '')} le ${dateCourte(f.le)}` : ''}">
+                <input type="checkbox" data-publie="${el.id}" data-match="${m.id}" ${f ? 'checked' : ''} ${peutPublier ? '' : 'disabled'}> Publié</label></div>
+              <div>${peutPublier ? `<input type="url" class="petit" data-lien="${el.id}" data-match="${m.id}" value="${echapper(f?.lien || '')}"
+                  placeholder="Lien du post (facultatif)" style="min-height:0;padding:.25rem .45rem">`
+                : f?.lien ? `<a class="petit" href="${echapper(f.lien)}" target="_blank" rel="noopener">Voir le post</a>` : ''}</div>
+              <div class="programme-commentaire">${commentaire(el)}</div>
+            </div>`;
+          }).join('');
+        }).join('')}
+      </section>`;
+  };
+  $('resume').textContent = `${aVenir.length} match${aVenir.length > 1 ? 's' : ''} à venir · ${types.length} types de posts`;
+  return `
+    ${aVenir.map(carte).join('') || '<p class="vide">Aucun match à venir.</p>'}
+    ${passes.length ? `
+      <details style="margin-top:1rem"><summary><strong>Matchs passés</strong> <span class="doux">· ${passes.length}</span></summary>
+        ${passes.map(carte).join('')}
+      </details>` : ''}`;
+}
+
 function afficher() {
-  $('contenu').innerHTML = vue === 'programme' ? vueProgramme() : vue === 'app' ? vueApp() : vueParrainage();
+  $('contenu').innerHTML = vue === 'programme' ? vueProgramme() : vue === 'app' ? vueApp()
+    : vue === 'reseaux' ? vueReseaux() : vueParrainage();
+}
+
+// « Publié » / lien du post (RPC publier_post : Régie, admin, accès « reseaux »)
+async function publier(id, match, publie, lien) {
+  const { data, error } = await sb.rpc('publier_post', { p_element: id, p_match: match, p_publie: publie, p_lien: lien || null });
+  if (error) { notifier(/publier_post/.test(error.message) ? 'Exécutez d’abord la migration 65 dans Supabase.' : `Pas enregistré : ${error.message}`, 'erreur'); return false; }
+  const el = etat.elements.find(x => x.id === id);
+  if (el) el.fait = data || {};
+  return true;
 }
 
 // ---------------------------------------------------------------------
@@ -259,6 +333,20 @@ function afficher() {
 // ---------------------------------------------------------------------
 $('contenu').addEventListener('change', async (e) => {
   const t = e.target;
+  if (t.dataset.publie) {
+    t.disabled = true;
+    const lien = t.closest('.programme-pub')?.querySelector('[data-lien]')?.value;
+    if (await publier(t.dataset.publie, t.dataset.match, t.checked, lien)) afficher(); else { t.checked = !t.checked; t.disabled = false; }
+    return;
+  }
+  if (t.dataset.lien) {
+    // un lien collé = publié
+    if (await publier(t.dataset.lien, t.dataset.match, !!t.value.trim() || !!etat.elements.find(x => x.id === t.dataset.lien)?.fait?.[t.dataset.match], t.value)) {
+      notifier('Lien enregistré');
+      afficher();
+    }
+    return;
+  }
   if (t.dataset.commentaire) {
     const el = etat.elements.find(x => x.id === t.dataset.commentaire);
     const texte = t.value.trim() || null;
