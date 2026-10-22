@@ -12,21 +12,36 @@ try { etat.vue = localStorage.getItem('sponsors-vue') || 'produits'; } catch { /
 
 async function charger() {
   try {
-    const [sponsors, lignes, documents] = await Promise.all([
+    const [sponsors, lignes, documents, digital] = await Promise.all([
       toutesLesLignes((de, a) => sb.from('sponsors').select('id, nom, alias, origine').order('nom').range(de, a)),
       toutesLesLignes((de, a) => sb.from('lignes_vendues')
         .select('produit:produits(nom, ordre, actif), contrat:contrats(sponsor_id)')
         .not('statut', 'in', '(annule,termine)').range(de, a)),
       toutesLesLignes((de, a) => sb.from('documents_sponsors').select('sponsor_id, depose_le').range(de, a)),
+      // espace Digital (programme, app, parrainage, réseaux…) : compté aussi, comme dans le dossier (Léa, 22.10.2026 :
+      // Rouvinez « 2 produits » dans la liste mais bien plus dans son dossier). Absent avant la 55 : rien.
+      toutesLesLignes((de, a) => sb.from('digital_elements')
+        .select('sponsor_id, au, produit:produits(nom, ordre), match:matchs(date_heure)')
+        .eq('statut', 'actif').range(de, a)).catch(() => []),
     ]);
 
     const produits = new Map(), docs = new Map();
+    const ajouter = (id, produit) => {
+      if (!produits.has(id)) produits.set(id, new Map());
+      const m = produits.get(id);
+      m.set(produit.nom, { nom: produit.nom, ordre: produit.ordre ?? 100, n: (m.get(produit.nom)?.n || 0) + 1 });
+    };
     for (const l of lignes) {
       const id = l.contrat?.sponsor_id;
       if (!id || !l.produit?.actif) continue;       // l'anneau de la pause tiers est compris dans la Pub pause tiers
-      if (!produits.has(id)) produits.set(id, new Map());
-      const m = produits.get(id);
-      m.set(l.produit.nom, { nom: l.produit.nom, ordre: l.produit.ordre ?? 100, n: (m.get(l.produit.nom)?.n || 0) + 1 });
+      ajouter(id, l.produit);
+    }
+    const aujourdhui = new Date().toISOString().slice(0, 10);
+    for (const e of digital) {
+      // en cours seulement : bannière pas terminée, programme / post d'un match pas encore passé
+      if (!e.sponsor_id || !e.produit || (e.au && e.au < aujourdhui)
+        || (e.match?.date_heure && e.match.date_heure.slice(0, 10) < aujourdhui)) continue;
+      ajouter(e.sponsor_id, e.produit);
     }
     for (const d of documents) {
       if (!d.sponsor_id) continue;
