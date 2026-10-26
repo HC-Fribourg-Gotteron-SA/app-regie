@@ -338,7 +338,8 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
 0-quinvicies. **Visuels manquants (26.10.2026, option B de Léa ; migration 67 à exécuter sur les deux bases, pas encore
    testé)** : diffusions importées d'Airtable sans visuel (ex. Garage Klaus · Sponsor du match). En haut de **Demandes**,
    bloc replié « ⏳ N visuels manquants » (`js/visuels-manquants.js`) : diffusion en cours, produit actif hors Digital,
-   pas club / ligue, pas `par_match`, qui passe encore (au match : un match à venir), **sans visuel valide / à valider**
+   pas club / ligue, pas `par_match`, **seulement les diffusions « au match » avec un match à venir** (Léa : pas les
+   diffusions à la saison, déjà dans Colosseo), **sans visuel valide / à valider**
    ou avec `visuel_attendu`. Dépôt direct (Sponsoring / Régie / admin) → RPC `deposer_visuel_manquant` : asset validé
    tout de suite (`outil.depot_video_match`), durée / son repris, dossier du sponsor, et si la diffusion passait déjà
    (match passé prévu / diffusé) → tâche « Pour ce soir » au prochain match (sinon le ➕ de Match du jour le montre).

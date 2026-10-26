@@ -29,11 +29,12 @@ export async function chargerVisuelsManquants() {
     if (['club', 'ligue'].includes(l.contrat?.sponsor?.origine)) return false;
     if (l.regle_rotation === 'par_match') return false;                        // Spot chef : sa propre carte
     if (l.date_fin && l.date_fin < jour) return false;
-    if (l.type_vente === 'match' && !l.prochain) return false;                 // ses matchs sont passés
+    // seulement ce qui passe à certains matchs (Sponsor du match…) et dont un match arrive : les diffusions à la
+    // saison sont déjà dans Colosseo (Léa, 26.10.2026)
+    if (l.type_vente !== 'match' || !l.prochain) return false;
     const aUnVisuel = (l.assets || []).some(a => ['valide', 'a_valider'].includes(a.statut));
     return l.visuel_attendu || !aUnVisuel;
-  }).sort((a, b) => (a.prochain ? 0 : 1) - (b.prochain ? 0 : 1)
-    || (a.prochain && b.prochain ? new Date(a.prochain.date_heure) - new Date(b.prochain.date_heure) : 0)
+  }).sort((a, b) => new Date(a.prochain.date_heure) - new Date(b.prochain.date_heure)
     || (a.produit.ordre ?? 100) - (b.produit.ordre ?? 100)
     || (a.contrat?.sponsor?.nom || '').localeCompare(b.contrat?.sponsor?.nom || ''));
 }
@@ -43,7 +44,7 @@ export function blocVisuelsManquants(lignes) {
   if (!lignes.length) return '';
   const rangees = lignes.map(l => {
     const video = l.produit.support === 'Vidéotron';
-    const quand = l.prochain ? `match du ${dateCourte(l.prochain.date_heure)} contre ${echapper(l.prochain.adversaire || '')}` : 'à la saison';
+    const quand = `match du ${dateCourte(l.prochain.date_heure)} contre ${echapper(l.prochain.adversaire || '')}`;
     return `
       <li class="visuel-manquant" data-ligne="${l.id}">
         <div><strong>${echapper(l.contrat?.sponsor?.nom || '—')}</strong> · ${echapper(court(l.produit.nom))}
