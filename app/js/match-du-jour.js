@@ -165,6 +165,18 @@ async function chargerMatch() {
 
   etat.changements = etat.precedent
     ? calculerChangements({ passagesAvant, passagesCe: etat.passagesCe, lignes: etat.lignes }) : [];
+  // un seul « Enlever » par sponsor et par produit : dans Colosseo c'est une seule entrée à enlever (26.10.2026, Léa :
+  // Art on Ice deux fois, une diffusion retirée + une vendue au match, toutes deux au match précédent)
+  const dejaEnleve = new Set();
+  etat.changements = etat.changements.filter(c => {
+    if (c.action !== 'enlever') return true;
+    const l = etat.lignes.get(c.ligne_id);
+    if (!l?.contrat?.sponsor_id) return true;
+    const cle = `${l.contrat.sponsor_id}|${l.produit_id ?? l.produit?.id}`;
+    if (dejaEnleve.has(cle)) return false;
+    dejaEnleve.add(cle);
+    return true;
+  });
 
   const [{ data: fait, error }, { data: notes, error: eNotes }, { data: attente }, { data: traitees }] = await Promise.all([
     sb.from('colosseo_fait').select('ligne_id, action, fait_par, fait_le').eq('match_id', m.id),
