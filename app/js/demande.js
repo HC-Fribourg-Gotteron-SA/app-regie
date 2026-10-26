@@ -132,9 +132,19 @@ async function chargerSaisonEtMatchs() {
   const { data: joueurs } = await sb.from('joueurs').select('id, numero, prenom, nom').eq('actif', true).order('numero');
   etat.joueurs = joueurs || [];
   // joueurs déjà parrainés (Léa, 21.10.2026 : ils ne doivent plus être proposés) : joueur → sponsor du parrain
-  const { data: parrains } = await sb.from('digital_elements').select('joueur_id, sponsor_id, produit:produits!inner(nom)')
-    .eq('statut', 'actif').not('joueur_id', 'is', null).ilike('produit.nom', '%parrainage%');
+  const [{ data: parrains }, { data: suppressions }] = await Promise.all([
+    sb.from('digital_elements').select('joueur_id, sponsor_id, sponsor:sponsors(nom), produit:produits!inner(nom)')
+      .eq('statut', 'actif').not('joueur_id', 'is', null).ilike('produit.nom', '%parrainage%'),
+    // parrains dont la suppression est déjà demandée (pas encore traitée) : leur joueur est de nouveau proposé,
+    // « en cours de suppression » (Léa, 26.10.2026, option A : suppression puis nouvelle demande d'affilée)
+    sb.from('demandes_produits').select('produit:produits!inner(nom), demande:demandes!inner(type, statut, sponsor_id)')
+      .is('traite_le', null).eq('demande.type', 'suppression').neq('demande.statut', 'traitee')
+      .ilike('produit.nom', '%parrainage%'),
+  ]);
   etat.parraines = new Map((parrains || []).map(x => [x.joueur_id, x.sponsor_id]));
+  const sponsorsSupprimes = new Set((suppressions || []).map(x => x.demande?.sponsor_id).filter(Boolean));
+  etat.enSuppression = new Map((parrains || []).filter(x => sponsorsSupprimes.has(x.sponsor_id))
+    .map(x => [x.joueur_id, x.sponsor?.nom || 'ancien parrain']));
   // emplacements des produits « à liste » : posts des réseaux sociaux (65), jeux et onglets de l'app (66) ;
   // absent avant → listes vides ; sans la colonne liste (avant la 66) → tout est « reseaux »
   const { data: types } = await sb.from('types_posts').select('*').eq('actif', true).order('ordre');
@@ -188,7 +198,9 @@ function blocDigital(id, p, d, matchs, suppr) {
       <div class="champ-ligne"><span class="etiquette">Joueur</span>
         <select data-champ="joueur_id" style="width:auto;min-width:14rem">
           <option value="">— Choisir le joueur —</option>
-          ${joueursLibres(d).map(j => `<option value="${j.id}" ${d.joueur_id === j.id ? 'selected' : ''}>${j.numero ?? ''} · ${echapper(`${j.prenom} ${j.nom}`)}</option>`).join('')}
+          ${joueursLibres(d).map(j => `<option value="${j.id}" ${d.joueur_id === j.id ? 'selected' : ''}>${j.numero ?? ''} · ${echapper(`${j.prenom} ${j.nom}`)}${
+            etat.enSuppression?.has(j.id) && etat.parraines.get(j.id) !== etat.sponsor?.id
+              ? ` (en cours de suppression : ${echapper(etat.enSuppression.get(j.id))})` : ''}</option>`).join('')}
         </select></div>
       <div class="aide">Toute la saison ${echapper(etat.saison)}.</div>`;
   return `
@@ -211,7 +223,7 @@ function blocDigital(id, p, d, matchs, suppr) {
 function joueursLibres(d) {
   const parraines = etat.parraines || new Map();
   return (etat.joueurs || []).filter(j => !parraines.has(j.id) || j.id === d.joueur_id
-    || (etat.sponsor?.id && parraines.get(j.id) === etat.sponsor.id));
+    || (etat.sponsor?.id && parraines.get(j.id) === etat.sponsor.id) || etat.enSuppression?.has(j.id));
 }
 
 // Erreur à signaler pour un produit Digital (null = complet)
