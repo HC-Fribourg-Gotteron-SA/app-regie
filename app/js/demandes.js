@@ -573,6 +573,16 @@ async function afficherVideosMatch() {
   brancherVideos(zone, afficherVideosMatch);
 }
 
+// Diffusions sans visuel (importées d'Airtable sans fichier…) : dépôt direct, sans demande (migration 67)
+async function afficherVisuelsManquants(rouvrir = false) {
+  const { chargerVisuelsManquants, blocVisuelsManquants, brancherVisuelsManquants } = await import('./visuels-manquants.js');
+  const zone = $('visuels-manquants');
+  zone.innerHTML = blocVisuelsManquants(await chargerVisuelsManquants());
+  if (rouvrir) zone.querySelector('details')?.setAttribute('open', '');
+  brancherVisuelsManquants(zone, afficherVisuelsManquants);
+}
+
 await charger();
 if (etat.ouverte) ouvrir(etat.ouverte, { silencieux: true });
 afficherVideosMatch();
+afficherVisuelsManquants();
