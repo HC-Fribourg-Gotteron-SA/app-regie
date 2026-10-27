@@ -67,7 +67,8 @@ async function charger() {
   const [{ data: elements, error: e1 }, { data: attente }, { data: joueurs }, { data: matchs }] = await Promise.all([
     sb.from('digital_elements')
       .select('*, sponsor:sponsors(id, nom), match:matchs(id, numero, date_heure, adversaire), demande:demandes(id)')
-      .eq('produit_id', etat.produit.id).order('created_at'),
+      // supprimé par une demande « Suppression » : plus affiché ici, gardé dans le dossier du sponsor (migration 70)
+      .eq('produit_id', etat.produit.id).eq('statut', 'actif').order('created_at'),
     sb.from('demandes_produits').select(CHAMPS_A_TRAITER)
       .eq('produit_id', etat.produit.id).is('traite_le', null).neq('demande.statut', 'traitee'),
     sb.from('joueurs').select('*').eq('actif', true).order('numero'),
@@ -108,12 +109,6 @@ const fichiers = (el) => (el.fichiers || []).length
   : '<span class="badge badge-a-venir">fichier à venir</span>';
 
 function cases(el) {
-  if (el.statut === 'retire') {
-    const f = el.fait?.retiree;
-    return `<label class="petit" style="margin:0;color:var(--erreur)" title="${f ? `par ${echapper(f.par)} le ${dateCourte(f.le)}` : ''}">
-      <input type="checkbox" data-fait="retiree" data-id="${el.id}" ${f ? 'checked' : ''} ${estRegie ? '' : 'disabled'}>
-      ${vue === 'parrainage' ? 'Enlevé partout' : 'Enlevé'}</label>`;
-  }
   return CASES[vue].map(([cle, texte]) => {
     const f = el.fait?.[cle];
     return `<label class="petit" style="margin:0 .6rem 0 0;white-space:nowrap" title="${f ? `par ${echapper(f.par)} le ${dateCourte(f.le)}` : ''}">
@@ -128,7 +123,6 @@ const commentaire = (el) => estRegie
   : `<span class="petit" style="white-space:pre-line">${echapper(el.commentaire || '')}</span>`;
 const remarque = (el) => el.remarque ?`<div class="doux petit" style="white-space:pre-line">${echapper(el.remarque)}</div>` : '';
 const sponsor = (el) => `<strong>${echapper(el.sponsor?.nom || '—')}</strong>${
-  el.statut === 'retire' ? ' <span class="badge badge-suppression">retiré : à enlever</span>' : ''}${
   el.demande?.id ? ` <a class="petit" href="demandes.html?id=${el.demande.id}">demande →</a>` : ''}`;
 
 // ---------------------------------------------------------------------
@@ -170,7 +164,7 @@ function vueProgramme() {
             ${trop ? '⚠ ' : ''}${actifs.length} / ${MAX_PUBS_PROGRAMME} pubs</span>
         </div>
         ${liste.length ? liste.map(el => `
-          <div class="programme-pub${el.statut === 'retire' && el.fait?.retiree ? ' passe' : ''}">
+          <div class="programme-pub">
             <div class="programme-sponsor">${sponsor(el)}${remarque(el)}</div>
             <span class="badge">${el.format === 'pleine' ? 'Page pleine' : el.format === 'demi' ? 'Demi-page' : 'format ?'}</span>
             <div>${fichiers(el)}</div>
@@ -213,11 +207,11 @@ function vueApp() {
   const LIB = { en_ligne: 'En ligne', a_venir: 'À venir', terminee: 'Terminée' };
   const ordre = { en_ligne: 0, a_venir: 1, terminee: 2 };
   const liste = [...etat.elements].sort((a, b) =>
-    (a.statut === 'retire') - (b.statut === 'retire') || ordre[quand(a)] - ordre[quand(b)] || (a.du || '').localeCompare(b.du || ''));
+    ordre[quand(a)] - ordre[quand(b)] || (a.du || '').localeCompare(b.du || ''));
   const enLigne = liste.filter(el => el.statut === 'actif' && quand(el) === 'en_ligne').length;
   $('resume').textContent = `${enLigne} bannière${enLigne > 1 ? 's' : ''} en ligne aujourd'hui`;
   const ligne = (el) => `
-    <tr class="${quand(el) === 'terminee' || (el.statut === 'retire' && el.fait?.retiree) ? 'passe' : ''}">
+    <tr class="${quand(el) === 'terminee' ? 'passe' : ''}">
       <td>${sponsor(el)}${remarque(el)}</td>
       <td style="white-space:nowrap">du ${jour(el.du)}<br>au ${jour(el.au)}</td>
       <td><span class="badge${quand(el) === 'en_ligne' ? ' statut-traitee' : ''}">${LIB[quand(el)]}</span></td>
@@ -240,7 +234,6 @@ function vueApp() {
 function vueParrainage() {
   const parJoueur = new Map();
   for (const el of etat.elements) {
-    if (el.statut === 'retire' && el.fait?.retiree) continue;     // enlevé partout : plus rien à faire
     if (!parJoueur.has(el.joueur_id)) parJoueur.set(el.joueur_id, []);
     parJoueur.get(el.joueur_id).push(el);
   }

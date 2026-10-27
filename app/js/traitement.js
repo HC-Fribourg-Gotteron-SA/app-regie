@@ -175,7 +175,7 @@ function actions(c, existantes) {
     // espace Digital : pas de diffusion, des éléments (programme : un par match)
     const enCours = c.ctx.elements.filter(x => d.sponsor_id && x.sponsor_id === d.sponsor_id).length;
     principal = d.type === 'suppression'
-      ? (enCours ? '<button type="button" class="btn btn-principal" data-suite="retire">Retirer</button>'
+      ? (enCours ? '<button type="button" class="btn btn-principal" data-suite="retire">Supprimer le produit</button>'
                  : `<span class="petit doux">Ce sponsor n'a pas ce produit dans l'outil.</span>
                     <button type="button" class="btn btn-principal" data-suite="ignore">Marquer comme fait</button>`)
       : d.type === 'changement_visuel' && enCours
@@ -672,7 +672,7 @@ async function traiter(k, suite, bouton) {
     });
     bouton.disabled = false;
     if (error) return notifier(`Impossible (rien n'a été modifié) : ${error.message}`, 'erreur');
-    notifier(`${{ ajoute: 'Ajouté', visuel: 'Nouveau visuel mis', retire: 'Retiré', ignore: 'Marqué comme fait' }[suite]} · ${p.nom}`
+    notifier(`${{ ajoute: 'Ajouté', visuel: 'Nouveau visuel mis', retire: 'Supprimé', ignore: 'Marqué comme fait' }[suite]} · ${p.nom}`
       + (data?.demande_traitee ? ' · la demande est complète : marquée « Traitée »' : ''));
     cartes.delete(k);
     oublierContextes();

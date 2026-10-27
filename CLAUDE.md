@@ -351,6 +351,11 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    **Migration 69 (même jour)** : plusieurs fichiers d'un coup dans chaque zone ; chaque fichier reçoit sa version
    (`p_variante` : FR / DE devinés du nom, sinon V1, V2…) sinon le dernier archiverait les autres ; un seul fichier =
    sans version. Ancienne signature de la RPC supprimée. Tâche « Pour ce soir » pas répétée pour la même diffusion.
+   **Migration 70 (même jour, Léa : Solsystems restait sur Jamiro Reber)** : Digital, une demande « Suppression » traitée
+   **supprime** le produit — bouton « Supprimer le produit » (ex « Retirer ») OU « Marquer comme traitée » (trigger
+   `demande_suppression_traitee` → `retirer_digital_demande`) ; les pages Digital ne chargent plus que `statut = actif`
+   (plus de « retiré : à enlever » ni de case « Enlevé partout ») ; historique = dossier du sponsor (« Retiré »).
+   Suppressions déjà marquées traitées rattrapées par la 70.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
