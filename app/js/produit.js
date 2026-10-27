@@ -900,6 +900,23 @@ function ouvrirDetail(id) {
   $('fenetre').hidden = $('voile').hidden = false;
   document.body.classList.add('fenetre-ouverte');
   afficherDossierSponsor(l);
+  if (l.regle_rotation === 'alterner') afficherVersionPrevue(l);
+}
+
+// Version vraiment prévue au prochain match de CETTE diffusion (son passage, celui que lit Match du jour).
+// Le calcul de la page (langueProchainMatch) compte tous les matchs de saison et pouvait afficher V2 alors que
+// la base avait V3 : choisir V2 dans la liste ne changeait alors rien (Léa, 27.10.2026, AHG Cars).
+async function afficherVersionPrevue(l) {
+  const debut = new Date(); debut.setHours(0, 0, 0, 0);
+  const { data } = await sb.from('passages')
+    .select('asset:assets(variante), match:matchs!inner(date_heure, adversaire)')
+    .eq('ligne_id', l.id).gte('match.date_heure', debut.toISOString());
+  const p = (data || []).sort((a, b) => new Date(a.match.date_heure) - new Date(b.match.date_heure))[0];
+  const bloc = document.querySelector(`[data-alternance="${l.id}"]`);
+  const sel = bloc?.querySelector('[data-langue-prochain]');
+  if (!p || !sel || etat.ouverte !== l.id) return;
+  bloc.querySelector('[data-langue-match]').innerHTML = libProchain(p.match);     // libProchain échappe déjà
+  if (p.asset?.variante && [...sel.options].some(o => o.value === p.asset.variante)) sel.value = p.asset.variante;
 }
 
 // ---------------------------------------------------------------------
@@ -959,7 +976,7 @@ function champLangue(l) {
       <option value="alterne" ${alterne ? 'selected' : ''}>change à chaque match (à tour de rôle)</option>
     </select>
     ${alterne && (l.ordre_variantes || []).length >= 2 ? `
-      <div class="petit" style="margin-top:.3rem">Au ${libProchain(etat.prochains[0])} :
+      <div class="petit" style="margin-top:.3rem">Au <span data-langue-match>${libProchain(etat.prochains[0])}</span> :
         <select class="champ-court" data-langue-prochain>${l.ordre_variantes.map(v =>
           `<option ${v === langueProchainMatch(l) ? 'selected' : ''}>${echapper(v)}</option>`).join('')}</select></div>`
       : alterne && versions.length ? `<div class="petit">${versions.map(echapper).join(' / ')}</div>` : ''}
