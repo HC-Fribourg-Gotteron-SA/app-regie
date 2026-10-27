@@ -361,6 +361,11 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    Corrigé dans `langue_un_match_sur_deux` et `ordreVersions` (demande.js, versions triées V1, V2…). AHG : V2 au
    27.10. Si une version n'a plus de visuel validé, `choisir_asset` prend le dernier validé (V3 au lieu de V2) : la 71
    remet en service le visuel archivé et liste les visuels validés de chaque diffusion à 3 versions ou plus.
+   Vraie cause (même jour) : la fiche calculait la version du prochain match sur TOUS les matchs de saison (V2),
+   la base (`choisir_asset`) sur les matchs de la diffusion (V3) → choisir V2 ne déclenchait rien. Le détail affiche
+   maintenant la version du passage (`afficherVersionPrevue` dans produit.js). **Migration 72** : toutes les
+   diffusions à 3 versions ou plus remises dans l'ordre V1 → V2 → V3… (ECAB était V2 → V1 → V3 → V4), version du
+   prochain match gardée. Léa : cycle affiché « V2 → V3 → V1 » = à partir du prochain match (ça l'a troublée).
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
