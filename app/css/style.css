@@ -623,6 +623,7 @@ td .etat-attente { display: inline-block; }
 .visuel-manquant { display: grid; grid-template-columns: 1fr minmax(220px, 320px); gap: .6rem; align-items: center;
   padding: .45rem 0; border-top: 1px solid var(--bordure); }
 @media (max-width: 700px) { .visuel-manquant { grid-template-columns: 1fr; } }
+.zones-manquant { display: grid; gap: .4rem; }
 .video-match-entete { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; }
 /* Fiche produit : durée totale au prochain match (produit.js) — barre verte, orange dès 90 %, rouge au-delà */
 .duree-totale { background: var(--surface); border: 1px solid var(--bordure); border-radius: var(--rayon-petit);

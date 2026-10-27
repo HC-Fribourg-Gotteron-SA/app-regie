@@ -11,7 +11,7 @@ export async function chargerVisuelsManquants() {
   let lignes;
   try {
     lignes = await toutesLesLignes((de, a) => sb.from('lignes_vendues')
-      .select(`id, type_vente, date_fin, visuel_attendu, regle_rotation, statut,
+      .select(`id, type_vente, date_fin, visuel_attendu, regle_rotation, statut, ligne_couplee_id,
                produit:produits(nom, actif, espace, support, ordre),
                contrat:contrats(sponsor:sponsors(nom, origine)),
                matchs:lignes_matchs(match:matchs(date_heure, adversaire)),
@@ -20,10 +20,16 @@ export async function chargerVisuelsManquants() {
   } catch { return []; }
   const aujourdhui = new Date(); aujourdhui.setHours(0, 0, 0, 0);
   const jour = aujourdhui.toISOString().slice(0, 10);
+  const parId = new Map(lignes.map(l => [l.id, l]));
+  const sansVisuel = (l) => !(l.assets || []).some(a => ['valide', 'a_valider'].includes(a.statut));
   return lignes.map(l => {
     const prochain = (l.matchs || []).map(x => x.match).filter(m => m && new Date(m.date_heure) >= aujourdhui)
       .sort((a, b) => new Date(a.date_heure) - new Date(b.date_heure))[0] || null;
-    return { ...l, prochain };
+    // anneau LED couplé (Pub pause tiers, Sponsor du match… : produit technique inactif) : son visuel à part
+    const anneau = parId.get(l.ligne_couplee_id);
+    const anneauManquant = anneau && anneau.produit?.actif === false && (anneau.visuel_attendu || sansVisuel(anneau))
+      ? anneau.id : null;
+    return { ...l, prochain, anneauManquant, manque: l.visuel_attendu || sansVisuel(l) };
   }).filter(l => {
     if (!l.produit?.actif || l.produit.espace === 'digital') return false;     // anneau couplé, Digital : à part
     if (['club', 'ligue'].includes(l.contrat?.sponsor?.origine)) return false;
@@ -32,8 +38,7 @@ export async function chargerVisuelsManquants() {
     // seulement ce qui passe à certains matchs (Sponsor du match…) et dont un match arrive : les diffusions à la
     // saison sont déjà dans Colosseo (Léa, 26.10.2026)
     if (l.type_vente !== 'match' || !l.prochain) return false;
-    const aUnVisuel = (l.assets || []).some(a => ['valide', 'a_valider'].includes(a.statut));
-    return l.visuel_attendu || !aUnVisuel;
+    return l.manque || l.anneauManquant;
   }).sort((a, b) => new Date(a.prochain.date_heure) - new Date(b.prochain.date_heure)
     || (a.produit.ordre ?? 100) - (b.produit.ordre ?? 100)
     || (a.contrat?.sponsor?.nom || '').localeCompare(b.contrat?.sponsor?.nom || ''));
@@ -46,12 +51,17 @@ export function blocVisuelsManquants(lignes) {
     const video = l.produit.support === 'Vidéotron';
     const quand = `match du ${dateCourte(l.prochain.date_heure)} contre ${echapper(l.prochain.adversaire || '')}`;
     return `
-      <li class="visuel-manquant" data-ligne="${l.id}">
+      <li class="visuel-manquant">
         <div><strong>${echapper(l.contrat?.sponsor?.nom || '—')}</strong> · ${echapper(court(l.produit.nom))}
           <span class="doux petit">· ${quand}${l.visuel_attendu ? ' · nouveau visuel attendu par la Régie' : ''}</span></div>
-        <div class="zone-depot zone-compacte" data-depot-manquant>
-          Glissez ${video ? 'la vidéo' : 'le visuel'} ici ou <u>cliquez pour choisir</u>
-          <input type="file" ${video ? 'accept="video/*"' : ''} hidden data-fichier-manquant></div>
+        <div class="zones-manquant">
+          ${l.manque ? `<div class="zone-depot zone-compacte" data-depot-manquant="${l.id}">
+            Glissez ${video ? 'la vidéo' : 'le visuel'} ici ou <u>cliquez pour choisir</u>
+            <input type="file" ${video ? 'accept="video/*"' : ''} hidden data-fichier-manquant></div>` : ''}
+          ${l.anneauManquant ? `<div class="zone-depot zone-compacte" data-depot-manquant="${l.anneauManquant}">
+            Glissez le visuel de l’<strong>anneau LED</strong> ici ou <u>cliquez pour choisir</u>
+            <input type="file" hidden data-fichier-manquant></div>` : ''}
+        </div>
       </li>`;
   }).join('');
   return `
@@ -66,17 +76,18 @@ export function blocVisuelsManquants(lignes) {
 export function brancherVisuelsManquants(zone, apres) {
   if (zone.dataset.manquantsBranche) return;
   zone.dataset.manquantsBranche = '1';
-  const deposer = async (rangee, fichier) => {
-    if (!fichier) return;
-    const depot = rangee.querySelector('[data-depot-manquant]');
-    if (depot) depot.textContent = `Envoi de ${fichier.name}…`;
+  // depot = la zone : vidéo / visuel de la diffusion, ou visuel de son anneau LED (data-depot-manquant = la ligne)
+  const deposer = async (depot, fichier) => {
+    if (!fichier || !depot) return;
+    const ligne = depot.dataset.depotManquant;
+    depot.textContent = `Envoi de ${fichier.name}…`;
     try {
-      const chemin = `diffusions/${rangee.dataset.ligne}/visuel__${Date.now().toString(36)}-${nomFichierSur(fichier.name)}`;
+      const chemin = `diffusions/${ligne}/visuel__${Date.now().toString(36)}-${nomFichierSur(fichier.name)}`;
       const [dims, son] = await Promise.all([lireDimensions(fichier), analyserSon(fichier).catch(() => null)]);
       const { error: e1 } = await sb.storage.from('assets').upload(chemin, fichier, { upsert: false, contentType: fichier.type || undefined });
       if (e1) throw new Error(`Envoi impossible : ${e1.message}`);
       const { error: e2 } = await sb.rpc('deposer_visuel_manquant', {
-        p_ligne: rangee.dataset.ligne, p_chemin: chemin, p_nom: fichier.name,
+        p_ligne: ligne, p_chemin: chemin, p_nom: fichier.name,
         p_mime: fichier.type || null, p_taille: fichier.size,
         p_largeur: dims?.largeur || null, p_hauteur: dims?.hauteur || null, p_duree: dims?.duree || null,
         p_son: son === 'oui' ? true : son ? false : null,
@@ -97,7 +108,7 @@ export function brancherVisuelsManquants(zone, apres) {
     if (d && e.target.tagName !== 'INPUT') d.querySelector('input[type=file]').click();
   });
   zone.addEventListener('change', (e) => {
-    if (e.target.dataset.fichierManquant !== undefined) deposer(e.target.closest('.visuel-manquant'), e.target.files[0]);
+    if (e.target.dataset.fichierManquant !== undefined) deposer(e.target.closest('[data-depot-manquant]'), e.target.files[0]);
   });
   zone.addEventListener('dragover', (e) => { const d = e.target.closest('[data-depot-manquant]'); if (d) { e.preventDefault(); d.classList.add('survol'); } });
   zone.addEventListener('dragleave', (e) => e.target.closest('[data-depot-manquant]')?.classList.remove('survol'));
@@ -105,6 +116,6 @@ export function brancherVisuelsManquants(zone, apres) {
     const d = e.target.closest('[data-depot-manquant]');
     if (!d) return;
     e.preventDefault();
-    deposer(d.closest('.visuel-manquant'), e.dataTransfer.files[0]);
+    deposer(d, e.dataTransfer.files[0]);
   });
 }

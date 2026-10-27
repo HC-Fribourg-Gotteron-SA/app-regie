@@ -343,7 +343,11 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    ou avec `visuel_attendu`. Dépôt direct (Sponsoring / Régie / admin) → RPC `deposer_visuel_manquant` : asset validé
    tout de suite (`outil.depot_video_match`), durée / son repris, dossier du sponsor, et si la diffusion passait déjà
    (match passé prévu / diffusé) → tâche « Pour ce soir » au prochain match (sinon le ➕ de Match du jour le montre).
-   Visuel de l'anneau LED couplé : pas géré.
+   **Migration 68 (27.10.2026)** : **Sponsor du match = vidéo vidéotron + anneau LED complet facultatif, comme la Pub
+   pause tiers** (Léa) : produit passé en support « Vidéotron » + `lie_a_produit_id` = « Anneau LED couplé » (demande :
+   son, avec / sans anneau, visuel de l'anneau). Visuels manquants : 2e zone « anneau LED » quand la diffusion a un
+   anneau couplé sans visuel (`anneauManquant`) ; la RPC (redéfinie dans la 68) nomme le produit de base, jamais le
+   produit technique. La 68 crée l'anneau couplé des Sponsor du match à venir de **Téléverbier** (match du 30.10).
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
