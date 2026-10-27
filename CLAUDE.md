@@ -348,6 +348,9 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    son, avec / sans anneau, visuel de l'anneau). Visuels manquants : 2e zone « anneau LED » quand la diffusion a un
    anneau couplé sans visuel (`anneauManquant`) ; la RPC (redéfinie dans la 68) nomme le produit de base, jamais le
    produit technique. La 68 crée l'anneau couplé des Sponsor du match à venir de **Téléverbier** (match du 30.10).
+   **Migration 69 (même jour)** : plusieurs fichiers d'un coup dans chaque zone ; chaque fichier reçoit sa version
+   (`p_variante` : FR / DE devinés du nom, sinon V1, V2…) sinon le dernier archiverait les autres ; un seul fichier =
+   sans version. Ancienne signature de la RPC supprimée. Tâche « Pour ce soir » pas répétée pour la même diffusion.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
