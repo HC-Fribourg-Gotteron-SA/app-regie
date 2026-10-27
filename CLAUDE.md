@@ -366,6 +366,9 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    maintenant la version du passage (`afficherVersionPrevue` dans produit.js). **Migration 72** : toutes les
    diffusions à 3 versions ou plus remises dans l'ordre V1 → V2 → V3… (ECAB était V2 → V1 → V3 → V4), version du
    prochain match gardée. Léa : cycle affiché « V2 → V3 → V1 » = à partir du prochain match (ça l'a troublée).
+   **Migration 73** (dernière vraie cause, « parfait » de Léa) : V1 / V2 / V3 avaient le même nom de visuel →
+   `langue_un_match_sur_deux` réutilisait le même asset pour chaque version (il ne restait que V3). Corrigé (un asset
+   déjà pris n'est pas réutilisé) + chaque version du cycle sans visuel validé en reçoit un (sans fichier).
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
