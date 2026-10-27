@@ -356,6 +356,11 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    `demande_suppression_traitee` → `retirer_digital_demande`) ; les pages Digital ne chargent plus que `statut = actif`
    (plus de « retiré : à enlever » ni de case « Enlevé partout ») ; historique = dossier du sponsor (« Retiré »).
    Suppressions déjà marquées traitées rattrapées par la 70.
+   **Migration 71 (même jour, AHG Cars · Angles match V1 / V2 / V3)** : cycle des versions (3 ou plus) = on part de la
+   version choisie et on CONTINUE dans l'ordre (V2 → V3 → V1), avant : choisie en tête puis les autres (V2, V1, V3).
+   Corrigé dans `langue_un_match_sur_deux` et `ordreVersions` (demande.js, versions triées V1, V2…). AHG : V2 au
+   27.10. Si une version n'a plus de visuel validé, `choisir_asset` prend le dernier validé (V3 au lieu de V2) : la 71
+   remet en service le visuel archivé et liste les visuels validés de chaque diffusion à 3 versions ou plus.
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.

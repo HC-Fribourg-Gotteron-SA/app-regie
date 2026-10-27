@@ -351,9 +351,15 @@ function zoneFichiers(d, { role, libelle, cible }) {
 // Chaque zone a sa propre question : la vidéo, l'anneau LED, ou les deux (ex. Mobilière : seulement l'anneau).
 // ---------------------------------------------------------------------
 const alterne = (d, role) => d.fichiers[role].length >= 2 && d.rotation[role] === 'alterner';
-const versionsDe = (d, role) => [...new Set(d.fichiers[role].map(f => (d.versions.get(f) || '').trim()).filter(Boolean))];
+const versionsDe = (d, role) => [...new Set(d.fichiers[role].map(f => (d.versions.get(f) || '').trim()).filter(Boolean))]
+  .sort((a, b) => a.localeCompare(b, 'fr', { numeric: true }));      // V1, V2, V3… quel que soit l'ordre des fichiers
 const premiereDe = (d, role) => { const v = versionsDe(d, role); return v.includes(d.premiere[role]) ? d.premiere[role] : v[0] || ''; };
-const ordreVersions = (d, role) => { const p = premiereDe(d, role); return [p, ...versionsDe(d, role).filter(v => v !== p)]; };
+// le cycle commence par la version du premier match puis continue dans l'ordre (V2 → V3 → V1, pas V2 → V1 → V3 :
+// Léa, 27.10.2026, AHG Cars)
+const ordreVersions = (d, role) => {
+  const v = versionsDe(d, role), i = Math.max(0, v.indexOf(premiereDe(d, role)));
+  return [...v.slice(i), ...v.slice(0, i)];
+};
 // zones dont les fichiers partent avec la demande (l'anneau seulement si « avec anneau LED »)
 const rolesAvecFichiers = (d) => d.anneau === 'oui' ? ['visuel', 'anneau'] : ['visuel'];
 function premierMatch(d) {
