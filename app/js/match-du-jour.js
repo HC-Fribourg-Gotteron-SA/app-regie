@@ -663,7 +663,9 @@ function ouvrirChangement(cleItem) {
               <div class="grille-remarques">
                 <div>
                   <div class="titre-bloc">Remarques</div>
-                  <div class="bloc-texte petit">${echapper(l.consignes || '—')}</div>
+                  ${estRegie ? `<textarea id="d-consignes" class="petit" rows="2" placeholder="Remarque…"
+                      style="field-sizing:content;min-height:2.6rem">${echapper(l.consignes || '')}</textarea>`
+                    : `<div class="bloc-texte petit">${echapper(l.consignes || '—')}</div>`}
                 </div>
                 <div>
                   <div class="titre-bloc">Pourquoi ce changement</div>
@@ -699,6 +701,16 @@ function ouvrirChangement(cleItem) {
   $('d-pied').hidden = false;
   $('fenetre').hidden = $('voile').hidden = false;
   document.body.classList.add('fenetre-ouverte');
+
+  // Remarques modifiables ici (Léa, 29.10.2026 : « là je peux pas changer »), comme sur la fiche produit
+  $('d-consignes')?.addEventListener('change', async (e) => {
+    const texte = e.target.value.trim() || null;
+    const { error } = await sb.from('lignes_vendues').update({ consignes: texte }).eq('id', l.id);
+    if (error) return notifier(`Remarque pas enregistrée : ${error.message}`, 'erreur');
+    l.consignes = texte;
+    notifier('Remarque enregistrée');
+    afficher();
+  });
 }
 
 function fermerChangement() {
