@@ -21,7 +21,7 @@ const VUES = {
 // accès « reseaux » (migration 65) : la personne qui publie voit seulement la page Réseaux sociaux
 const espaces = profil.espaces || [];
 const accesDigital = espaces.includes('digital');
-const MAX_PUBS_PROGRAMME = 3;       // Léa : « plus que 3 c'est chiant », quelle que soit la taille
+const MAX_PUBS_PROGRAMME = 3;      // Léa : « plus que 3 c'est chiant », quelle que soit la taille
 // cases « c'est mis » par vue
 const CASES = {
   programme: [['programme', 'Mis dans le programme']],
@@ -32,6 +32,8 @@ const CASES = {
 const vueDemandee = new URLSearchParams(location.search).get('vue');
 const vue = !accesDigital ? 'reseaux' : VUES[vueDemandee] ? vueDemandee : 'programme';
 if (!accesDigital) Object.keys(VUES).forEach(v => { if (v !== 'reseaux') delete VUES[v]; });
+// accès « reseaux » (migration 74, Mathys) : gère la page Réseaux sociaux, et seulement celle-là
+const peutModifier = estRegie || (vue === 'reseaux' && espaces.includes('reseaux'));
 const etat = { produit: null, elements: [], attente: [], joueurs: [], matchs: [], types: [] };
 const jour = (d) => d ? dateCourte(d + 'T12:00') : '?';
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
@@ -62,7 +64,7 @@ async function charger() {
   if (error) return erreur(/espace/.test(error.message) ? 'Exécutez d’abord la migration 55 dans Supabase.' : error.message);
   etat.produit = (produits || []).find(p => vueDigital(p) === vue);
   if (!etat.produit) return erreur(`Produit introuvable : exécutez la migration ${({ reseaux: 65, jeux: 66 })[vue] || 55} dans Supabase.`);
-  $('btn-ajouter').hidden = !estRegie;      // ajouter sans demande (Léa, 16.10.2026 : « pour aller plus vite »)
+  $('btn-ajouter').hidden = !peutModifier;     // ajouter sans demande (Léa, 16.10.2026 : « pour aller plus vite »)
 
   const [{ data: elements, error: e1 }, { data: attente }, { data: joueurs }, { data: matchs }] = await Promise.all([
     sb.from('digital_elements')
@@ -96,7 +98,7 @@ function afficherAttente() {
   $('a-ajouter').innerHTML = etat.attente.map(a => `<div data-demande="${a.demande_id}"></div>`).join('');
   for (const a of etat.attente) {
     carteTraitement(document.querySelector(`#a-ajouter [data-demande="${a.demande_id}"]`), a,
-      { estRegie, mode: 'produit', apres: charger });
+      { estRegie: peutModifier, sansSuppression: !estRegie, mode: 'produit', apres: charger });
   }
 }
 
@@ -117,7 +119,7 @@ function cases(el) {
 }
 
 // Commentaire libre de Léa / la Régie (migration 56), modifiable sur place ; la remarque du Sponsoring reste à part
-const commentaire = (el) => estRegie
+const commentaire = (el) => peutModifier
   ? `<textarea class="petit" data-commentaire="${el.id}" rows="1" placeholder="Commentaire…"
        style="min-height:0;min-width:12rem;field-sizing:content">${echapper(el.commentaire || '')}</textarea>`
   : `<span class="petit" style="white-space:pre-line">${echapper(el.commentaire || '')}</span>`;

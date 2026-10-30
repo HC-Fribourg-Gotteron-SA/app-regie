@@ -326,7 +326,11 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    sponsor (⚠ 2 sponsors), logo, commentaire. **Pas de case « Publié » ni de lien** (retirés par Léa le même jour).
    Traité par une personne **hors Régie** : pas dans Match du jour ; accès **`profiles.espaces` contient 'reseaux'**
    (admins l'ont par la 65) → menu Digital / Réseaux sociaux seulement si pas l'espace digital.
-   Ouvert : qui publie (compte à créer, rôle à choisir), ce qu'elle doit voir d'autre.
+   **Mathys, community manager (30.10.2026, option A de Léa ; migration 74 à exécuter sur les deux bases, pas encore
+   testé)** : rôle `sponsoring` + `profiles.espaces` = `{regie,digital,reseaux}`. `gere_reseaux()` : sur le produit Réseaux
+   sociaux seulement, « + Ajouter », traiter les demandes (`peutModifier` dans digital.js), commentaires, créer un sponsor ;
+   pas de suppression de demande / fichier (`sansSuppression`, carte de traitement). Jeux app : Léa. Le Sponsoring passe par
+   la demande. La 74 interdit aussi de modifier ses propres `espaces` (seul un admin).
    Posts déjà pris **à la saison** par un autre sponsor : grisés dans la demande et « + Ajouter ».
    **Onglet « App » unique** (même jour, Léa) : menu Digital → « App » ; dans la page, sous-onglets « Bannières » /
    « Jeux app » (`dans: 'app'` dans VUES de digital.js). Les 2 produits restent séparés dans la demande.

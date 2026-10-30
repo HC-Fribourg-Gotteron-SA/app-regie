@@ -197,8 +197,8 @@ function actions(c, existantes) {
   }
   return `
     <div class="actions-attente">
-      <button type="button" class="btn btn-discret btn-danger" data-supprimer-produit
-              title="Erreur ou demande qui ne se fera pas : la supprimer">Supprimer</button>
+      ${c.options.sansSuppression ? '' : `<button type="button" class="btn btn-discret btn-danger" data-supprimer-produit
+              title="Erreur ou demande qui ne se fera pas : la supprimer">Supprimer</button>`}
       <span class="espace"></span>
       ${principal}
     </div>`;
@@ -268,7 +268,7 @@ function blocFichiers(c) {
               <input type="text" data-variante="${echapper(f.storage_path)}" value="${echapper(f.variante || '')}" placeholder="FR"
                      style="width:4.5rem;min-height:0;padding:.2rem .4rem"></label>` : ''}
             <button type="button" class="btn btn-discret petit" data-fichier="${echapper(f.storage_path)}">Télécharger</button>
-            ${options.estRegie ? boutonSupprimerFichier(f.storage_path) : ''}
+            ${options.estRegie && !options.sansSuppression ? boutonSupprimerFichier(f.storage_path) : ''}
           </div>`).join('')}
         ${options.estRegie ? boutonAjoutFichier(role) : ''}
       </div>`;
