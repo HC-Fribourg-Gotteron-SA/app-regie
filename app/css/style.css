@@ -45,7 +45,7 @@ a  { color: var(--lien); }
             color: var(--texte-doux); margin-bottom: .2rem; }
 
 /* ---- Menu latéral ---- */
-:root { --largeur-menu: 248px; }
+:root { --largeur-menu: 220px; }
 .menu-lateral {
   position: fixed; top: 0; left: 0; bottom: 0; width: var(--largeur-menu); z-index: 25;
   display: flex; flex-direction: column; gap: 1.5rem;
@@ -55,14 +55,14 @@ a  { color: var(--lien); }
 }
 body.avec-menu main { margin-left: calc(var(--largeur-menu) + max(0px, (100vw - var(--largeur-menu) - 1240px) / 2)); }
 .menu-lateral .marque { padding: 0 .35rem .25rem; }
-.menu-lateral nav { display: grid; gap: 1.25rem; flex: 1; align-content: start; }
+.menu-lateral nav { display: grid; gap: .9rem; flex: 1; align-content: start; }
 .menu-titre {
-  font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .12em;
-  color: #8a9ab3; padding: 0 .65rem .45rem;
+  font-size: .64rem; font-weight: 800; text-transform: uppercase; letter-spacing: .12em;
+  color: #8a9ab3; padding: 0 .65rem .3rem;
 }
 .menu-rubrique a {
-  display: flex; align-items: center; gap: .7rem; padding: .6rem .65rem; border-radius: 8px;
-  color: #c5d0e0; text-decoration: none; font-weight: 600; font-size: .93rem;
+  display: flex; align-items: center; gap: .6rem; padding: .42rem .65rem; border-radius: 8px;
+  color: #c5d0e0; text-decoration: none; font-weight: 600; font-size: .84rem;
 }
 .menu-rubrique a + a { margin-top: .15rem; }
 .menu-rubrique a:hover { color: #fff; background: rgba(255,255,255,.07); }
@@ -79,8 +79,8 @@ body.avec-menu main { margin-left: calc(var(--largeur-menu) + max(0px, (100vw - 
 .menu-rubrique a.actif .menu-compteur { background: var(--noir); }
 /* Produits : une page par produit, rangées par catégorie */
 .menu-tous-produits > summary {
-  display: flex; align-items: center; gap: .7rem; padding: .6rem .65rem; border-radius: 8px; cursor: pointer;
-  color: #c5d0e0; font-weight: 600; font-size: .93rem; list-style: none; margin-top: .15rem;
+  display: flex; align-items: center; gap: .6rem; padding: .42rem .65rem; border-radius: 8px; cursor: pointer;
+  color: #c5d0e0; font-weight: 600; font-size: .84rem; list-style: none; margin-top: .15rem;
 }
 .menu-tous-produits > summary::-webkit-details-marker { display: none; }
 .menu-tous-produits > summary::before { content: '▸'; width: 18px; text-align: center; font-size: .75rem; color: #8a9ab3; transition: transform .12s; }
