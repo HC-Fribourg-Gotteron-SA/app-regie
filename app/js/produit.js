@@ -890,7 +890,8 @@ function ouvrirDetail(id) {
               ? info('Passe', estRegie ? champPasse(l) : l.un_match_sur > 1 ? 'un match sur deux' : 'à chaque match') : ''}
             ${p.famille !== 'emplacement'
               ? info('Langue / version', estRegie ? champLangue(l) : l.regle_rotation === 'alterner' ? 'change à chaque match (à tour de rôle)' : 'toujours la même') : ''}
-            ${p.famille === 'emplacement' ? info('Emplacement', empl.length ? empl.join(', ') : '<span class="badge badge-a-venir">à placer</span>') : ''}
+            ${p.famille === 'emplacement' ? info('Emplacement', estRegie ? champEmplacement(l)
+              : empl.length ? empl.join(', ') : '<span class="badge badge-a-venir">à placer</span>') : ''}
             ${info('Origine', l.demande_id ? `<a href="demandes.html?id=${l.demande_id}">voir la demande</a>` : l.created_by ? `ajouté par ${echapper(etat.personnes.get(l.created_by) || 'la Régie')}, sans demande` : 'import Airtable')}
             ${info('Créée le', dateCourte(l.created_at))}
           </dl>
@@ -902,6 +903,58 @@ function ouvrirDetail(id) {
   afficherDossierSponsor(l);
   if (l.regle_rotation === 'alterner') afficherVersionPrevue(l);
 }
+
+// ---------------------------------------------------------------------
+// LED 3M / 6M : changer l'emplacement d'un sponsor (16.11.2026, Léa : ce qui passe ne correspond pas à ce qui est
+// noté). Libre (Banner HCFG) = il y va ; occupé = échange (migration 75, RPC deplacer_emplacement).
+// LED 6M = 2 emplacements qui se suivent : on choisit le premier.
+// ---------------------------------------------------------------------
+function champEmplacement(l) {
+  const est6M = /6M/.test(l.produit?.nom || etat.p.nom);
+  const actuels = new Set((l.emplacements || []).map(x => x.emplacement).filter(Boolean).map(codeEmpl));
+  const tous = etat.emplacements.slice().sort((a, b) => a.anneau.localeCompare(b.anneau) || a.position - b.position);
+  const suivant = (e) => tous.find(x => x.anneau === e.anneau && x.position === e.position + 1);
+  const qui = (e) => e.reserve_club ? 'réservé club' : e.ligne_id === l.id ? 'ici' : e.sponsor || 'Banner HCFG (libre)';
+  const options = (anneau) => tous.filter(e => e.anneau === anneau).map(e => {
+    const n = est6M ? suivant(e) : null;
+    if (est6M && !n) return '';
+    const cases = n ? [e, n] : [e];
+    const code = cases.map(codeEmpl).join(' + ');
+    const ici = cases.every(x => actuels.has(codeEmpl(x))) && cases.length === actuels.size;
+    const occupe = [...new Set(cases.map(qui))].join(' / ');
+    return `<option value="${e.emplacement_id}" ${ici ? 'selected' : ''} ${cases.some(x => x.reserve_club) ? 'disabled' : ''}>
+      ${echapper(code)} · ${echapper(ici ? 'actuel' : occupe)}</option>`;
+  }).join('');
+  const anneaux = [...new Set(tous.filter(e => !est6M || bandeDe(e) === '6M').map(e => e.anneau))];
+  return `<select class="champ-court" data-deplacer-led="${l.id}" style="max-width:100%">
+      ${actuels.size ? '' : '<option value="" selected>à placer</option>'}
+      ${anneaux.map(a => `<optgroup label="Anneau ${a} (bande ${['A', 'B'].includes(a) ? '3M' : '6M'})">${options(a)}</optgroup>`).join('')}
+    </select>
+    <div class="aide">Emplacement occupé : les deux sponsors sont échangés.</div>`;
+}
+
+document.addEventListener('change', async (e) => {
+  const t = e.target.closest('[data-deplacer-led]');
+  if (!t || !t.value) return;
+  const l = trouverLigne(t.dataset.deplacerLed);
+  const choix = t.selectedOptions[0]?.textContent.trim().replace(/\s+/g, ' ') || '';
+  const nom = l?.contrat?.sponsor?.nom || 'ce sponsor';
+  if (!confirm(`Mettre ${nom} en ${choix} ?\n\nSi un autre sponsor y est, il prend l'ancienne place de ${nom}.`)) {
+    ouvrirDetail(l.id);
+    return;
+  }
+  t.disabled = true;
+  const { data, error } = await sb.rpc('deplacer_emplacement', { p_ligne: l.id, p_emplacement: t.value });
+  if (error) {
+    notifier(/deplacer_emplacement/.test(error.message)
+      ? 'Migration 75 pas encore exécutée dans Supabase' : `Déplacement impossible : ${error.message}`, 'erreur');
+    ouvrirDetail(l.id);
+    return;
+  }
+  notifier(data || 'Emplacement changé');
+  await charger();
+  ouvrirDetail(l.id);
+});
 
 // Version vraiment prévue au prochain match de CETTE diffusion (son passage, celui que lit Match du jour).
 // Le calcul de la page (langueProchainMatch) compte tous les matchs de saison et pouvait afficher V2 alors que

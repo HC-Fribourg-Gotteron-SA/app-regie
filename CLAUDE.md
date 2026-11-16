@@ -373,6 +373,12 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    **Migration 73** (dernière vraie cause, « parfait » de Léa) : V1 / V2 / V3 avaient le même nom de visuel →
    `langue_un_match_sur_deux` réutilisait le même asset pour chaque version (il ne restait que V3). Corrigé (un asset
    déjà pris n'est pas réutilisé) + chaque version du cycle sans visuel validé en reçoit un (sans fichier).
+0-sexvicies. **Déplacer un sponsor LED 3M / 6M (16.11.2026, Léa : ce qui passe sur la LED 3M ≠ ce qui est noté ;
+   migration 75 à exécuter sur les deux bases, pas encore testé)** : détail d'une diffusion LED (Régie / admin), liste
+   « Emplacement » (par anneau, avec qui occupe chaque place) → RPC `deplacer_emplacement(ligne, emplacement)` :
+   libre = il y va (ancienne place → Banner HCFG) ; occupé = **échange** ; LED 6M = 2 emplacements qui se suivent
+   (on choisit le 1er), bande 6M seulement ; refus : réservé club, 3M sur la moitié d'un 6M. Rien dans Match du jour
+   (correction de l'outil, Colosseo reste la référence).
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
@@ -493,7 +499,8 @@ outil-regie/
 │   ├── 54_leguriviera_spots.sql ← Leguriviera : versions « Spot chef » / « Spot normal »
 │   ├── 55_espace_digital.sql ← espace Digital : produits.espace, joueurs, digital_elements, traiter_digital, profiles.espaces
 │   ├── 56 / 57 ← parrainages et programme actuels (Airtable, vraie base seulement) ; 58 lettres des slides
-│   └── 59_intercalaire_anneau.sql ← produits.intercalaire_nom / _s : Anneau LED, fond transparent 5 s après chaque sponsor
+│   ├── 59_intercalaire_anneau.sql ← produits.intercalaire_nom / _s : Anneau LED, fond transparent 5 s après chaque sponsor
+│   └── 75_deplacer_led.sql ← RPC deplacer_emplacement : déplacer / échanger un sponsor LED 3M / 6M
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
