@@ -7,7 +7,8 @@
 -- Fribourg-Gottéron - Genève-Servette » (FO 19:00, 70 éléments). Différences avec le modèle Game Day 5 (43) :
 -- SEYU CTA + SEYU URL (TEXT 1, 11, 12, 14, 16, 18), Fan activity « Tricky Cups », un seul hymne national
 -- (deux équipes suisses), boucle sponsors dès 0:17:50 dans les pauses, Warrior Webshop au 3e tiers.
--- Heures avant le match = écart avec le face-off (suit le face-off du match). Liens / instructions repris de la 43
+-- Heures avant le match = écart avec le face-off (suit le face-off du match : capture à 19:00, match de retour à
+-- 19:45 d'après Léa → tout se décale de 45 min, ex. lumières à 18:45). Liens / instructions repris de la 43
 -- quand la ligne est la même ; liens SEYU : pas dans la capture (à ajouter en mode Modifier).
 -- La capture s'arrête à l'élément 70 (Overtime) : s'il y a une suite (tirs au but), l'ajouter en mode Modifier.
 

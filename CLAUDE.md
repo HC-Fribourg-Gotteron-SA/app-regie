@@ -502,7 +502,7 @@ outil-regie/
 │   ├── 59_intercalaire_anneau.sql ← produits.intercalaire_nom / _s : Anneau LED, fond transparent 5 s après chaque sponsor
 │   ├── 75_deplacer_led.sql ← RPC deplacer_emplacement : déplacer / échanger un sponsor LED 3M / 6M
 │   ├── 76_format_action_scenes.sql ← Action scenes / Sponsor du match : 1920 × 1080 (tout 16:9 accepté) comme le vidéotron
-│   └── 77_run_of_show_chl_round16.sql ← modèle de run of show « CHL Round of 16 – Return game 26/27 » (FO 19:00)
+│   └── 77_run_of_show_chl_round16.sql ← modèle de run of show « CHL Round of 16 – Return game 26/27 » (heures relatives au face-off, retour à 19:45)
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)
