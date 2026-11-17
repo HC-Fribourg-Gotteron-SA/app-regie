@@ -101,7 +101,7 @@ const est169 = (att) => !!att && att.l * 9 === att.h * 16;
 export function specsProduit(p) {
   if (!p) return '';
   const att = dimensionsAttendues(p);
-  const dims = att ? `${att.l} × ${att.h} px${est169(att) ? ' (ou 4K 3840 × 2160)' : ''}`
+  const dims = att ? `${att.l} × ${att.h} px${est169(att) ? ' (ou autre taille en 16:9 : 2560 × 1440, 4K…)' : ''}`
     : p.hauteur_px ? `${p.hauteur_px} px de haut` : '';
   return [dims, formatsLisibles(p.formats), p.duree_max_s ? `max ${p.duree_max_s} s` : ''].filter(Boolean).join(' · ');
 }
@@ -121,7 +121,9 @@ export function alertesFichier(p, f) {
   const marge = video ? 16 : 0;
   const ecart = (lu, voulu) => lu < voulu || lu - voulu > marge;
   // format 16:9 attendu (1920 × 1080…) : la 4K (3840 × 2160) est aussi acceptée (Léa, 21.10.2026 puis 17.11.2026)
-  const enQuatreK = est169(att) && !ecart(f.largeur, 3840) && !ecart(f.hauteur, 2160);
+  // 17.11.2026, Léa : « s'il respecte le 16:9, c'est ok » → tout fichier en 16:9 accepté (2560 × 1440, 4K…) ;
+  // petite marge pour la hauteur codée des vidéos (1920 × 1088)
+  const enQuatreK = est169(att) && f.largeur && f.hauteur && Math.abs(f.largeur / f.hauteur - 16 / 9) < 0.02;
   if (att && f.largeur && !enQuatreK && (ecart(f.largeur, att.l) || ecart(f.hauteur, att.h))) alertes.push(`${f.largeur} × ${f.hauteur} px : attendu ${att.l} × ${att.h} px`);
   if (p.duree_max_s && f.duree && f.duree > p.duree_max_s + 0.5) alertes.push(`${Math.round(f.duree)} s : maximum ${p.duree_max_s} s`);
   return alertes;
