@@ -500,7 +500,8 @@ outil-regie/
 │   ├── 55_espace_digital.sql ← espace Digital : produits.espace, joueurs, digital_elements, traiter_digital, profiles.espaces
 │   ├── 56 / 57 ← parrainages et programme actuels (Airtable, vraie base seulement) ; 58 lettres des slides
 │   ├── 59_intercalaire_anneau.sql ← produits.intercalaire_nom / _s : Anneau LED, fond transparent 5 s après chaque sponsor
-│   └── 75_deplacer_led.sql ← RPC deplacer_emplacement : déplacer / échanger un sponsor LED 3M / 6M
+│   ├── 75_deplacer_led.sql ← RPC deplacer_emplacement : déplacer / échanger un sponsor LED 3M / 6M
+│   └── 76_format_action_scenes.sql ← Action scenes / Sponsor du match : 1920 × 1080 (4K acceptée) comme le vidéotron
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)

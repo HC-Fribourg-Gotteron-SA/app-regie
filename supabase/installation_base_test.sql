@@ -1,7 +1,7 @@
 -- =====================================================================
 -- INSTALLATION COMPLÈTE d'une base neuve (base de TEST) — généré par outils/installation-base-test.mjs
 -- À exécuter UNE fois dans le SQL Editor du projet de test (jamais sur la vraie base).
--- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75.
+-- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76.
 -- Ensuite : créer son compte (Authentication > Users), se mettre admin (voir en bas),
 -- importer le calendrier dans l'outil (.ics), puis lancer supabase/demo_donnees_test.sql.
 -- =====================================================================
@@ -6498,6 +6498,30 @@ grant execute on function deplacer_emplacement(uuid, uuid) to authenticated;
 select 'Migration 75 OK : déplacer un sponsor LED' as "Résultat";
 
 
+-- #####################################################################
+-- 76_format_action_scenes.sql
+-- #####################################################################
+-- =====================================================================
+-- 76 — Action scenes et Sponsor du match : même format que le vidéotron (1920 × 1080, ou 4K 3840 × 2160)
+-- À exécuter une fois dans Supabase > SQL Editor, sur la base de TEST puis sur la vraie base.
+-- Peut être exécuté plusieurs fois.
+-- =====================================================================
+-- Léa (17.11.2026) : Spot_Gotteron.mp4 en 2560 × 1440 était « juste » sur une Action scene et « faux » sur la Pub
+-- pause tiers. La migration 32 n'avait mis les dimensions que sur les pubs vidéotron (famille temps) : les produits
+-- « un seul sponsor » du vidéotron (Action scenes, Sponsor du match) n'avaient rien → aucun contrôle des dimensions.
+-- Même règle partout maintenant : 1920 × 1080 attendu, 4K acceptée, le reste signalé (alerte, jamais bloquant).
+-- Seulement les produits sans dimension (une dimension déjà réglée avec « ✏️ Format » est gardée).
+
+update produits set largeur_px = 1920, hauteur_px = 1080
+where support = 'Vidéotron' and famille = 'exclusif' and largeur_px is null;
+
+select nom as "Produit", largeur_px || ' × ' || hauteur_px || ' px' as "Dimension",
+       array_to_string(formats, ', ') as "Formats"
+from produits
+where support = 'Vidéotron' and actif and espace is distinct from 'digital'
+order by ordre, nom;
+
+
 -- Après avoir créé ton compte dans Authentication > Users, lance ceci séparément :
 -- update profiles set role = 'admin', nom = 'Léa Talon' where email = 'lea.talon@fribourg-gotteron.ch';
-select 'Installation terminée : 71 fichiers.' as "Résultat";
+select 'Installation terminée : 72 fichiers.' as "Résultat";
