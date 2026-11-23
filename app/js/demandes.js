@@ -1,6 +1,6 @@
 import { sb, exigerConnexion, LIBELLES, echapper, dateCourte, dateHeure, notifier, debounce, taille, libelleFichier,
          depuis, initiales, vueDigital } from './app.js';
-import { carteTraitement, traiterTout, CHAMPS_A_TRAITER, ajouterFichierDemande, boutonAjoutFichier, supprimerDemande,
+import { carteTraitement, CHAMPS_A_TRAITER, ajouterFichierDemande, boutonAjoutFichier, supprimerDemande,
          boutonSupprimerFichier, confirmerSuppressionFichier } from './traitement.js';
 
 const { profil } = await exigerConnexion({ roles: ['sponsoring', 'regie', 'admin'] });
@@ -387,8 +387,10 @@ function piedRegie(d) {
             <button class="btn" data-statut="en_cours">Rouvrir</button>`;
   }
   return `<span class="indication">Ajoutez chaque produit ci-dessus (ou sur sa fiche, c’est la même chose) ; la demande passe en « Traitée » quand tout est fait.</span>
-    <button class="btn btn-discret btn-danger" id="btn-supprimer-demande" title="Erreur ou demande qui ne se fera pas">Supprimer la demande…</button>
-    <button class="btn" data-statut="traitee" title="Ajoute chaque produit pas encore fait (comme « Ajouter » sur chacun), puis la demande est traitée">Marquer comme traitée</button>`;
+    <button class="btn btn-discret btn-danger" id="btn-supprimer-demande" title="Erreur ou demande qui ne se fera pas">Supprimer la demande…</button>`;
+  // « Marquer comme traitée » retiré (23.11.2026, Léa : doublon avec « Ajouter », les collègues ne faisaient que
+  // ça → 45 demandes « traitées » jamais ajoutées dans l'outil). La demande est traitée quand chaque produit a été
+  // fait avec son bouton (Ajouter ✓, Mettre le nouveau visuel, Retirer, Supprimer le produit…).
 }
 
 const SUITES = { ajoute: 'Ajouté', visuel: 'Nouveau visuel mis', retire: 'Retiré', ignore: 'Ignoré' };
@@ -424,19 +426,6 @@ function brancherActions(d) {
 
   document.querySelectorAll('#d-pied [data-statut]').forEach(b => b.addEventListener('click', async () => {
     const statut = b.dataset.statut;
-    // 23.11.2026 (Léa : « si tu traites, c'est que ça a été ajouté ») : « Marquer comme traitée » traite chaque produit
-    // pas encore fait avec son bouton (Ajouter ✓, Mettre le nouveau visuel, Retirer…). Avant, le statut changeait seul :
-    // JPF · Sponsor du match n'avait rien dans l'outil, ni dans Match du jour, ni à enlever au match suivant.
-    const pasFaits = statut === 'traitee' ? d.produits.filter(x => !x.traite_le) : [];
-    if (pasFaits.length) {
-      b.disabled = true;
-      const restants = await traiterTout(d.id);
-      b.disabled = false;
-      if (restants) {
-        notifier(`${restants} produit${restants > 1 ? 's' : ''} pas encore traité${restants > 1 ? 's' : ''} : la demande reste ouverte.`, 'erreur');
-        return;
-      }
-    }
     await enregistrer(d.id, { statut },
       { en_cours: 'Demande prise en charge', question: 'Question envoyée au Sponsoring', traitee: 'Demande traitée' }[statut]);
   }));
