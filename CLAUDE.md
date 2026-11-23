@@ -379,6 +379,13 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    libre = il y va (ancienne place → Banner HCFG) ; occupé = **échange** ; LED 6M = 2 emplacements qui se suivent
    (on choisit le 1er), bande 6M seulement ; refus : réservé club, 3M sur la moitié d'un 6M. Rien dans Match du jour
    (correction de l'outil, Colosseo reste la référence).
+0-septvicies. **« Marquer comme traitée » = ajouter (23.11.2026, Léa : « si tu traites c'est que ça a été ajouté » ; pas de
+   migration, pas encore testé)**. Cas JPF · Sponsor du match (20.11) : demande marquée traitée sans « Ajouter » → aucune
+   diffusion, disparue de Match du jour, pas d'« Enlever » au match suivant. Maintenant le bouton du détail d'une demande
+   lance `traiterTout` (traitement.js) = le bouton principal de chaque produit pas encore fait (Ajouter ✓ / Mettre le
+   nouveau visuel / Retirer…, mêmes confirmations) ; s'il en reste, la demande reste ouverte. Match du jour : demande déjà
+   marquée traitée sans ajout = affichée grisée avec « ⚠ Pas ajouté dans l'outil » (idem dans le détail de la demande).
+   **Règle de Léa : tout ce qui est fait reste affiché, grisé / barré ; rien ne disparaît.**
 0-ter. ✅ **Hébergement passé sur Cloudflare Pages (02.10.2026, déploiement auto à chaque push testé OK par Léa)**. Ancien point : **Netlify gratuit bloque les déploiements** (30.09.2026 : crédits épuisés ; 2 sites reliés au même dépôt =
    2 déploiements par push). Léa teste d'abord sur le site actuel ; **plus tard** : passer le site de test (puis
    peut-être le vrai) sur **Cloudflare Pages** (recommandé) ou plan payant. En attendant : regrouper les push.
