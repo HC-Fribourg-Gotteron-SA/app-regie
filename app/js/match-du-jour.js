@@ -186,8 +186,8 @@ async function chargerMatch() {
     sb.from('demandes_produits')
       .select(`*,
                produit:produits(*),
-               demande:demandes!inner(id, type, statut, created_at, sponsor_nom_saisi, sponsor:sponsors(nom))`)
-      .is('traite_le', null).neq('demande.statut', 'traitee'),
+               demande:demandes!inner(id, type, statut, created_at, traite_le, traite_par, sponsor_nom_saisi, sponsor:sponsors(nom))`)
+      .is('traite_le', null),
     // demandes traitées : restent affichées, grisées (demandé par Léa). Celles traitées depuis le match précédent
     // (jusqu'au lendemain de ce match), ET celles vendues pour CE match même traitées plus tôt (corrigé le 03.10.2026 :
     // une demande pour le 7.10 traitée avant le match du 3.10 disparaissait au lieu d'être grisée)
@@ -207,7 +207,15 @@ async function chargerMatch() {
   etat.notes = notes || [];
   // celles qui concernent ce match : pour la saison, ou vendues pour ce jour de match
   const jourMatch = jourLocal(m.date_heure);
-  etat.attente = attente || [];
+  // demande « Marquer comme traitée » sans « Ajouter » (23.11.2026, Léa : JPF · Sponsor du match disparu de la liste) :
+  // le produit n'est pas dans l'outil ; on le garde affiché, grisé, avec un avertissement (rien ne disparaît)
+  const marquee = (a) => a.demande?.statut === 'traitee';
+  etat.attente = (attente || []).filter(a => !marquee(a));
+  const finFenetre = new Date(new Date(m.date_heure).getTime() + 864e5);
+  const debutFenetre = etat.precedent ? new Date(etat.precedent.date_heure) : new Date(new Date(m.date_heure) - 7 * 864e5);
+  const marqueesPourCeMatch = (attente || []).filter(marquee).filter(a => a.type_vente === 'match'
+    || (a.demande.traite_le && new Date(a.demande.traite_le) >= debutFenetre && new Date(a.demande.traite_le) <= finFenetre))
+    .map(a => ({ ...a, sansAjout: true, traite_le: a.demande.traite_le, traite_par: a.demande.traite_par }));
   // Champions League = une autre playlist : les demandes « toute la saison » ne la concernent pas (Léa, 05.10.2026)
   // espace Digital (programme, app, parrainage ; migration 55) : rien à faire dans Colosseo
   const pourCeMatch = (a) => a.produit?.espace !== 'digital'
@@ -219,7 +227,8 @@ async function chargerMatch() {
   const passaitAvant = new Set(passagesAvant.filter(p => PASSE.has(p.statut)).map(p => p.ligne_id));
   const debutPrecedent = etat.precedent ? new Date(etat.precedent.date_heure) : null;
   const dejaEnPlace = (t) => debutPrecedent && new Date(t.traite_le) < debutPrecedent && passaitAvant.has(t.ligne_id);
-  etat.demandesFaites = (traitees || []).filter(pourCeMatch).filter(t => !dejaEnPlace(t));
+  etat.demandesFaites = (traitees || []).filter(pourCeMatch).filter(t => !dejaEnPlace(t))
+    .concat(marqueesPourCeMatch.filter(pourCeMatch));
   await chargerFichiersDemandes(etat.demandesMatch);
 
   afficher();
@@ -452,8 +461,10 @@ function carteDemande(i) {
       <div class="changement-icone" aria-hidden="true">📨</div>
       <div class="changement-texte">
         <div><span class="changement-verbe">${VERBE_DEMANDE[d.type] || 'Nouveau'}</span> · <strong>${echapper(i.sponsor)}</strong></div>
-        <div class="petit doux">✓ ${SUITE_FAITE[a.suite] || 'Traité'} par ${echapper(etat.personnes.get(a.traite_par) || '—')}
-          le ${dateCourte(a.traite_le)} à ${heure(a.traite_le)}</div>
+        <div class="petit doux">✓ ${a.sansAjout ? 'Demande marquée traitée' : SUITE_FAITE[a.suite] || 'Traité'}
+          par ${echapper(etat.personnes.get(a.traite_par) || '—')}${a.traite_le ? ` le ${dateCourte(a.traite_le)} à ${heure(a.traite_le)}` : ''}</div>
+        ${a.sansAjout ? `<div class="petit">⚠ <strong>Pas ajouté dans l’outil</strong> (« Marquer comme traitée » au lieu de « Ajouter ») :
+          il ne sera pas proposé à « Enlever » au match suivant. Rouvrez la demande et faites « Ajouter ».</div>` : ''}
       </div>
       <div class="changement-actions">
         <a class="btn btn-discret" href="demandes.html?id=${a.demande_id}&retour=${encodeURIComponent(`match-du-jour.html?match=${etat.match.id}`)}">Voir</a>

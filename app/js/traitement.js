@@ -643,6 +643,25 @@ function brancher(el) {
   });
 }
 
+// « Marquer comme traitée » = traiter chaque produit pas encore fait avec son bouton principal (Ajouter ✓, Mettre le
+// nouveau visuel, Retirer…), exactement comme un clic dessus (23.11.2026, Léa : « si tu traites, c'est que ça a été
+// ajouté » ; JPF · Sponsor du match marqué traité sans être ajouté avait disparu de Match du jour).
+// Renvoie le nombre de produits qui restent à traiter (confirmation refusée, erreur, pas de carte).
+export async function traiterTout(demandeId) {
+  const liste = [...cartes].filter(([, c]) => c.a.demande_id === demandeId);
+  let apres = null, restants = 0;
+  for (const [k, c] of liste) {
+    const b = c.el.querySelector('.btn-principal[data-suite]');
+    if (!b) { restants++; continue; }
+    apres = apres || c.options.apres;
+    c.options = { ...c.options, apres: null };       // une seule mise à jour de la page, à la fin
+    await traiter(k, b.dataset.suite, b);
+    if (cartes.has(k)) restants++;
+  }
+  await apres?.({});
+  return restants;
+}
+
 async function traiter(k, suite, bouton) {
   const { a, ctx, choix, options } = cartes.get(k);
   const p = ctx.p, requis = p.emplacements_requis || 1;
