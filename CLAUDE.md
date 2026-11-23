@@ -379,7 +379,7 @@ Contexte du projet pour Claude. Mets ce fichier à jour quand une décision est 
    libre = il y va (ancienne place → Banner HCFG) ; occupé = **échange** ; LED 6M = 2 emplacements qui se suivent
    (on choisit le 1er), bande 6M seulement ; refus : réservé club, 3M sur la moitié d'un 6M. Rien dans Match du jour
    (correction de l'outil, Colosseo reste la référence).
-0-septvicies. **Bouton « Marquer comme traitée » RETIRÉ (23.11.2026, Léa : doublon avec « Ajouter », ses collègues ne
+0-septvicies. **« Marquer comme traitée » REMPLACE « Ajouter » (23.11.2026, Léa) : le bouton du bas de la demande est retiré ; sur chaque produit (carte de traitement) le bouton principal s'appelle « ✓ Marquer comme traitée » et fait l'action (ajouter / nouveau visuel / retirer, titre au survol). Avant : doublon avec « Ajouter », ses collègues ne
    faisaient que ça)**. Cas JPF · Sponsor du match puis Red Bull : demandes marquées traitées (surtout par le compte
    « Digital ») sans « Ajouter » → rien dans l'outil, disparues de Match du jour, pas d'« Enlever » ensuite. **45 demandes**
    dans ce cas (liste du 23.11) : requête de contrôle donnée à Léa (sponsor sur la fiche ? visuel mis après la demande ?

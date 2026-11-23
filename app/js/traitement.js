@@ -170,30 +170,32 @@ function actions(c, existantes) {
     <select data-ligne style="width:auto">${existantes.map(l => `<option value="${l.id}" ${choix.ligne_id === l.id ? 'selected' : ''}>
       ${l.type_vente === 'saison' ? 'Saison' : 'Au match'} · ${STATUT_LIGNE[l.statut] || l.statut} · depuis le ${dateCourte(l.created_at)}</option>`).join('')}
     </select>` : '';
+  // UN seul bouton : « Marquer comme traitée » (23.11.2026, Léa : « marquer comme traitée doit remplacer ajouter » ;
+  // ses collègues cliquaient « Marquer comme traitée » en bas de la demande, qui ne mettait rien dans l'outil).
+  // Le bouton fait ce que la demande demande : ajouter, mettre le nouveau visuel, retirer… (le titre le dit au survol).
+  const traitee = (suite, ce) =>
+    `<button type="button" class="btn btn-principal" data-suite="${suite}" title="${ce}">✓ Marquer comme traitée</button>`;
   let principal;
   if (vueDigital(c.ctx.p)) {
     // espace Digital : pas de diffusion, des éléments (programme : un par match)
     const enCours = c.ctx.elements.filter(x => d.sponsor_id && x.sponsor_id === d.sponsor_id).length;
     principal = d.type === 'suppression'
-      ? (enCours ? '<button type="button" class="btn btn-principal" data-suite="retire">Supprimer le produit</button>'
-                 : `<span class="petit doux">Ce sponsor n'a pas ce produit dans l'outil.</span>
-                    <button type="button" class="btn btn-principal" data-suite="ignore">Marquer comme fait</button>`)
+      ? (enCours ? traitee('retire', 'Supprime le produit de ce sponsor')
+                 : `<span class="petit doux">Ce sponsor n'a pas ce produit dans l'outil.</span>${traitee('ignore', 'Rien à enlever')}`)
       : d.type === 'changement_visuel' && enCours
-        ? '<button type="button" class="btn btn-principal" data-suite="visuel">Mettre le nouveau visuel</button>'
-        : '<button type="button" class="btn btn-principal" data-suite="ajoute">Ajouter ✓</button>';
+        ? traitee('visuel', 'Met le nouveau visuel')
+        : traitee('ajoute', 'Ajoute le sponsor à ce produit');
   } else if (a.ligne_id) {
-    principal = `<button type="button" class="btn btn-principal" data-suite="visuel">Mettre le nouveau visuel</button>`;
+    principal = traitee('visuel', 'Met le nouveau visuel sur la diffusion');
   } else if (d.type === 'suppression') {
     principal = existantes.length
       ? `${choixLigne}<label class="petit" style="margin:0">Dernier jour <input type="date" data-fin value="${choix.date_fin}" style="width:auto"></label>
-         <button type="button" class="btn btn-principal" data-suite="retire">Retirer</button>`
-      : `<span class="petit doux">Ce sponsor n'a pas ce produit dans l'outil.</span>
-         <button type="button" class="btn btn-principal" data-suite="ignore">Marquer comme fait</button>`;
+         ${traitee('retire', 'Retire le sponsor de ce produit (dernier jour ci-contre)')}`
+      : `<span class="petit doux">Ce sponsor n'a pas ce produit dans l'outil.</span>${traitee('ignore', 'Rien à retirer')}`;
   } else if (d.type === 'changement_visuel' && existantes.length) {
-    principal = `${choixLigne}
-      <button type="button" class="btn btn-principal" data-suite="visuel">Mettre le nouveau visuel</button>`;
+    principal = `${choixLigne}${traitee('visuel', 'Met le nouveau visuel sur la diffusion')}`;
   } else {
-    principal = `<button type="button" class="btn btn-principal" data-suite="ajoute">Ajouter ✓</button>`;
+    principal = traitee('ajoute', 'Ajoute le sponsor à ce produit (fiche, Match du jour, playlist)');
   }
   return `
     <div class="actions-attente">
