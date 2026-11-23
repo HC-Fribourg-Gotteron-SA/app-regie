@@ -461,10 +461,8 @@ function carteDemande(i) {
       <div class="changement-icone" aria-hidden="true">📨</div>
       <div class="changement-texte">
         <div><span class="changement-verbe">${VERBE_DEMANDE[d.type] || 'Nouveau'}</span> · <strong>${echapper(i.sponsor)}</strong></div>
-        <div class="petit doux">✓ ${a.sansAjout ? 'Demande marquée traitée' : SUITE_FAITE[a.suite] || 'Traité'}
+        <div class="petit doux">✓ ${a.sansAjout ? 'Demande traitée' : SUITE_FAITE[a.suite] || 'Traité'}
           par ${echapper(etat.personnes.get(a.traite_par) || '—')}${a.traite_le ? ` le ${dateCourte(a.traite_le)} à ${heure(a.traite_le)}` : ''}</div>
-        ${a.sansAjout ? `<div class="petit">⚠ <strong>Pas ajouté dans l’outil</strong> (« Marquer comme traitée » au lieu de « Ajouter ») :
-          il ne sera pas proposé à « Enlever » au match suivant. Rouvrez la demande et faites « Ajouter ».</div>` : ''}
       </div>
       <div class="changement-actions">
         <a class="btn btn-discret" href="demandes.html?id=${a.demande_id}&retour=${encodeURIComponent(`match-du-jour.html?match=${etat.match.id}`)}">Voir</a>

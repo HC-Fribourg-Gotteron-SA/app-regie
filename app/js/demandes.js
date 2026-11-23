@@ -106,9 +106,8 @@ function blocProduits(d) {
         ${x.traite_le
           ? `✓ ${SUITES[x.suite] || 'Traité'} le ${dateHeure(x.traite_le)} par ${echapper(etat.personnes.get(x.traite_par) || '—')}`
           : x.a_corriger ? '⚠ Fichier à refaire'
-          // demande « Marquer comme traitée » sans « Ajouter » (23.11.2026, JPF · Sponsor du match) : rien dans l'outil
-          : d.statut === 'traitee' && !vueDigital(x.produit)
-            ? '⚠ <strong>Pas ajouté dans l’outil</strong> : la demande a été marquée traitée sans « Ajouter ». Rouvrez-la puis ajoutez ce produit.'
+          // demande marquée traitée (23.11.2026, Léa : « mets juste Demande traitée »)
+          : d.statut === 'traitee' ? '✓ Demande traitée'
           : `En attente de la Régie`}
         <a href="${vueDigital(x.produit) ? `digital.html?vue=${vueDigital(x.produit)}` : `produit.html?id=${x.produit?.id}`}">Ouvrir la fiche →</a>
       </div>
