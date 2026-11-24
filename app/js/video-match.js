@@ -11,12 +11,12 @@ const heure = (d) => new Date(d).toLocaleTimeString('fr-CH', { hour: '2-digit', 
 // Diffusions « une vidéo par match » encore actives, avec leurs matchs et leurs vidéos déjà déposées
 export async function chargerVideosMatch() {
   const { data, error } = await sb.from('lignes_vendues')
-    .select('id, consignes, produit:produits(nom), contrat:contrats(sponsor:sponsors(nom)), matchs:lignes_matchs(match:matchs(id, date_heure, adversaire))')
+    .select('id, consignes, ligne_couplee_id, produit:produits(nom, lie_a_produit_id), contrat:contrats(sponsor:sponsors(nom)), matchs:lignes_matchs(match:matchs(id, date_heure, adversaire))')
     .eq('regle_rotation', 'par_match').not('statut', 'in', '(annule,termine)');
   if (error || !data?.length) return [];
   const [{ data: videos }, { data: personnes }] = await Promise.all([
     sb.from('assets').select('id, ligne_id, match_id, nom_visuel, storage_path, depose_par, depose_le')
-      .in('ligne_id', data.map(l => l.id)).eq('statut', 'valide').not('match_id', 'is', null),
+      .in('ligne_id', data.flatMap(l => [l.id, l.ligne_couplee_id]).filter(Boolean)).eq('statut', 'valide').not('match_id', 'is', null),
     sb.from('profiles').select('id, nom, email'),
   ]);
   const nomDe = new Map((personnes || []).map(p => [p.id, p.nom || (p.email || '').split('@')[0]]));
@@ -25,6 +25,10 @@ export async function chargerVideosMatch() {
     titre: /spot chef/i.test(l.consignes || '') ? 'Spot chef' : 'Vidéo du match',
     matchs: (l.matchs || []).map(x => x.match).filter(Boolean).sort((a, b) => new Date(a.date_heure) - new Date(b.date_heure)),
     videos: (videos || []).map(v => ({ ...v, par: nomDe.get(v.depose_par) || '' })).filter(v => v.ligne_id === l.id),
+    // anneau LED du match (migration 79) : facultatif, possible seulement si le produit a un anneau
+    anneaux: (videos || []).map(v => ({ ...v, par: nomDe.get(v.depose_par) || '' }))
+      .filter(v => l.ligne_couplee_id && v.ligne_id === l.ligne_couplee_id),
+    avecAnneau: !!(l.ligne_couplee_id || l.produit?.lie_a_produit_id),
   }));
 }
 
@@ -41,6 +45,7 @@ export function cartesVideos(lignes, { matchId = null, peutDeposer = true } = {}
     const m = matchConcerne(l, matchId);
     if (!m) return '';
     const v = l.videos.find(x => x.match_id === m.id);
+    const an = l.anneaux.find(x => x.match_id === m.id);
     const ceSoir = jourLocal(m.date_heure) === jourLocal(new Date());
     return `
       <div class="carte video-match${v ? ' recue' : ''}" data-ligne="${l.id}" data-match="${m.id}" data-date="${jourLocal(m.date_heure)}">
@@ -56,6 +61,14 @@ export function cartesVideos(lignes, { matchId = null, peutDeposer = true } = {}
         ${peutDeposer ? `<div class="zone-depot zone-compacte" data-depot-video style="margin-top:.5rem">
             ${v ? 'Mauvaise vidéo ? Glissez la bonne ici' : 'Glissez la vidéo de ce match ici'} ou <u>cliquez pour choisir</u>
             <input type="file" accept="video/*" hidden data-fichier-video></div>` : ''}
+        ${l.avecAnneau ? `<div class="petit" style="margin-top:.6rem"><strong>Anneau LED</strong>
+            <span class="doux">(facultatif)</span>${an ? ` · ${echapper(an.nom_visuel)}
+            <span class="doux">· déposé${an.par ? ` par ${echapper(an.par)}` : ''} le ${dateCourte(an.depose_le)} à ${heure(an.depose_le)}</span>
+            ${boutonVoir(an.storage_path)}
+            <button type="button" class="btn btn-discret" data-telecharger-video="${echapper(an.storage_path)}">Télécharger</button>` : ''}</div>
+          ${peutDeposer ? `<div class="zone-depot zone-compacte" data-depot-video data-role="anneau" style="margin-top:.35rem">
+            ${an ? 'Mauvais anneau ? Glissez le bon ici' : 'Glissez l’anneau LED de ce match ici (si il y en a un)'} ou <u>cliquez pour choisir</u>
+            <input type="file" hidden data-fichier-video></div>` : ''}` : ''}
       </div>`;
   }).join('');
 }
@@ -64,12 +77,12 @@ export function cartesVideos(lignes, { matchId = null, peutDeposer = true } = {}
 export function brancherVideos(zone, apres) {
   if (zone.dataset.videosBranche) return;
   zone.dataset.videosBranche = '1';
-  const deposer = async (carte, fichier) => {
+  const deposer = async (carte, fichier, role = 'visuel') => {
     if (!fichier) return;
-    const depot = carte.querySelector('[data-depot-video]');
+    const depot = carte.querySelector(`[data-depot-video]${role === 'anneau' ? '[data-role="anneau"]' : ':not([data-role])'}`);
     if (depot) depot.textContent = `Envoi de ${fichier.name}…`;
     try {
-      const chemin = `diffusions/${carte.dataset.ligne}/match-${carte.dataset.date}__${Date.now().toString(36)}-${nomFichierSur(fichier.name)}`;
+      const chemin = `diffusions/${carte.dataset.ligne}/${role === 'anneau' ? 'anneau' : 'match'}-${carte.dataset.date}__${Date.now().toString(36)}-${nomFichierSur(fichier.name)}`;
       const [dims, son] = await Promise.all([lireDimensions(fichier), analyserSon(fichier).catch(() => null)]);
       const { error: e1 } = await sb.storage.from('assets').upload(chemin, fichier, { upsert: false, contentType: fichier.type || undefined });
       if (e1) throw new Error(`Envoi impossible : ${e1.message}`);
@@ -77,12 +90,13 @@ export function brancherVideos(zone, apres) {
         p_ligne: carte.dataset.ligne, p_match: carte.dataset.match, p_chemin: chemin, p_nom: fichier.name,
         p_mime: fichier.type || null, p_taille: fichier.size, p_duree: dims?.duree || null,
         p_son: son === 'oui' ? true : son ? false : null,
+        ...(role === 'anneau' ? { p_role: 'anneau' } : {}),
       });
       if (e2) {
         await sb.storage.from('assets').remove([chemin]);
-        throw new Error(/deposer_video_match/.test(e2.message) ? 'Exécutez d’abord la migration 64 dans Supabase.' : e2.message);
+        throw new Error(/deposer_video_match/.test(e2.message) ? (role === 'anneau' ? 'Exécutez d’abord la migration 79 dans Supabase.' : 'Exécutez d’abord la migration 64 dans Supabase.') : e2.message);
       }
-      notifier('Vidéo déposée : la Régie la voit dans Match du jour.');
+      notifier(role === 'anneau' ? 'Anneau LED déposé : la Régie le voit dans Match du jour.' : 'Vidéo déposée : la Régie la voit dans Match du jour.');
       await apres?.();
     } catch (err) {
       notifier(err.message, 'erreur');
@@ -101,7 +115,8 @@ export function brancherVideos(zone, apres) {
     if (d && e.target.tagName !== 'INPUT') d.querySelector('input[type=file]').click();
   });
   zone.addEventListener('change', (e) => {
-    if (e.target.dataset.fichierVideo !== undefined) deposer(e.target.closest('.video-match'), e.target.files[0]);
+    if (e.target.dataset.fichierVideo !== undefined)
+      deposer(e.target.closest('.video-match'), e.target.files[0], e.target.closest('[data-depot-video]')?.dataset.role || 'visuel');
   });
   zone.addEventListener('dragover', (e) => { const d = e.target.closest('[data-depot-video]'); if (d) { e.preventDefault(); d.classList.add('survol'); } });
   zone.addEventListener('dragleave', (e) => e.target.closest('[data-depot-video]')?.classList.remove('survol'));
@@ -109,6 +124,6 @@ export function brancherVideos(zone, apres) {
     const d = e.target.closest('[data-depot-video]');
     if (!d) return;
     e.preventDefault();
-    deposer(d.closest('.video-match'), e.dataTransfer.files[0]);
+    deposer(d.closest('.video-match'), e.dataTransfer.files[0], d.dataset.role || 'visuel');
   });
 }
