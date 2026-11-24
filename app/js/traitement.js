@@ -524,6 +524,9 @@ async function chercherSemblables(k) {
 // ---------------------------------------------------------------------
 // LED 3M / 6M : on place le logo là où il y a un Banner HCFG (emplacement libre)
 // ---------------------------------------------------------------------
+// case suivante dans le même anneau (position + 1), ou null
+const suivant = (ctx, e) => ctx.emplacements.find(x => x.anneau === e.anneau && x.position === e.position + 1) || null;
+
 function grilleEmplacements(k) {
   const { ctx, choix, a } = cartes.get(k);
   const requis = ctx.p.emplacements_requis || 1;
@@ -544,7 +547,9 @@ function grilleEmplacements(k) {
     ${!est6M && plein3M ? `<p class="message message-info petit">Plus de place sur la bande 3M : le logo peut aller sur la bande 6M.</p>` : ''}
     <div class="titre-bloc">Emplacement
       <span class="compte-empl ${choix.emplacements.size === requis ? 'ok' : ''}">${choix.emplacements.size} / ${requis}</span></div>
-    <p class="aide" style="margin-top:0">Cliquez sur ${requis > 1 ? `${requis} cases « Banner HCFG »` : 'une case « Banner HCFG »'} pour y mettre le logo
+    <p class="aide" style="margin-top:0">${requis > 1
+      ? 'Cliquez sur une case « Banner HCFG » : elle est prise avec la case suivante (une LED 6M = 2 cases qui se suivent)'
+      : 'Cliquez sur une case « Banner HCFG » pour y mettre le logo'}
       (facultatif : on peut placer plus tard).</p>
     <div class="legende-empl"><span class="case-empl libre"></span> Banner HCFG (libre) <span class="case-empl choisi"></span> choisi
       <span class="case-empl occupe"></span> sponsor <span class="case-empl reserve"></span> réservé club</div>
@@ -557,9 +562,15 @@ function grilleEmplacements(k) {
               const choisi = choix.emplacements.has(e.emplacement_id);
               const occupe = !!e.ligne_id || prisAilleurs.has(e.emplacement_id);
               const cl = choisi ? 'choisi' : e.reserve_club ? 'reserve' : occupe ? 'occupe' : 'libre';
-              const titre = `${x}-${z}-${e.position} · ${e.reserve_club ? 'réservé club' : e.sponsor ? e.sponsor : prisAilleurs.has(e.emplacement_id) ? 'choisi pour une autre demande' : 'Banner HCFG (libre)'}`;
+              // LED 6M = 2 cases qui se suivent (24.11.2026, Léa) : une case libre n'est cliquable que si la suivante
+              // l'est aussi ; le clic prend les deux
+              const n = requis > 1 ? suivant(ctx, e) : null;
+              const sansVoisin = requis > 1 && cl === 'libre' && !(n && libre(n));
+              const titre = `${x}-${z}-${e.position} · ${e.reserve_club ? 'réservé club' : e.sponsor ? e.sponsor : prisAilleurs.has(e.emplacement_id) ? 'choisi pour une autre demande' : 'Banner HCFG (libre)'}`
+                + (sansVoisin ? ' · la case suivante n’est pas libre (une LED 6M prend 2 cases qui se suivent)'
+                   : requis > 1 && cl === 'libre' ? ` · prend ${x}-${n.zone}-${n.position} avec` : '');
               return `<button type="button" class="case-empl ${cl}" data-empl="${e.emplacement_id}" title="${echapper(titre)}"
-                        ${cl === 'reserve' || cl === 'occupe' ? 'disabled' : ''}>${e.position}</button>`;
+                        ${cl === 'reserve' || cl === 'occupe' || sansVoisin ? 'disabled' : ''}>${e.position}</button>`;
             }).join('')}</div></div>`).join('')}
         </div>
       </div>`).join('')}
@@ -623,7 +634,14 @@ function brancher(el) {
     const empl = e.target.closest('[data-empl]');
     if (empl && !empl.disabled) {
       const requis = c.ctx.p.emplacements_requis || 1, id = empl.dataset.empl;
-      if (c.choix.emplacements.has(id)) c.choix.emplacements.delete(id);
+      if (requis > 1) {
+        // LED 6M : la case cliquée + la suivante (re-clic sur une case choisie = on enlève le choix)
+        const e0 = c.ctx.emplacements.find(x => x.emplacement_id === id);
+        const n = e0 && suivant(c.ctx, e0);
+        const deja = c.choix.emplacements.has(id);
+        c.choix.emplacements.clear();
+        if (!deja && n) { c.choix.emplacements.add(id); c.choix.emplacements.add(n.emplacement_id); }
+      } else if (c.choix.emplacements.has(id)) c.choix.emplacements.delete(id);
       else {
         if (c.choix.emplacements.size >= requis) c.choix.emplacements.delete([...c.choix.emplacements][0]);
         c.choix.emplacements.add(id);
