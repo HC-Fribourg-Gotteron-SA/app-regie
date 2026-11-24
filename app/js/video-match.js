@@ -10,10 +10,14 @@ const heure = (d) => new Date(d).toLocaleTimeString('fr-CH', { hour: '2-digit', 
 
 // Diffusions « une vidéo par match » encore actives, avec leurs matchs et leurs vidéos déjà déposées
 export async function chargerVideosMatch() {
-  const { data, error } = await sb.from('lignes_vendues')
-    .select('id, consignes, ligne_couplee_id, produit:produits(nom, lie_a_produit_id), contrat:contrats(sponsor:sponsors(nom)), matchs:lignes_matchs(match:matchs(id, date_heure, adversaire))')
+  let { data, error } = await sb.from('lignes_vendues')
+    .select('id, consignes, ligne_couplee_id, produit:produits(nom, actif, lie_a_produit_id), contrat:contrats(sponsor:sponsors(nom)), matchs:lignes_matchs(match:matchs(id, date_heure, adversaire))')
     .eq('regle_rotation', 'par_match').not('statut', 'in', '(annule,termine)');
   if (error || !data?.length) return [];
+  // l'anneau LED couplé (produit technique inactif, « un visuel par match » depuis la migration 79) n'est pas une
+  // carte à part : il est dans la carte de sa vidéo (24.11.2026, Léa : « pourquoi tu me mets à double »)
+  data = data.filter(l => l.produit?.actif !== false);
+  if (!data.length) return [];
   const [{ data: videos }, { data: personnes }] = await Promise.all([
     sb.from('assets').select('id, ligne_id, match_id, nom_visuel, storage_path, depose_par, depose_le')
       .in('ligne_id', data.flatMap(l => [l.id, l.ligne_couplee_id]).filter(Boolean)).eq('statut', 'valide').not('match_id', 'is', null),
