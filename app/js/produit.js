@@ -530,7 +530,13 @@ function rangeesEmplacements(cols) {
   const titre = (texte) => `<tr class="rangee-titre"><td colspan="${cols.length}">${texte}</td></tr>`;
   const surAutreBande = autres.filter(l => (l.emplacements || []).length);
   const aPlacer = autres.filter(l => !(l.emplacements || []).length);
-  $('nb-sponsors').textContent += ` · ${libres} Banner HCFG libre${libres > 1 ? 's' : ''}`;
+  // bande pleine : « Complet » (26.11.2026, Léa : « comme pour les autres trucs, on dit quand c'est plein »)
+  $('nb-sponsors').textContent += libres ? ` · ${libres} Banner HCFG libre${libres > 1 ? 's' : ''}` : ` · bande ${bande} complète`;
+  const badge = $('led-complet') || Object.assign(document.createElement('span'), { id: 'led-complet' });
+  badge.className = libres ? 'etat etat-attente' : 'etat etat-ecran';
+  badge.textContent = libres ? `${libres} place${libres > 1 ? 's' : ''} libre${libres > 1 ? 's' : ''}` : '✓ Complet';
+  badge.style.marginLeft = '.5rem';
+  if (!badge.isConnected) $('nb-sponsors').after(badge);
   return rangees
     + (surAutreBande.length ? titre(`${etat.p.nom} placées sur la bande ${bande === '3M' ? '6M' : '3M'}`)
         + surAutreBande.map(l => rangeeLigne(l, rang++, cols)).join('') : '')
