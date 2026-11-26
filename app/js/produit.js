@@ -533,8 +533,9 @@ function rangeesEmplacements(cols) {
   // bande pleine : « Complet » (26.11.2026, Léa : « comme pour les autres trucs, on dit quand c'est plein »)
   $('nb-sponsors').textContent += libres ? ` · ${libres} Banner HCFG libre${libres > 1 ? 's' : ''}` : ` · bande ${bande} complète`;
   const badge = $('led-complet') || Object.assign(document.createElement('span'), { id: 'led-complet' });
-  badge.className = libres ? 'etat etat-attente' : 'etat etat-ecran';
-  badge.textContent = libres ? `${libres} place${libres > 1 ? 's' : ''} libre${libres > 1 ? 's' : ''}` : '✓ Complet';
+  // comme la barre des durées : vert = il reste de la place, rouge = complet (Léa, 26.11.2026)
+  badge.className = libres ? 'etat etat-ecran' : 'etat etat-desactive';
+  badge.textContent = libres ? `${libres} place${libres > 1 ? 's' : ''} libre${libres > 1 ? 's' : ''}` : 'Complet';
   badge.style.marginLeft = '.5rem';
   if (!badge.isConnected) $('nb-sponsors').after(badge);
   return rangees
