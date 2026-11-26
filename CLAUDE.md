@@ -512,7 +512,8 @@ outil-regie/
 │   ├── 76_format_action_scenes.sql ← Action scenes / Sponsor du match : 1920 × 1080 (tout 16:9 accepté) comme le vidéotron
 │   ├── 77_run_of_show_chl_round16.sql ← modèle de run of show « CHL Round of 16 – Return game 26/27 » (heures relatives au face-off, retour à 19:45)
 │   ├── 78_rouvrir_demandes_marquees.sql ← demandes marquées traitées sans ajout : la migration fait le travail du bouton (traiter_produit au nom de Léa)
-│   └── 79_anneau_video_match.sql ← Spot chef : anneau LED du match facultatif, déposé avec la vidéo (deposer_video_match p_role)
+│   ├── 79_anneau_video_match.sql ← Spot chef : anneau LED du match facultatif, déposé avec la vidéo (deposer_video_match p_role)
+│   └── 80_led_comme_ecran.sql ← LED 3M / 6M remises comme les PNG du 26.11 (A-9 media f, C-24/25 Sagérime, C-26 RM Montage, UPCF C-24 retiré)
 ├── import-airtable/       ← CSV exportés d'Airtable (une feuille par produit ; liens Airtable retirés)
 ├── outils/import-airtable.mjs ← `node outils/import-airtable.mjs` : CSV -> supabase/import_airtable_2026-27.sql
 │                                (+ import_airtable_annuler.sql) et résumé (sponsors regroupés, lignes ignorées)

@@ -1,7 +1,7 @@
 -- =====================================================================
 -- INSTALLATION COMPLÈTE d'une base neuve (base de TEST) — généré par outils/installation-base-test.mjs
 -- À exécuter UNE fois dans le SQL Editor du projet de test (jamais sur la vraie base).
--- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79.
+-- Contient : 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80.
 -- Ensuite : créer son compte (Authentication > Users), se mettre admin (voir en bas),
 -- importer le calendrier dans l'outil (.ics), puis lancer supabase/demo_donnees_test.sql.
 -- =====================================================================
@@ -6873,6 +6873,79 @@ join produits pr on pr.id = lv.produit_id and pr.actif
 where lv.regle_rotation = 'par_match' and lv.statut not in ('annule', 'termine');
 
 
+-- #####################################################################
+-- 80_led_comme_ecran.sql
+-- #####################################################################
+-- =====================================================================
+-- 80 — LED 3M / 6M : l'outil remis comme ce qui passe sur les LED (PNG du 26.11.2026)
+-- À exécuter sur la VRAIE base (sans effet sur la base de test). Peut être exécuté plusieurs fois.
+-- =====================================================================
+-- Léa (26.11.2026) a donné les PNG des 4 anneaux ; comparaison case par case avec l'outil :
+-- 144 emplacements identiques, 5 différents (4 sponsors mal placés dans l'outil) :
+--   A-9   outil RM Montage            → LED media f imprimerie
+--   C-24  outil UPCF                  → LED Sagérime (1re case)
+--   C-26  outil Sagérime (2e case)    → LED RM Montage
+--   C-27  outil media f imprimerie    → LED libre (Banner HCFG)
+--   UPCF est aussi en B-36 (juste) : son lien C-24 est un doublon, retiré. Si sa diffusion n'a plus aucun emplacement,
+--   elle est arrêtée (hier) comme « Retirer de ce produit » ; elle reste dans l'historique.
+-- Résultat : A-9 media f · C-24 + C-25 Sagérime (LED 6M) · C-26 RM Montage · C-27 libre.
+
+do $x$
+declare
+  v_media uuid; v_rm uuid; v_sag uuid; v_upcf uuid;
+  e_a9 uuid; e_c24 uuid; e_c25 uuid; e_c26 uuid;
+  -- diffusion en cours d'un sponsor sur un produit LED, qui occupe l'emplacement donné
+  q text := $q$
+    select lv.id from lignes_vendues lv
+    join contrats c on c.id = lv.contrat_id join sponsors s on s.id = c.sponsor_id
+    join lignes_emplacements le on le.ligne_id = lv.id join emplacements e on e.id = le.emplacement_id
+    where s.nom ilike $1 and e.anneau || '-' || e.position = $2
+      and lv.statut not in ('annule', 'termine') limit 1 $q$;
+begin
+  select id into e_a9  from emplacements where anneau = 'A' and position = 9;
+  select id into e_c24 from emplacements where anneau = 'C' and position = 24;
+  select id into e_c25 from emplacements where anneau = 'C' and position = 25;
+  select id into e_c26 from emplacements where anneau = 'C' and position = 26;
+
+  execute q into v_media using 'media f%', 'C-27';
+  execute q into v_rm    using 'RM Montage%', 'A-9';
+  execute q into v_sag   using 'Sag%rime%', 'C-25';
+  execute q into v_upcf  using 'UPCF%', 'C-24';
+
+  if v_media is null and v_rm is null and v_sag is null and v_upcf is null then
+    raise notice 'Rien à corriger (déjà fait ?)';
+    return;
+  end if;
+
+  -- 1. on libère les emplacements concernés de ces 4 diffusions
+  delete from lignes_emplacements
+  where (ligne_id = v_media) or (ligne_id = v_rm) or (ligne_id = v_sag)
+     or (ligne_id = v_upcf and emplacement_id = e_c24);
+
+  -- 2. on remet chacun à sa place sur la LED
+  if v_media is not null then insert into lignes_emplacements values (v_media, e_a9) on conflict do nothing; end if;
+  if v_rm    is not null then insert into lignes_emplacements values (v_rm, e_c26) on conflict do nothing; end if;
+  if v_sag   is not null then
+    insert into lignes_emplacements values (v_sag, e_c24) on conflict do nothing;
+    insert into lignes_emplacements values (v_sag, e_c25) on conflict do nothing;
+  end if;
+
+  -- 3. UPCF : plus d'emplacement du tout → diffusion arrêtée (doublon de B-36)
+  if v_upcf is not null and not exists (select 1 from lignes_emplacements where ligne_id = v_upcf) then
+    update lignes_vendues set statut = 'termine', date_fin = current_date - 1,
+           consignes = concat_ws(E'\n', consignes, 'Doublon retiré le 26.11.2026 (UPCF est en B-36)')
+    where id = v_upcf;
+  end if;
+end $x$;
+
+-- Contrôle : les cases corrigées
+select e.anneau || '-' || e.position as "Empl", coalesce(v.sponsor, 'Banner HCFG') as "Sponsor", coalesce(v.produit, '') as "Produit"
+from emplacements e
+left join lateral (select * from v_plan_emplacements p where p.emplacement_id = e.id and p.ligne_id is not null limit 1) v on true
+where (e.anneau, e.position) in (('A', 9), ('B', 36), ('C', 24), ('C', 25), ('C', 26), ('C', 27))
+order by e.anneau, e.position;
+
+
 -- Après avoir créé ton compte dans Authentication > Users, lance ceci séparément :
 -- update profiles set role = 'admin', nom = 'Léa Talon' where email = 'lea.talon@fribourg-gotteron.ch';
-select 'Installation terminée : 75 fichiers.' as "Résultat";
+select 'Installation terminée : 76 fichiers.' as "Résultat";
