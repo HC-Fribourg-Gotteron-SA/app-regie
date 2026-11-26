@@ -196,6 +196,7 @@ const minSec = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padSta
 async function afficherDureeTotale() {
   const zone = $('duree-totale');
   const p = etat.p, m = etat.prochainMatch;
+  if (p.famille === 'emplacement') return;           // LED 3M / 6M : encadré des places (rangeesEmplacements)
   if (p.famille !== 'temps' || !m) { zone.hidden = true; return; }
   // calculé avec ce qui est déjà chargé (20.10.2026 : la requête sur la table passages bloquait la base, fiches
   // à 15 s) : à l'écran + vendu pour ce match (au match) ou saison (match de saison), pas terminé avant ce jour.
@@ -530,14 +531,24 @@ function rangeesEmplacements(cols) {
   const titre = (texte) => `<tr class="rangee-titre"><td colspan="${cols.length}">${texte}</td></tr>`;
   const surAutreBande = autres.filter(l => (l.emplacements || []).length);
   const aPlacer = autres.filter(l => !(l.emplacements || []).length);
-  // bande pleine : « Complet » (26.11.2026, Léa : « comme pour les autres trucs, on dit quand c'est plein »)
-  $('nb-sponsors').textContent += libres ? ` · ${libres} Banner HCFG libre${libres > 1 ? 's' : ''}` : ` · bande ${bande} complète`;
-  const badge = $('led-complet') || Object.assign(document.createElement('span'), { id: 'led-complet' });
-  // comme la barre des durées : vert = il reste de la place, rouge = complet (Léa, 26.11.2026)
-  badge.className = libres ? 'etat etat-ecran' : 'etat etat-desactive';
-  badge.textContent = libres ? `${libres} place${libres > 1 ? 's' : ''} libre${libres > 1 ? 's' : ''}` : 'Complet';
-  badge.style.marginLeft = '.5rem';
-  if (!badge.isConnected) $('nb-sponsors').after(badge);
+  // place sur la bande : même encadré + barre que les durées (26.11.2026, Léa : « comme pour les durées finalement ») :
+  // vert = il reste de la place, rouge = complet. Les cases réservées club ne comptent pas.
+  const vendables = cases.filter(e => !e.reserve_club).length;
+  const occupees = vendables - libres;
+  const zone = $('duree-totale');
+  zone.className = `duree-totale ${libres ? 'ok' : 'trop'}`;
+  zone.innerHTML = `
+    <div class="duree-ligne">
+      <span>📍 Emplacements de la bande ${bande}</span>
+      <strong class="duree-chiffres">${occupees} / ${vendables}</strong>
+      ${libres ? '' : '<strong style="color:var(--erreur)">Complet</strong>'}
+    </div>
+    <div class="duree-barre" role="progressbar" aria-valuemin="0" aria-valuemax="${vendables}" aria-valuenow="${occupees}">
+      <div style="width:${vendables ? (occupees / vendables * 100).toFixed(1) : 0}%"></div></div>
+    <div class="petit doux">${libres
+      ? `reste <strong style="color:var(--ok)">${libres} place${libres > 1 ? 's' : ''} libre${libres > 1 ? 's' : ''}</strong> (Banner HCFG)`
+      : 'plus aucune place libre (aucun Banner HCFG)'} · ${cases.length - vendables} réservées club</div>`;
+  zone.hidden = false;
   return rangees
     + (surAutreBande.length ? titre(`${etat.p.nom} placées sur la bande ${bande === '3M' ? '6M' : '3M'}`)
         + surAutreBande.map(l => rangeeLigne(l, rang++, cols)).join('') : '')
